@@ -1,0 +1,17 @@
+[[source]]
+url = "https://pypi.org/simple"
+verify_ssl = true
+name = "pypi"
+
+[packages]
+numpy = "*"
+cyndilib = {editable = true, path = "."}
+
+[dev-packages]
+cython = "*"
+ipython = "*"
+kivy = {extras = ["base"], version = "*"}
+pytest = "*"
+
+[requires]
+python_version = "3.10"
