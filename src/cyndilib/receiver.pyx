@@ -189,8 +189,7 @@ cdef class Receiver:
         return self._is_connected()
 
     cdef bint _is_connected(self) nogil except *:
-        cdef bint r = self._probably_connected and self._num_empty_recv < 20
-        # cdef bint r = self._get_num_connections() > 0
+        cdef bint r = self._get_num_connections() > 0
         if r is not self._connected:
             self._set_connected(r)
         return r
@@ -220,6 +219,7 @@ cdef class Receiver:
 
     cdef int _get_num_connections(self) nogil except *:
         cdef int r = NDIlib_recv_get_no_connections(self.ptr)
+        return r
 
     cpdef ReceiveFrameType receive(self, ReceiveFrameType recv_type, uint32_t timeout_ms):
         return self._receive(recv_type, timeout_ms)
