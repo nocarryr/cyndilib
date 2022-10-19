@@ -136,12 +136,14 @@ cdef class Finder:
         self.source_ptr = src_p
         cdef size_t i
         self.source_names.clear()
+        cdef const NDIlib_source_t* src_cn
         cdef NDIlib_source_t* src
         cdef cpp_string name
         cdef source_pair_t pair
 
         for i in range(n_sources):
-            src = &(src_p[i])
+            src_c = &(src_p[i])
+            src = <NDIlib_source_t*> &(src_c)[0]
             name = cpp_string(src.p_ndi_name)
             if self.source_map.count(name) > 0:
                 self.source_map.erase(name)

@@ -193,7 +193,7 @@ cdef void test_fill_audio_bfr(audio_bfr_p bfr, float start_val) except *:
     bfr.total_size = bfr.num_channels * bfr.num_samples
     bfr.p_data = <float*>mem_alloc(sizeof(float) * bfr.total_size)
     cdef float* tmp = <float*>mem_alloc(sizeof(float) * bfr.total_size)
-    memcpy(bfr.p_data, tmp, sizeof(float) * bfr.total_size)
+    memcpy(<void*>bfr.p_data, <void*>tmp, sizeof(float) * bfr.total_size)
     mem_free(tmp)
 
 

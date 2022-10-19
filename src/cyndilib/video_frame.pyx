@@ -187,8 +187,8 @@ cdef class VideoRecvFrame(VideoFrame):
             NDIlib_recv_free_video_v2(recv_ptr, self.ptr)
 
 
-cdef void copy_char_array(const uint8_t** src, uint8_t** dst, size_t size) nogil:
-    cdef const uint8_t* src_p = src[0]
+cdef void copy_char_array(uint8_t** src, uint8_t** dst, size_t size) nogil:
+    cdef uint8_t* src_p = src[0]
     cdef uint8_t* dst_p = dst[0]
     cdef size_t i
     for i in range(size):

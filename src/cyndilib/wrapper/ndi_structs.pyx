@@ -9,9 +9,6 @@ cdef NDIlib_source_t* source_create() nogil except *:
 
 cdef void source_destroy(NDIlib_source_t* p) nogil except *:
     if p is not NULL:
-        if p.p_ndi_name is not NULL:
-            mem_free(p.p_ndi_name)
-            # p.p_ndi_name = NULL
         mem_free(p)
 
 cdef NDIlib_video_frame_v2_t* video_frame_create() nogil except *:

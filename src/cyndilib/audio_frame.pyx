@@ -205,7 +205,7 @@ cdef void audio_bfr_unpack_data(audio_bfr_p bfr, uint8_t* p_data) nogil except *
     bfr.p_data = <float*>mem_alloc(size_in_bytes)
     if bfr.p_data is NULL:
         raise_mem_err()
-    memcpy(bfr.p_data, p_data, size_in_bytes)
+    memcpy(<void*>bfr.p_data, <void*>p_data, size_in_bytes)
     # g = (float)((data[0] << 24) | (data[1] << 16) | (data[2] << 8) | (data[3]) );
     # size_t ch_idx, samp_idx
     # for ch_idx in range(bfr.num_channels):
