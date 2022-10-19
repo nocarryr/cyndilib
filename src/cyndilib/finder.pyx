@@ -36,7 +36,6 @@ cdef class Finder:
         self.finder_thread_running = Event()
 
     def __dealloc__(self):
-        self.source_ptr = NULL
         cdef NDIlib_find_instance_t p = self.find_p
         if p != NULL:
             self.find_p = NULL
@@ -129,11 +128,9 @@ cdef class Finder:
         # self._lock.lock()
         cdef bint changed = False
         # cdef unique_lock[mutex]* lk = new unique_lock[mutex](self.lock)
-        self.source_ptr = NULL
         cdef uint32_t n_sources = 0
         cdef const NDIlib_source_t* src_p = NDIlib_find_get_current_sources(self.find_p, &n_sources)
 
-        self.source_ptr = src_p
         cdef size_t i
         self.source_names.clear()
         cdef const NDIlib_source_t* src_cn

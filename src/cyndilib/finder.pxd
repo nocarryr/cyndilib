@@ -44,7 +44,6 @@ cdef class Source:
 
 cdef class Finder:
     cdef NDIlib_find_instance_t find_p
-    cdef NDIlib_source_t* source_ptr
     # cdef readonly list source_names
     cdef cpp_str_list source_names
     cdef source_map_t source_map
