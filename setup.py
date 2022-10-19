@@ -16,8 +16,17 @@ if USE_CYTHON:
 
 PROJECT_PATH = Path(__file__).parent
 # WIN32 = sys.platform == 'win32'
+MACOS = sys.platform == 'darwin'
 IS_BUILD = len({'sdist', 'bdist_wheel', 'build_ext'} & set(sys.argv)) > 0
 INCLUDE_PATH = [get_python_inc()]
+
+def get_ndi_include():
+    if MACOS:
+        p = Path('/Library/NDI SDK for Apple/include')
+        if p.exists():
+            INCLUDE_PATH.append(str(p))
+
+get_ndi_include()
 
 try:
     import numpy
