@@ -192,8 +192,7 @@ cdef class Receiver:
         self.set_source(src)
 
     cdef void _connect_to(self, NDIlib_source_t* src) except *:
-        cdef char* src_name = src.p_ndi_name
-        self.source_name = src_name.decode()
+        self.source_name = src.p_ndi_name.decode('UTF-8')
         self.source_ptr = src
         NDIlib_recv_connect(self.ptr, src)
         self._probably_connected = True
