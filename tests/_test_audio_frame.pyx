@@ -1,6 +1,10 @@
 # cython: language_level=3
+# cython: linetrace=True
+# cython: profile=True
 # distutils: language = c++
 # distutils: include_dirs=NUMPY_INCLUDE
+# distutils: define_macros=CYTHON_TRACE_NOGIL=1
+
 
 cimport cython
 from libc.math cimport sqrt, sin, M_PI_2

@@ -14,6 +14,12 @@ if USE_CYTHON:
     from annotate_index import AnnotateIndex
     Options.fast_fail = True
 
+    USE_PROFILE = '--use-profile' in sys.argv
+    if USE_PROFILE:
+        sys.argv.remove('--use-profile')
+else:
+    USE_PROFILE = False
+
 PROJECT_PATH = Path(__file__).parent
 # WIN32 = sys.platform == 'win32'
 MACOS = sys.platform == 'darwin'
@@ -122,20 +128,31 @@ def build_extensions(pkg_dir, search_pattern='**/*.pyx'):
     return extensions
 
 if USE_CYTHON:
+    compiler_directives = {'embedsignature':True}
+    if USE_PROFILE:
+        ext_macros = [('CYTHON_TRACE', 1), ('CYTHON_TRACE_NOGIL', 1)]
+        compiler_directives.update({'profile':True, 'linetrace':True})
+    else:
+        ext_macros = None
     ext_modules = [
         Extension(
             '*', ['src/**/*.pyx'],
             include_dirs=INCLUDE_PATH,
             extra_compile_args=['-fpermissive'],
             libraries=['ndi'],
+            define_macros=ext_macros,
+            # define_macros=[('CYTHON_TRACE', 1), ('CYTHON_TRACE_NOGIL', 1)]
         ),
     ]
     ext_modules = cythonize(
         ext_modules,
         annotate=True,
-        compiler_directives={
-            'embedsignature':True,
-        },
+        compiler_directives=compiler_directives,
+        # compiler_directives={
+        #     'embedsignature':True,
+        #     # 'profile':True,
+        #     # 'linetrace':True,
+        # },
     )
     def build_annotate_index(extensions):
         root = AnnotateIndex('', root_dir=PROJECT_PATH / 'src')

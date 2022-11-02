@@ -12,6 +12,8 @@ cython = "*"
 ipython = "*"
 kivy = {extras = ["base"], version = "*"}
 pytest = "*"
+pytest-profiling = "*"
+snakeviz = "*"
 
 [requires]
 python_version = "3.10"
