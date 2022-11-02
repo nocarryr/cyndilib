@@ -3,15 +3,18 @@
 
 from libcpp.string cimport string as cpp_string
 from libcpp.list cimport list as cpp_list
+from libcpp.set cimport set as cpp_set
 from libcpp.utility cimport pair as cpp_pair
 from libcpp.map cimport map as cpp_map
 
 from .wrapper cimport *
 from .locks cimport RLock, Condition, Event
+from .callback cimport Callback
 
 ctypedef cpp_list[cpp_string] cpp_str_list
-ctypedef cpp_map[cpp_string, NDIlib_source_t*] source_map_t
-ctypedef cpp_pair[cpp_string, NDIlib_source_t*] source_pair_t
+ctypedef cpp_map[cpp_string, NDIlib_source_t*] source_ptr_map_t
+ctypedef cpp_pair[cpp_string, NDIlib_source_t*] source_ptr_pair_t
+ctypedef cpp_set[cpp_string] cpp_str_set
 
 # cdef extern from "<mutex>" namespace "std" nogil:
 #     cdef cppclass mutex:
@@ -35,18 +38,27 @@ ctypedef cpp_pair[cpp_string, NDIlib_source_t*] source_pair_t
 #         void wait(unique_lock[mutex]&)
 
 cdef class Source:
+    cdef Finder parent
     cdef NDIlib_source_t* ptr
+    cdef cpp_string cpp_name
     cdef readonly str name
+    cdef readonly bint valid
 
     @staticmethod
-    cdef Source create(NDIlib_source_t* ptr, str name)
+    cdef Source create(Finder parent, NDIlib_source_t* ptr, cpp_string cpp_name, str name)
+
+    cpdef bint update(self)
+    cdef void _set_ptr(self, NDIlib_source_t* ptr) nogil except *
+    cdef void _check_ptr(self) nogil except *
+    cdef void _invalidate(self) nogil except *
 
 
 cdef class Finder:
     cdef NDIlib_find_instance_t find_p
     # cdef readonly list source_names
     cdef cpp_str_list source_names
-    cdef source_map_t source_map
+    cdef source_ptr_map_t source_ptr_map
+    cdef dict source_obj_map
     cdef readonly RLock lock
     cdef readonly Condition notify
     cdef readonly size_t num_sources
@@ -56,14 +68,16 @@ cdef class Finder:
     cdef bint _initial_source_get
     cdef readonly Event finder_thread_running
     cdef readonly object finder_thread
+    cdef Callback change_callback
 
     cpdef get_source_names(self)
     cpdef Source get_source(self, str name)
-    cdef NDIlib_source_t* _get_source(self, cpp_string name) nogil except *
-    cdef bint _update_sources(self) nogil except *
+    cdef NDIlib_source_t* _get_source_ptr(self, cpp_string name) nogil except *
+    cdef void _trigger_callback(self) nogil except *
+    cdef bint _update_sources(self) except *
     cdef void _wait(self) nogil except *
     cdef bint _wait_timed(self, float timeout) nogil except *
-    cdef bint _wait_for_sources(self, uint32_t timeout_ms) nogil except *
+    cdef bint _wait_for_sources(self, uint32_t timeout_ms) except *
     cdef void build_finder(self) except *
     cdef void __notify_acquire(self) nogil except *
     cdef void __notify_notify(self) nogil except *
