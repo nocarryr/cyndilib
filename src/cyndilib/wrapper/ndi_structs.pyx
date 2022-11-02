@@ -1,3 +1,13 @@
+from libc.math cimport llround
+
+
+cdef double ndi_time_to_posix(int64_t ndi_ts) nogil except *:
+    cdef float128_t result = <float128_t>ndi_ts * 1e-7
+    return <double>result
+
+cdef int64_t posix_time_to_ndi(double ts) nogil except *:
+    cdef long long result = llround(ts * 1e7)
+    return result
 
 cdef NDIlib_source_t* source_create() nogil except *:
     cdef NDIlib_source_t* p = <NDIlib_source_t*>mem_alloc(sizeof(NDIlib_source_t))

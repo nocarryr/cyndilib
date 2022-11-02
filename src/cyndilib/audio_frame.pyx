@@ -59,6 +59,8 @@ cdef class AudioFrame:
         cdef bytes result = self.ptr.p_metadata
         return result
 
+    def get_timestamp(self):
+        return self._get_timestamp()
     cdef int64_t _get_timestamp(self) nogil:
         return self.ptr.timestamp
     cdef void _set_timestamp(self, int64_t value) nogil:

@@ -263,6 +263,9 @@ cdef extern from "Processing.NDI.structs.h" nogil:
         # // Is this currently on preview output.
         bint on_preview
 
+cdef double ndi_time_to_posix(int64_t ndi_ts) nogil except *
+cdef int64_t posix_time_to_ndi(double ts) nogil except *
+
 cpdef enum FrameType:
     unknown = NDIlib_frame_type_none
     video = NDIlib_frame_type_video

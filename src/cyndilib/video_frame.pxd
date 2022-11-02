@@ -15,6 +15,7 @@ cdef class VideoFrame:
     cdef NDIlib_video_frame_v2_t* ptr
     cdef frame_rate_t frame_rate
 
+    cpdef str get_format_string(self)
     cdef (int, int) _get_resolution(self) nogil except *
     cdef void _set_resolution(self, int xres, int yres) nogil
     cdef int _get_xres(self) nogil
@@ -23,7 +24,7 @@ cdef class VideoFrame:
     cdef void _set_yres(self, int value) nogil
     cdef FourCC _get_fourcc(self) nogil except *
     cdef void _set_fourcc(self, FourCC value) nogil except *
-    cdef frame_rate_t _get_frame_rate(self) nogil except *
+    cdef frame_rate_t* _get_frame_rate(self) nogil except *
     cdef void _set_frame_rate(self, frame_rate_ft fr) nogil except *
     cdef float _get_aspect(self) nogil
     cdef void _set_aspect(self, float value) nogil

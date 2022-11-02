@@ -23,6 +23,21 @@ cdef class VideoFrame:
         if p is not NULL:
             video_frame_destroy(p)
 
+    cpdef str get_format_string(self):
+        cdef int yres = self._get_yres()
+        if yres <= 0:
+            return 'unknown'
+        cdef FrameFormat fmt = self._get_frame_format()
+        cdef str fieldStr = 'p' if fmt == FrameFormat.progressive else 'i'
+        cdef frame_rate_t* fr = self._get_frame_rate()
+        cdef double fr_dbl = fr.numerator / <double>fr.denominator
+        cdef str fr_str
+        if fr_dbl % 1 == 0:
+            fr_str = f'{fr_dbl:.2f}'
+        else:
+            fr_str = f'{fr_dbl:.0f}'
+        return f'{yres}{fieldStr}{fr_str}'
+
     cdef (int, int) _get_resolution(self) nogil except *:
         return (self.ptr.xres, self.ptr.yres)
     cdef void _set_resolution(self, int xres, int yres) nogil:
@@ -52,10 +67,10 @@ cdef class VideoFrame:
     cdef void _set_fourcc(self, FourCC value) nogil except *:
         self.ptr.FourCC = fourcc_type_cast(value)
 
-    cdef frame_rate_t _get_frame_rate(self) nogil except *:
+    cdef frame_rate_t* _get_frame_rate(self) nogil except *:
         self.frame_rate.numerator = self.ptr.frame_rate_N
         self.frame_rate.denominator = self.ptr.frame_rate_D
-        return self.frame_rate
+        return &self.frame_rate
 
     cdef void _set_frame_rate(self, frame_rate_ft fr) nogil except *:
         if frame_rate_ft is frame_rate_t:
@@ -109,6 +124,17 @@ cdef class VideoFrame:
         return self.ptr.timestamp
     cdef void _set_timestamp(self, int64_t value) nogil:
         self.ptr.timestamp = value
+
+    def get_timestamp_posix(self):
+        cdef double r = ndi_time_to_posix(self.ptr.timestamp)
+        return r
+
+    def get_timecode_posix(self):
+        cdef double r = ndi_time_to_posix(self.ptr.timecode)
+        return r
+
+    # cdef double _get_timestamp_posix(self) nogil:
+    #     return ndi_time_to_posix(self.ptr.timestamp)
 
     cdef size_t _get_data_size(self) nogil:
         return self.ptr.line_stride_in_bytes * self.ptr.yres
