@@ -2,6 +2,8 @@
 # distutils: language = c++
 
 from libc.stdint cimport *
+from libcpp.deque cimport deque as cpp_deque
+from libcpp.set cimport set as cpp_set
 cimport numpy as cnp
 
 from .wrapper cimport *
@@ -31,6 +33,7 @@ cdef class VideoFrame:
     cdef int64_t _set_timecode(self, int64_t value) nogil
     cdef int _get_line_stride(self) nogil
     cdef void _set_line_stride(self, int value) nogil
+    cdef size_t _get_buffer_size(self) nogil except *
     cdef uint8_t* _get_data(self) nogil
     cdef void _set_data(self, uint8_t* data) nogil
     cdef const char* _get_metadata(self) nogil except *
@@ -41,10 +44,26 @@ cdef class VideoFrame:
     cpdef size_t get_data_size(self)
 
 cdef class VideoRecvFrame(VideoFrame):
+    cdef readonly size_t max_buffers
+    cdef cpp_deque[size_t] read_indices
+    cdef cpp_set[size_t] read_indices_set
     cdef video_bfr_p video_bfrs
+    cdef video_bfr_p read_bfr
     cdef video_bfr_p write_bfr
+    cdef readonly RLock read_lock
+    cdef readonly RLock write_lock
+    cdef readonly Condition read_ready
+    cdef readonly Condition write_ready
+    cdef cnp.ndarray all_frame_data
+    cdef readonly cnp.ndarray current_frame_data
     cdef Py_ssize_t[1] bfr_shape
     cdef Py_ssize_t[1] bfr_strides
     cdef size_t view_count
 
-    cdef void _process_incoming(self, NDIlib_recv_instance_t recv_ptr) nogil except *
+    cdef void _check_read_array_size(self) except *
+    cdef void _fill_read_data(self, bint advance) nogil except *
+    cdef size_t _get_next_write_index(self) nogil except *
+    cdef bint can_receive(self) nogil except *
+    cdef void _check_write_array_size(self) except *
+    cdef void _prepare_incoming(self, NDIlib_recv_instance_t recv_ptr) except *
+    cdef void _process_incoming(self, NDIlib_recv_instance_t recv_ptr) except *

@@ -2,6 +2,8 @@
 # distutils: language = c++
 
 from libc.stdint cimport *
+from libcpp.deque cimport deque as cpp_deque
+from libcpp.set cimport set as cpp_set
 cimport numpy as cnp
 
 from .wrapper cimport *
@@ -31,6 +33,10 @@ cdef class AudioFrame:
 
 
 cdef class AudioRecvFrame(AudioFrame):
+    cdef readonly size_t max_buffers
+    cdef cpp_deque[size_t] read_indices
+    cdef cpp_set[size_t] read_indices_set
+    cdef cpp_deque[int64_t] frame_timestamps
     cdef audio_bfr_p audio_bfrs
     cdef audio_bfr_p read_bfr
     cdef audio_bfr_p write_bfr
@@ -38,14 +44,38 @@ cdef class AudioRecvFrame(AudioFrame):
     cdef readonly RLock write_lock
     cdef readonly Condition read_ready
     cdef readonly Condition write_ready
+    cdef cnp.ndarray all_frame_data
     cdef readonly cnp.ndarray current_frame_data
-    cdef readonly cnp.ndarray next_frame_data
     cdef readonly uint32_t current_timecode
     cdef readonly uint32_t current_timestamp
     cdef Py_ssize_t[2] bfr_shape
     cdef Py_ssize_t[2] bfr_strides
-    cdef size_t view_count
+    cdef Py_ssize_t[2] empty_bfr_shape
+    cdef readonly size_t view_count
 
-    cdef void _check_array_size(self, audio_bfr_p bfr) nogil except *
-    cdef void _process_incoming(self, NDIlib_recv_instance_t recv_ptr) nogil except *
-    cdef void process_read_buffer(self, audio_bfr_p bfr) nogil except *
+    cpdef size_t get_buffer_depth(self)
+    cpdef (size_t, size_t) get_read_shape(self)
+    cpdef size_t get_read_length(self)
+    cpdef get_all_read_data(self)
+    cdef (size_t, size_t) _fill_all_read_data(
+        self,
+        cnp.float32_t[:,:,:] all_frame_data,
+        cnp.float32_t[:,:] result,
+        cnp.int64_t[:] timestamps,
+        size_t bfr_len,
+    ) nogil except *
+
+    cpdef get_read_data(self)
+    cdef bint _check_read_array_size(self) except *
+    cdef int64_t _fill_read_data(
+        self,
+        cnp.float32_t[:,:,:] all_frame_data,
+        cnp.float32_t[:,:] dest,
+        size_t bfr_idx,
+        bint advance
+    ) nogil except *
+    cdef size_t _get_next_write_index(self) nogil except *
+    cdef bint can_receive(self) nogil except *
+    cdef void _check_write_array_size(self) except *
+    cdef void _prepare_incoming(self, NDIlib_recv_instance_t recv_ptr) except *
+    cdef void _process_incoming(self, NDIlib_recv_instance_t recv_ptr) except *

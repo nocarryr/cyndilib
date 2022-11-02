@@ -237,42 +237,65 @@ cdef class Receiver:
 
     cpdef ReceiveFrameType receive(self, ReceiveFrameType recv_type, uint32_t timeout_ms):
         return self._receive(recv_type, timeout_ms)
-        # cdef NDIlib_frame_type_e ft = self._receive(recv_type, timeout_ms)
-        #
-        # return recv_frame_type_uncast(ft)
 
     cdef ReceiveFrameType _receive(
         self, ReceiveFrameType recv_type, uint32_t timeout_ms
-    ) nogil except *:
+    ) except *:
+        cdef VideoRecvFrame video_frame = self.video_frame
+        cdef AudioRecvFrame audio_frame = self.audio_frame
+        cdef bint has_video_frame = self.has_video_frame, has_audio_frame = self.has_audio_frame
         cdef NDIlib_video_frame_v2_t* video_ptr
         cdef NDIlib_audio_frame_v3_t* audio_ptr
         cdef NDIlib_metadata_frame_t* metadata_ptr = NULL
+        cdef bint buffers_full = False
+        cdef int recv_type_flags = <int>recv_type
 
-        if recv_type & ReceiveFrameType.recv_video and self.has_video_frame:
-            video_ptr = self.video_frame.ptr
+        if recv_type & ReceiveFrameType.recv_video and has_video_frame:
+            if video_frame.can_receive():
+                video_ptr = video_frame.ptr
+            else:
+                recv_type_flags ^= ReceiveFrameType.recv_video
+                buffers_full = True
+                video_ptr = NULL
         else:
             video_ptr = NULL
 
-        if recv_type & ReceiveFrameType.recv_audio and self.has_audio_frame:
-            audio_ptr = self.audio_frame.ptr
+        if recv_type & ReceiveFrameType.recv_audio and has_audio_frame:
+            if audio_frame.can_receive():
+                audio_ptr = audio_frame.ptr
+            else:
+                recv_type_flags ^= ReceiveFrameType.recv_audio
+                buffers_full = True
+                audio_ptr = NULL
         else:
             audio_ptr = NULL
 
-        # cdef NDIlib_frame_type_e recv_t
-        # recv_t = self._do_receive(video_ptr, audio_ptr, metadata_ptr, timeout_ms)
-        # cdef ReceiveFrameType ft = recv_frame_type_uncast(recv_t)
+        if recv_type_flags != <int>recv_type:
+            recv_type = ReceiveFrameType(recv_type_flags)
+
+        if not recv_type & ReceiveFrameType.recv_all:
+            if buffers_full:
+                return ReceiveFrameType.recv_buffers_full
+            else:
+                return ReceiveFrameType.nothing
+
         cdef ReceiveFrameType ft = self._do_receive(
             video_ptr, audio_ptr, metadata_ptr, timeout_ms
         )
 
+        if ft == ReceiveFrameType.recv_video and has_video_frame:
+            video_frame._prepare_incoming(self.ptr)
+        elif ft == ReceiveFrameType.recv_audio and has_audio_frame:
+            audio_frame._prepare_incoming(self.ptr)
+
         if ft == ReceiveFrameType.recv_video:
-            if self.has_video_frame:
-                self.video_frame._process_incoming(self.ptr)
+            if has_video_frame:
+                video_frame._process_incoming(self.ptr)
             else:
                 self.free_video(video_ptr)
         elif ft == ReceiveFrameType.recv_audio:
-            if self.has_audio_frame:
-                self.audio_frame._process_incoming(self.ptr)
+            if has_audio_frame:
+                audio_frame._process_incoming(self.ptr)
             else:
                 self.free_audio(audio_ptr)
         elif ft == ReceiveFrameType.recv_metadata:
@@ -311,23 +334,55 @@ cdef class RecvThreadWorker:
     cdef Receiver receiver
     cdef uint32_t timeout_ms
     cdef ReceiveFrameType recv_frame_type
+    cdef float wait_time
+    cdef Event wait_event
     cdef bint running
+    cdef Callback callback
 
-    def __init__(self, Receiver receiver, ReceiveFrameType recv_frame_type, uint32_t timeout_ms):
+    def __init__(
+        self,
+        Receiver receiver,
+        ReceiveFrameType recv_frame_type,
+        uint32_t timeout_ms,
+        float wait_time=.1
+    ):
         self.receiver = receiver
-        assert recv_frame_type & (ReceiveFrameType.recv_video | ReceiveFrameType.recv_audio | ReceiveFrameType.recv_metadata)
+        assert recv_frame_type & ReceiveFrameType.recv_all
         self.recv_frame_type = recv_frame_type
         self.timeout_ms = timeout_ms
+        self.callback = Callback()
+        self.wait_event = Event()
+        self.wait_time = wait_time
 
-    cdef void run(self) nogil except *:
+    cdef void run(self) except *:
+        cdef ReceiveFrameType ft
         self.running = True
         while self.running:
             if self.receiver._is_connected():
-                self.receiver._receive(self.recv_frame_type, self.timeout_ms)
+                ft = self.receiver._receive(self.recv_frame_type, self.timeout_ms)
+                if ft & ReceiveFrameType.recv_buffers_full:
+                    self.time_sleep(.01)
+                    continue
+                if ft & self.recv_frame_type:
+                    if self.callback.has_callback:
+                        self.callback.trigger_callback()
+                if self.wait_time >= 0:
+                    self.wait_for_evt(self.wait_time)
             else:
-                self.receiver._wait_for_connect(1)
+                self.wait_for_evt(.1)
 
-    cdef void stop(self) nogil except *:
+    cdef void time_sleep(self, double timeout) nogil except *:
+        with gil:
+            time.sleep(timeout)
+
+    cdef void wait_for_evt(self, double timeout) nogil except *:
+        with gil:
+            self.wait_event.wait(timeout)
+            self.wait_event.clear()
+
+
+    cdef void stop(self) except *:
+        self.wait_event.set()
         self.running = False
 
 class RecvThread(threading.Thread):
@@ -336,9 +391,10 @@ class RecvThread(threading.Thread):
         Receiver receiver,
         uint32_t timeout_ms,
         int recv_frame_type = ReceiveFrameType.recv_video | ReceiveFrameType.recv_audio | ReceiveFrameType.recv_metadata,
+        float wait_time=.1,
     ):
         super().__init__()
-        self.worker = RecvThreadWorker(receiver, recv_frame_type, timeout_ms)
+        self.worker = RecvThreadWorker(receiver, recv_frame_type, timeout_ms, wait_time)
         self.stopped = threading.Event()
 
     def run(self):
@@ -350,13 +406,26 @@ class RecvThread(threading.Thread):
             assert receiver.has_video_frame
         if recv_frame_type & ReceiveFrameType.recv_audio:
             assert receiver.has_audio_frame
-        worker.run()
-        self.stopped.set()
+        try:
+            worker.run()
+        except Exception:
+            import traceback
+            traceback.print_exc()
+        finally:
+            self.stopped.set()
 
     def stop(self):
         cdef RecvThreadWorker w = self.worker
         w.stop()
         self.stopped.wait()
+
+    def set_callback(self, cb):
+        cdef RecvThreadWorker w = self.worker
+        w.callback.set_callback(cb)
+
+    def set_wait_event(self):
+        cdef RecvThreadWorker w = self.worker
+        w.wait_event.set()
 
 def test():
     import time

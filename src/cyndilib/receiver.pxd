@@ -5,10 +5,11 @@ from libc.stdint cimport *
 
 from .wrapper cimport *
 
-from .locks cimport RLock, Condition
+from .locks cimport RLock, Condition, Event
 from .finder cimport Source
 from .video_frame cimport VideoRecvFrame
 from .audio_frame cimport AudioRecvFrame
+from .callback cimport Callback
 
 
 cpdef enum ReceiveFrameType:
@@ -18,6 +19,7 @@ cpdef enum ReceiveFrameType:
     recv_metadata = 4
     recv_status_change = 8
     recv_error = 16
+    recv_buffers_full = 32
     recv_all = recv_video | recv_audio | recv_metadata
 
 cdef NDIlib_frame_type_e recv_frame_type_cast(ReceiveFrameType ft) nogil except *
@@ -59,12 +61,13 @@ cdef class Receiver:
     cdef void _set_connected(self, bint value) nogil except *
     cdef int _get_num_connections(self) nogil except *
     cdef bint _wait_for_connect(self, float timeout) nogil except *
+    cdef void _update_performance(self) nogil except *
     cpdef ReceiveFrameType receive(
         self, ReceiveFrameType recv_type, uint32_t timeout_ms
     )
     cdef ReceiveFrameType _receive(
         self, ReceiveFrameType recv_type, uint32_t timeout_ms
-    ) nogil except *
+    ) except *
 
     cdef ReceiveFrameType _do_receive(
         self,

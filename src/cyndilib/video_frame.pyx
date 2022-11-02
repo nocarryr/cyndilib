@@ -87,6 +87,12 @@ cdef class VideoFrame:
     cdef void _set_line_stride(self, int value) nogil:
         self.ptr.line_stride_in_bytes = value
 
+    def get_buffer_size(self):
+        return self._get_buffer_size()
+
+    cdef size_t _get_buffer_size(self) nogil except *:
+        return self.ptr.line_stride_in_bytes * self.ptr.yres
+
     cdef uint8_t* _get_data(self) nogil:
         return self.ptr.p_data
     cdef void _set_data(self, uint8_t* data) nogil:
@@ -113,10 +119,18 @@ cdef class VideoFrame:
 cdef class VideoRecvFrame(VideoFrame):
     def __cinit__(self, *args, **kwargs):
         self.video_bfrs = av_frame_bfr_create(self.video_bfrs)
-        self.write_bfr = av_frame_bfr_create(self.video_bfrs)
+        self.read_bfr = av_frame_bfr_create(self.video_bfrs)
+        self.write_bfr = av_frame_bfr_create(self.read_bfr)
 
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
+        self.max_buffers = kwargs.get('max_buffers', 4)
+        self.read_lock = RLock()
+        self.write_lock = RLock()
+        self.read_ready = Condition(self.read_lock)
+        self.write_ready = Condition(self.write_lock)
+        self.all_frame_data = np.zeros((self.max_buffers, 0), dtype=np.uint8)
+        self.current_frame_data = np.zeros(0, dtype=np.uint8)
         self.view_count = 0
 
     def __dealloc__(self):
@@ -127,86 +141,209 @@ cdef class VideoRecvFrame(VideoFrame):
             av_frame_bfr_destroy(bfr)
 
     def __getbuffer__(self, Py_buffer *buffer, int flags):
-        self.bfr_shape[0] = self.write_bfr.total_size
-        self.bfr_strides[0] = self.bfr_shape[0]
-        buffer.buf = <char *>self.write_bfr.p_data
+        # buffer view is flattened on first axis
+        cdef size_t bfr_len, size_in_bytes
+        cdef bint is_empty
+        cdef cnp.ndarray[cnp.uint8_t, ndim=1] frame_data
+        with self.read_lock:
+            bfr_len = self.read_indices.size()
+            is_empty = bfr_len == 0
+            if not is_empty:
+                if self.view_count == 0:
+                    self._check_read_array_size()
+                    frame_data = self.current_frame_data
+                    if frame_data.shape[0] == 0:
+                        is_empty = True
+                    else:
+                        self._fill_read_data(advance=True)
+            if is_empty:
+                raise ValueError('Buffer empty')
+            self.view_count += 1
+
+        frame_data = self.current_frame_data
+        self.bfr_shape[0] = frame_data.shape[0]
+        self.bfr_strides[0] = frame_data.strides[0]
+        size_in_bytes = frame_data.strides[0] * frame_data.shape[0]
+
+        buffer.buf = <uint8_t *>frame_data.data
         buffer.format = 'B'
         buffer.internal = NULL
-        buffer.itemsize = sizeof(uint8_t)
-        buffer.len = self.write_bfr.total_size
-        buffer.ndim = 1
+        buffer.itemsize = frame_data.strides[0]
+        buffer.len = size_in_bytes
+        buffer.ndim = frame_data.ndim
         buffer.obj = self
         buffer.readonly = 1
         buffer.shape = self.bfr_shape
         buffer.strides = self.bfr_strides
         buffer.suboffsets = NULL
-        self.view_count += 1
 
     def __releasebuffer__(self, Py_buffer *buffer):
-        self.view_count -= 1
+        with self.read_lock:
+            self.view_count -= 1
+
+    @cython.boundscheck(False)
+    @cython.wraparound(False)
+    cdef void _check_read_array_size(self) except *:
+        cdef cnp.uint8_t[:,:] all_frame_data = self.all_frame_data
+        cdef cnp.uint8_t[:] read_data = self.current_frame_data
+        cdef size_t ncols = all_frame_data.shape[1]
+        if read_data.shape[0] != ncols:
+            with self.read_lock:
+                self.current_frame_data = np.zeros(ncols, dtype=np.uint8)
+
+    @cython.boundscheck(False)
+    @cython.wraparound(False)
+    cdef void _fill_read_data(self, bint advance) nogil except *:
+        cdef cnp.uint8_t[:,:] all_frame_data = self.all_frame_data
+        cdef cnp.uint8_t[:] arr = self.current_frame_data
+        cdef size_t bfr_idx = self.read_indices.front()
+        with nogil:
+            if advance:
+                self.read_indices.pop_front()
+                self.read_indices_set.erase(bfr_idx)
+
+            arr[...] = all_frame_data[bfr_idx,...]
+
+    def get_buffer_depth(self):
+        return self.read_indices.size()
+
+    def buffer_full(self):
+        return self.read_indices.size() >= self.max_buffers
+
+    def skip_frames(self, bint eager):
+        cdef size_t idx, max_remain, cur_size, num_skipped = 0
+        with self.read_lock:
+            cur_size = self.read_indices.size()
+            if not cur_size:
+                return
+            if eager:
+                max_remain = 1
+            else:
+                max_remain = cur_size - 1
+            while True:
+                idx = self.read_indices.front()
+                self.read_indices.pop_front()
+                self.read_indices_set.erase(idx)
+                num_skipped += 1
+                if not eager:
+                    break
+                if self.read_indices.size() <= max_remain:
+                    break
+        return num_skipped
 
     @cython.boundscheck(False)
     @cython.wraparound(False)
     def fill_p_data(self, cnp.uint8_t[:] dest):
-        if self.write_bfr.p_data is NULL:
-            return 0
-        cdef size_t arr_size = self.write_bfr.total_size
-        if dest.shape[0] < arr_size:
-            raise ValueError("Destination size must be {arr_size} or greater")
-        cdef size_t i
-        for i in range(arr_size):
-            dest[i] = self.write_bfr.p_data[i]
-        return arr_size
+        cdef size_t bfr_len, vc, bfr_idx
+        cdef cnp.uint8_t[:,:] all_frame_data = self.all_frame_data
+        cdef cnp.uint8_t[:] read_view = self.current_frame_data
+        cdef bint valid = False
+        with self.read_lock:
+            vc = self.view_count
+            self.view_count += 1
+            try:
+                with nogil:
+                    bfr_len = self.read_indices.size()
+                    if vc == 0:
+                        if bfr_len > 0:
+                            bfr_idx = self.read_indices.front()
+                            self.read_indices.pop_front()
+                            self.read_indices_set.erase(bfr_idx)
+                            dest[:] = all_frame_data[bfr_idx,:]
+                            valid = True
+                    else:
+                        dest[:] = read_view
+                        valid = True
+            finally:
+                self.view_count -= 1
+            return valid
 
-    cdef void _process_incoming(self, NDIlib_recv_instance_t recv_ptr) nogil except *:
+    cdef size_t _get_next_write_index(self) nogil except *:
+        cdef size_t idx, niter, result, bfr_len = self.read_indices.size()
+
+        if bfr_len > 0:
+            result = self.read_indices.back() + 1
+            if result >= self.max_buffers:
+                result = 0
+        else:
+            result = 0
+        niter = 0
+        while self.read_indices_set.count(result) != 0:
+            result += 1
+            if result >= self.max_buffers:
+                result = 0
+            niter += 1
+            if niter > self.max_buffers * 2:
+                raise_withgil(PyExc_ValueError, 'could not get write index')
+        return result
+
+    cdef bint can_receive(self) nogil except *:
+        return self.read_indices.size() < self.max_buffers
+
+    cdef void _check_write_array_size(self) except *:
+        cdef cnp.uint8_t[:,:] arr = self.all_frame_data
+        cdef size_t ncols = self._get_buffer_size()
+
+        if arr.shape[1] == ncols:
+            return
+        with self.read_lock:
+            self.all_frame_data = np.zeros((self.max_buffers, ncols), dtype=np.uint8)
+            self.read_indices.clear()
+            self.read_indices_set.clear()
+            if self.view_count == 0:
+                self.current_frame_data = np.zeros(ncols, dtype=np.uint8)
+
+    cdef void _prepare_incoming(self, NDIlib_recv_instance_t recv_ptr) except *:
+        cdef size_t bfr_idx
+        self._check_write_array_size()
+        if self.read_indices.size() == self.max_buffers:
+            with self.read_lock:
+                if self.read_indices.size() == self.max_buffers:
+                    bfr_idx = self.read_indices.front()
+                    self.read_indices.pop_front()
+                    self.read_indices_set.erase(bfr_idx)
+
+    cdef void _process_incoming(self, NDIlib_recv_instance_t recv_ptr) except *:
         cdef video_bfr_p write_bfr = self.write_bfr
+        cdef video_bfr_p read_bfr = self.read_bfr
         cdef NDIlib_video_frame_v2_t* p = self.ptr
         cdef frame_rate_t fr = self.frame_rate
-        cdef size_t size_in_bytes = p.line_stride_in_bytes * p.yres
+        cdef size_t size_in_bytes = self._get_buffer_size()
+        cdef size_t buffer_index = self._get_next_write_index()
+        cdef cnp.uint8_t[:,:] all_frame_data = self.all_frame_data
+        cdef cnp.uint8_t[:] write_view = all_frame_data[buffer_index]
 
-        if self.view_count > 0:
+        with nogil:
+            fr.numerator = p.frame_rate_N
+            fr.denominator = p.frame_rate_D
+
+            write_bfr.timecode = p.timecode
+            write_bfr.timestamp = p.timestamp
+            write_bfr.line_stride = p.line_stride_in_bytes
+            write_bfr.format = frame_format_uncast(p.frame_format_type)
+            write_bfr.fourcc = fourcc_type_uncast(p.FourCC)
+            write_bfr.xres = p.xres
+            write_bfr.yres = p.yres
+            write_bfr.aspect = p.picture_aspect_ratio
+            write_bfr.total_size = size_in_bytes
+            uint8_ptr_to_memview_1d(p.p_data, write_view)
+            self.read_bfr.total_size = self.write_bfr.total_size
+            self.read_indices.push_back(buffer_index)
+            self.read_indices_set.insert(buffer_index)
+
+            write_bfr.valid = True
+
             if recv_ptr is not NULL:
                 NDIlib_recv_free_video_v2(recv_ptr, self.ptr)
-            raise_withgil(PyExc_ValueError, 'Cannot write if buffer view active')
 
-        fr.numerator = p.frame_rate_N
-        fr.denominator = p.frame_rate_D
-
-        write_bfr.timecode = p.timecode
-        write_bfr.timestamp = p.timestamp
-        write_bfr.line_stride = p.line_stride_in_bytes
-        write_bfr.format = frame_format_uncast(p.frame_format_type)
-        write_bfr.fourcc = fourcc_type_uncast(p.FourCC)
-        write_bfr.xres = p.xres
-        write_bfr.yres = p.yres
-        write_bfr.aspect = p.picture_aspect_ratio
-        video_bfr_unpack_data(write_bfr, p.p_data, size_in_bytes)
-        write_bfr.valid = True
-
-        if recv_ptr is not NULL:
-            NDIlib_recv_free_video_v2(recv_ptr, self.ptr)
-
-
-cdef void copy_char_array(uint8_t** src, uint8_t** dst, size_t size) nogil:
-    cdef uint8_t* src_p = src[0]
-    cdef uint8_t* dst_p = dst[0]
+@cython.boundscheck(False)
+@cython.wraparound(False)
+cdef void uint8_ptr_to_memview_1d(uint8_t* p, cnp.uint8_t[:] dest) nogil except *:
+    cdef size_t ncols = dest.shape[0]
     cdef size_t i
-    for i in range(size):
-        dst_p[0] = src_p[0]
-        dst_p += 1
-        src_p += 1
 
-cdef void video_bfr_unpack_data(video_bfr_p bfr, uint8_t* p_data, size_t size_in_bytes) nogil except *:
-    if bfr.p_data is not NULL:
-        if bfr.total_size != size_in_bytes:
-            mem_free(bfr.p_data)
-    if bfr.p_data is NULL:
-        bfr.p_data = <uint8_t*>mem_alloc(sizeof(uint8_t) * size_in_bytes)
-        if bfr.p_data is NULL:
-            raise_mem_err()
-    copy_char_array(&p_data, &(bfr.p_data), size_in_bytes)
-    # memcpy(bfr.p_data, p_data, size_in_bytes)
-    bfr.total_size = size_in_bytes
+    for i in range(ncols):
+        dest[i] = p[i]
 
 
 
