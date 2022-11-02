@@ -146,8 +146,10 @@ cdef class Receiver:
         self.ptr = NDIlib_recv_create_v3(&(self.recv_create))
         if self.ptr is NULL:
             raise MemoryError()
+        self.frame_sync = FrameSync(self)
 
     def __dealloc__(self):
+        self.frame_sync = None
         cdef NDIlib_recv_instance_t p = self.ptr
         if self.ptr is not NULL:
             self.ptr = NULL

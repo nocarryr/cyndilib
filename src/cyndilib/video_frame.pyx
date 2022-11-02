@@ -336,6 +336,58 @@ cdef class VideoRecvFrame(VideoFrame):
             if recv_ptr is not NULL:
                 NDIlib_recv_free_video_v2(recv_ptr, self.ptr)
 
+cdef class VideoFrameSync(VideoFrame):
+    def __cinit__(self, *args, **kwargs):
+        self.shape[0] = 0
+        self.strides[0] = 0
+        self.view_count = 0
+        self.fs_ptr = NULL
+
+    def __dealloc__(self):
+        self.fs_ptr = NULL
+
+    def get_array(self):
+        cdef cnp.ndarray[cnp.uint8_t, ndim=1] arr = np.empty(self.shape, dtype=np.uint8)
+        cdef cnp.uint8_t[:] arr_view = arr
+        cdef cnp.uint8_t[:] self_view = self
+        arr_view[...] = self_view
+        return arr
+
+    def __getbuffer__(self, Py_buffer *buffer, int flags):
+        cdef NDIlib_video_frame_v2_t* p = self.ptr
+
+        buffer.buf = <char *>p.p_data
+        buffer.format = 'B'
+        buffer.internal = NULL
+        buffer.itemsize = sizeof(uint8_t)
+        buffer.len = self.shape[0]
+        buffer.ndim = 1
+        buffer.obj = self
+        buffer.readonly = 1
+        buffer.shape = <Py_ssize_t*>self.shape
+        buffer.strides = <Py_ssize_t*>self.strides
+        buffer.suboffsets = NULL
+
+        self.view_count += 1
+
+    def __releasebuffer__(self, Py_buffer *buffer):
+        cdef NDIlib_framesync_instance_t fs_ptr = self.fs_ptr
+        self.view_count -= 1
+        if self.view_count == 0:
+            if fs_ptr is not NULL:
+                self.fs_ptr = NULL
+                NDIlib_framesync_free_video(fs_ptr, self.ptr)
+
+    cdef void _process_incoming(self, NDIlib_framesync_instance_t fs_ptr) nogil except *:
+        if self.view_count > 0:
+            raise_withgil(PyExc_ValueError, 'cannot write with view active')
+
+        cdef NDIlib_video_frame_v2_t* p = self.ptr
+        cdef size_t size_in_bytes = self._get_buffer_size()
+        self.shape[0] = size_in_bytes
+        self.strides[0] = sizeof(uint8_t)
+        self.fs_ptr = fs_ptr
+
 @cython.boundscheck(False)
 @cython.wraparound(False)
 cdef void uint8_ptr_to_memview_1d(uint8_t* p, cnp.uint8_t[:] dest) nogil except *:

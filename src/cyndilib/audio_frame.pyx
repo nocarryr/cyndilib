@@ -383,6 +383,63 @@ cdef class AudioRecvFrame(AudioFrame):
                 NDIlib_recv_free_audio_v3(recv_ptr, self.ptr)
 
 
+cdef class AudioFrameSync(AudioFrame):
+
+    def __cinit__(self, *args, **kwargs):
+        for i in range(2):
+            self.shape[i] = 0
+            self.strides[i] = 0
+        self.view_count = 0
+
+    def __dealloc__(self):
+        self.fs_ptr = NULL
+
+    def get_array(self):
+        cdef cnp.ndarray[cnp.float32_t, ndim=2] arr = np.empty(self.shape, dtype=np.float32)
+        cdef cnp.float32_t[:,:] arr_view = arr
+        cdef cnp.float32_t[:,:] self_view = self
+        arr_view[...] = self_view
+        return arr
+
+    def __getbuffer__(self, Py_buffer *buffer, int flags):
+        cdef NDIlib_audio_frame_v3_t* p = self.ptr
+        cdef size_t nitems = self.shape[0] * self.shape[1]
+
+        buffer.buf = <char *>p.p_data
+        buffer.format = 'f'
+        buffer.internal = NULL
+        buffer.itemsize = sizeof(cnp.float32_t)
+        buffer.len = nitems * sizeof(cnp.float32_t)
+        buffer.ndim = 2
+        buffer.obj = self
+        buffer.readonly = 1
+        buffer.shape = <Py_ssize_t*>self.shape
+        buffer.strides = <Py_ssize_t*>self.strides
+        buffer.suboffsets = NULL
+
+        self.view_count += 1
+
+    def __releasebuffer__(self, Py_buffer *buffer):
+        cdef NDIlib_framesync_instance_t fs_ptr = self.fs_ptr
+        self.view_count -= 1
+        if self.view_count == 0:
+            if fs_ptr is not NULL:
+                self.fs_ptr = NULL
+                NDIlib_framesync_free_audio_v2(fs_ptr, self.ptr)
+
+    cdef void _process_incoming(self, NDIlib_framesync_instance_t fs_ptr) nogil except *:
+        if self.view_count > 0:
+            raise_withgil(PyExc_ValueError, 'cannot write with view active')
+
+        cdef NDIlib_audio_frame_v3_t* p = self.ptr
+        cdef size_t nrows = p.no_channels, ncols = p.no_samples
+        self.shape[0] = nrows
+        self.shape[1] = ncols
+        self.strides[0] = ncols * sizeof(cnp.float32_t)
+        self.strides[1] = sizeof(cnp.float32_t)
+        self.fs_ptr = fs_ptr
+
+
 @cython.boundscheck(False)
 @cython.wraparound(False)
 cdef void float_ptr_to_memview_2d(float* p, cnp.float32_t[:,:] dest) nogil except *:

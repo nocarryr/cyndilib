@@ -9,6 +9,7 @@ from .locks cimport RLock, Condition, Event
 from .finder cimport Source
 from .video_frame cimport VideoRecvFrame
 from .audio_frame cimport AudioRecvFrame
+from .framesync cimport FrameSync
 from .callback cimport Callback
 
 
@@ -42,6 +43,7 @@ cdef class RecvCreate:
 
 cdef class Receiver:
     cdef RecvCreate settings
+    cdef readonly FrameSync frame_sync
     cdef readonly VideoRecvFrame video_frame
     cdef readonly AudioRecvFrame audio_frame
     cdef readonly str source_name

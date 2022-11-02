@@ -79,3 +79,12 @@ cdef class AudioRecvFrame(AudioFrame):
     cdef void _check_write_array_size(self) except *
     cdef void _prepare_incoming(self, NDIlib_recv_instance_t recv_ptr) except *
     cdef void _process_incoming(self, NDIlib_recv_instance_t recv_ptr) except *
+
+
+cdef class AudioFrameSync(AudioFrame):
+    cdef NDIlib_framesync_instance_t fs_ptr
+    cdef readonly Py_ssize_t[2] shape
+    cdef readonly Py_ssize_t[2] strides
+    cdef size_t view_count
+
+    cdef void _process_incoming(self, NDIlib_framesync_instance_t fs_ptr) nogil except *
