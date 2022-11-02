@@ -1,4 +1,6 @@
+import os
 import sys
+import shutil
 import json
 from pathlib import Path
 from setuptools import setup, find_packages
@@ -21,9 +23,10 @@ else:
     USE_PROFILE = False
 
 PROJECT_PATH = Path(__file__).parent
-# WIN32 = sys.platform == 'win32'
+WIN32 = sys.platform == 'win32'
 MACOS = sys.platform == 'darwin'
 IS_BUILD = len({'sdist', 'bdist_wheel', 'build_ext'} & set(sys.argv)) > 0
+LIB_DIRS = []
 INCLUDE_PATH = [get_python_inc()]
 
 def get_ndi_include():
@@ -31,8 +34,39 @@ def get_ndi_include():
         p = Path('/Library/NDI SDK for Apple/include')
         if p.exists():
             INCLUDE_PATH.append(str(p))
+    elif WIN32:
+        # p = Path(os.environ.get('PROGRAMFILES'))
+        # p = p / 'NDI' / 'NDI 5 SDK' / 'Include'
+        p = PROJECT_PATH / 'src' / 'cyndilib' / 'wrapper' / 'include'
+        if p.exists():
+            INCLUDE_PATH.append(str(p))
 
-get_ndi_include()
+def get_ndi_libdir():
+    if WIN32:
+        # p = Path(os.environ.get('PROGRAMFILES'))
+        # p = p / 'NDI' / 'NDI 5 SDK' / 'Lib' / 'x64'
+        # p = PROJECT_PATH / 'src' / 'cyndilib' / 'wrapper' / 'lib'
+        sdk_dir = PROJECT_PATH / 'NDI SDK for Windows'
+        lib_dir = sdk_dir / 'Lib' / 'x64'
+        src_p = sdk_dir / 'Bin' / 'x64'
+        dest_p = PROJECT_PATH / 'src' / 'cyndilib'
+        for fn in src_p.iterdir():
+            if not fn.is_file():
+                continue
+            dest_fn = dest_p / fn.name
+            if dest_fn.exists():
+                continue
+            shutil.copy2(fn, dest_fn)
+        LIB_DIRS.append(str(lib_dir))
+
+def get_ndi_libname():
+    if WIN32:
+        return 'Processing.NDI.Lib.x64'
+    return 'ndi'
+
+if IS_BUILD:
+    get_ndi_include()
+    get_ndi_libdir()
 
 try:
     import numpy
@@ -134,12 +168,21 @@ if USE_CYTHON:
         compiler_directives.update({'profile':True, 'linetrace':True})
     else:
         ext_macros = None
+    extra_compile_args = []
+    if WIN32:
+        extra_compile_args.append('/Zc:strictStrings')
+    else:
+        extra_compile_args.append('-fpermissive')
+    if not len(LIB_DIRS):
+        LIB_DIRS = None
+
     ext_modules = [
         Extension(
             '*', ['src/**/*.pyx'],
             include_dirs=INCLUDE_PATH,
-            extra_compile_args=['-fpermissive'],
-            libraries=['ndi'],
+            extra_compile_args=extra_compile_args,
+            libraries=[get_ndi_libname()],
+            library_dirs=LIB_DIRS,
             define_macros=ext_macros,
             # define_macros=[('CYTHON_TRACE', 1), ('CYTHON_TRACE_NOGIL', 1)]
         ),

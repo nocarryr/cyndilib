@@ -1,6 +1,7 @@
 #! /usr/bin/env python3
 
 import typing as tp
+import sys
 from pathlib import Path
 import shutil
 import argparse
@@ -8,13 +9,19 @@ import argparse
 BASE_PATH = Path(__file__).resolve().parent
 SRC_PATH = BASE_PATH / 'src'
 TEST_PATH = BASE_PATH / 'tests'
-DEFAULT_EXTS = ['c', 'cpp', 'so', 'html']
+DEFAULT_EXTS = ['c', 'cpp', 'html']
+if sys.platform == 'win32':
+    DEFAULT_EXTS.append('pyd')
+elif sys.platform == 'darwin':
+    DEFAULT_EXTS.append('dylib')
+else:
+    DEFAULT_EXTS.append('so')
 
 def get_filenames(root_dir: Path, rm_exts:tp.Iterable[str]) -> tp.Iterator[Path]:
     for ext in rm_exts:
         for p in root_dir.glob(f'**/*.{ext}'):
             pyx_path = None
-            if ext == 'so':
+            if ext in ['pyd', 'dylib', 'so']:
                 pyx_path = p.with_name('.'.join([p.name.split('.')[0], 'pyx']))
             else:
                 pyx_path = p.with_suffix('.pyx')
