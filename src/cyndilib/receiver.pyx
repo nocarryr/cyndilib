@@ -88,6 +88,25 @@ cdef class Receiver:
     def __cinit__(self, *args, **kwargs):
         self.ptr = NULL
         self.source_ptr = NULL
+        self.video_stats.frames_total = 0
+        self.video_stats.frames_dropped = 0
+        self.video_stats.dropped_percent = 0
+
+        self.audio_stats.frames_total = 0
+        self.audio_stats.frames_dropped = 0
+        self.audio_stats.dropped_percent = 0
+
+        self.metadata_stats.frames_total = 0
+        self.metadata_stats.frames_dropped = 0
+        self.metadata_stats.dropped_percent = 0
+
+        self.perf_total_s.video_frames = 0
+        self.perf_total_s.audio_frames = 0
+        self.perf_total_s.metadata_frames = 0
+
+        self.perf_dropped_s.video_frames = 0
+        self.perf_dropped_s.audio_frames = 0
+        self.perf_dropped_s.metadata_frames = 0
 
     def __init__(
         self,
@@ -234,6 +253,49 @@ cdef class Receiver:
     cdef int _get_num_connections(self) nogil except *:
         cdef int r = NDIlib_recv_get_no_connections(self.ptr)
         return r
+
+    def get_performance_data(self):
+        self._update_performance()
+        cdef dict r = {
+            'video':self.video_stats,
+            'audio':self.audio_stats,
+            'metadata':self.metadata_stats,
+        }
+        return r
+
+    @cython.cdivision(True)
+    cdef void _update_performance(self) nogil except *:
+        NDIlib_recv_get_performance(self.ptr, &(self.perf_total_s), &(self.perf_dropped_s))
+
+        cdef RecvPerformance_t* vstats = &(self.video_stats)
+        cdef RecvPerformance_t* astats = &(self.audio_stats)
+        cdef RecvPerformance_t* mstats = &(self.metadata_stats)
+
+        vstats.frames_total = self.perf_total_s.video_frames
+        astats.frames_total = self.perf_total_s.audio_frames
+        mstats.frames_total = self.perf_total_s.metadata_frames
+
+        vstats.frames_dropped = self.perf_dropped_s.video_frames
+        astats.frames_dropped = self.perf_dropped_s.audio_frames
+        mstats.frames_dropped = self.perf_dropped_s.metadata_frames
+
+        cdef double pct
+
+        if vstats.frames_total > 0:
+            pct = vstats.frames_dropped / <double>vstats.frames_total * 100
+            vstats.dropped_percent = pct
+        else:
+            vstats.dropped_percent = 0
+        if astats.frames_total > 0:
+            pct = astats.frames_dropped / <double>astats.frames_total * 100
+            astats.dropped_percent = pct
+        else:
+            astats.dropped_percent = 0
+        if mstats.frames_total > 0:
+            pct = mstats.frames_dropped / <double>mstats.frames_total * 100
+            mstats.dropped_percent = pct
+        else:
+            mstats.dropped_percent = 0
 
     cpdef ReceiveFrameType receive(self, ReceiveFrameType recv_type, uint32_t timeout_ms):
         return self._receive(recv_type, timeout_ms)

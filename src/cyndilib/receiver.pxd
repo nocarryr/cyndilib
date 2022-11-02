@@ -22,6 +22,11 @@ cpdef enum ReceiveFrameType:
     recv_buffers_full = 32
     recv_all = recv_video | recv_audio | recv_metadata
 
+cdef struct RecvPerformance_t:
+    int64_t frames_total
+    int64_t frames_dropped
+    double dropped_percent
+
 cdef NDIlib_frame_type_e recv_frame_type_cast(ReceiveFrameType ft) nogil except *
 cdef ReceiveFrameType recv_frame_type_uncast(NDIlib_frame_type_e ft) nogil except *
 
@@ -45,6 +50,11 @@ cdef class Receiver:
     cdef readonly Condition connection_notify
     cdef readonly Source source
     cdef NDIlib_source_t* source_ptr
+    cdef NDIlib_recv_performance_t perf_total_s
+    cdef NDIlib_recv_performance_t perf_dropped_s
+    cdef readonly RecvPerformance_t video_stats
+    cdef readonly RecvPerformance_t audio_stats
+    cdef readonly RecvPerformance_t metadata_stats
     cdef bint _connected, _probably_connected
     cdef size_t _num_empty_recv
     cdef NDIlib_recv_instance_t ptr
