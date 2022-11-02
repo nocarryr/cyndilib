@@ -41,6 +41,8 @@ cdef class Receiver:
     cdef readonly bint has_video_frame, has_audio_frame, has_metadata_frame
     cdef readonly RLock connection_lock
     cdef readonly Condition connection_notify
+    cdef readonly Source source
+    cdef NDIlib_source_t* source_ptr
     cdef bint _connected, _probably_connected
     cdef size_t _num_empty_recv
     cdef NDIlib_recv_instance_t ptr
@@ -48,6 +50,7 @@ cdef class Receiver:
 
     cpdef set_video_frame(self, VideoRecvFrame vf)
     cpdef set_audio_frame(self, AudioRecvFrame af)
+    cpdef set_source(self, Source src)
     cpdef connect_to(self, Source src)
     cdef void _connect_to(self, NDIlib_source_t* src) except *
     cdef void _disconnect(self) nogil except *
@@ -56,7 +59,6 @@ cdef class Receiver:
     cdef void _set_connected(self, bint value) nogil except *
     cdef int _get_num_connections(self) nogil except *
     cdef bint _wait_for_connect(self, float timeout) nogil except *
-    cdef void _update_source_name(self) except *
     cpdef ReceiveFrameType receive(
         self, ReceiveFrameType recv_type, uint32_t timeout_ms
     )

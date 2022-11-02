@@ -1,5 +1,7 @@
 from libc.string cimport strdup
+cimport cython
 import threading
+import time
 
 
 cdef NDIlib_frame_type_e recv_frame_type_cast(ReceiveFrameType ft) nogil except *:
@@ -83,10 +85,14 @@ cdef class Receiver:
     # cdef readonly bint has_video_frame, has_audio_frame, has_metadata_frame
     # cdef NDIlib_recv_instance_t ptr
     # cdef NDIlib_recv_create_v3_t recv_create
+    def __cinit__(self, *args, **kwargs):
+        self.ptr = NULL
+        self.source_ptr = NULL
 
     def __init__(
         self,
         str source_name='',
+        Source source=None,
         color_format=RecvColorFormat.UYVY_BGRA,
         RecvBandwidth bandwidth=RecvBandwidth.lowest,
         bint allow_video_fields=True,
@@ -97,11 +103,14 @@ cdef class Receiver:
         self._connected = False
         self._probably_connected = False
         self._num_empty_recv = 0
+        self.source = source
+        if source is not None:
+            source_name = source.name
+        self.source_name = source_name
         self.settings = RecvCreate(
             source_name, color_format, bandwidth,
             allow_video_fields, recv_name,
         )
-        self.source_name = source_name
         self.has_video_frame = False
         self.has_audio_frame = False
         self.has_metadata_frame = False
@@ -115,7 +124,6 @@ cdef class Receiver:
             raise
         finally:
             recv_t_destroy(src_p)
-        # self._update_source_name()
         self.ptr = NDIlib_recv_create_v3(&(self.recv_create))
         if self.ptr is NULL:
             raise MemoryError()
@@ -142,25 +150,41 @@ cdef class Receiver:
         #     self.audio_ptr = af.ptr
         self.has_audio_frame = af is not None
 
+    cpdef set_source(self, Source src):
+        if self.source is src:
+            return
+        if self._is_connected():
+            self._disconnect()
+        if src is None:
+            self.source_name = None
+            self.source = src
+            self.source_ptr = NULL
+        else:
+            self.source_name = src.name
+            self.source = src
+            if not src.valid:
+                src.update()
+            if src.valid:
+                self._connect_to(src.ptr)
+
     cpdef connect_to(self, Source src):
-        self._connect_to(src.ptr)
+        self.set_source(src)
 
     cdef void _connect_to(self, NDIlib_source_t* src) except *:
-        cdef bytes src_name = src.p_ndi_name
+        cdef char* src_name = src.p_ndi_name
         self.source_name = src_name.decode()
-        # cdef char* src_name = strdup(src.p_ndi_name)
-        # self.recv_create.source_to_connect_to.p_ndi_name = src_name
-        # self._update_source_name()
+        self.source_ptr = src
         NDIlib_recv_connect(self.ptr, src)
         self._probably_connected = True
         self._set_connected(True)
 
     def disconnect(self):
-        self._disconnect()
+        self.set_source(None)
 
     cdef void _disconnect(self) nogil except *:
         # if not self._is_connected():
         #     return
+        self.source_ptr = NULL
         NDIlib_recv_connect(self.ptr, NULL)
         self._probably_connected = False
         self._num_empty_recv = 0
@@ -172,18 +196,8 @@ cdef class Receiver:
     cdef void _reconnect(self) nogil except *:
         if self._is_connected():
             return
-        NDIlib_recv_connect(self.ptr, &(self.recv_create.source_to_connect_to))
+        NDIlib_recv_connect(self.ptr, self.source_ptr)
         self._is_connected()
-
-    cdef void _update_source_name(self) except *:
-        pass
-        # if self.recv_create.source_to_connect_to is NULL:
-        #     return
-        # if self.recv_create.source_to_connect_to.p_ndi_name is NULL:
-        #     return
-        # cdef bytes name_c = self.recv_create.source_to_connect_to.p_ndi_name
-        # cdef str name_py = name_c.decode()
-        # self.source_name = self.settings.source_name = name_py
 
     def is_connected(self):
         return self._is_connected()
