@@ -19,6 +19,24 @@ cdef class Source:
         obj._set_ptr(ptr)
         return obj
 
+    @property
+    def program_tally(self):
+        return self.tally.on_program
+
+    @property
+    def preview_tally(self):
+        return self.tally.on_preview
+
+    cpdef set_program_tally(self, bint value):
+        self.tally.on_program = value
+
+    cpdef set_preview_tally(self, bint value):
+        self.tally.on_preview = value
+
+    cdef void _set_tally(self, bint program, bint preview) nogil except *:
+        self.tally.on_program = program
+        self.tally.on_preview = preview
+
     cpdef bint update(self):
         self._check_ptr()
         return self.valid

@@ -53,6 +53,7 @@ cdef class Receiver:
     cdef readonly RLock connection_lock
     cdef readonly Condition connection_notify
     cdef readonly Source source
+    cdef readonly NDIlib_tally_t source_tally
     cdef NDIlib_source_t* source_ptr
     cdef NDIlib_recv_performance_t perf_total_s
     cdef NDIlib_recv_performance_t perf_dropped_s
@@ -77,6 +78,11 @@ cdef class Receiver:
     cdef int _get_num_connections(self) nogil except *
     cdef bint _wait_for_connect(self, float timeout) nogil except *
     cdef void _update_performance(self) nogil except *
+    cpdef set_source_tally_program(self, bint value)
+    cpdef set_source_tally_preview(self, bint value)
+    cdef void _set_source_tally(self, bint program, bint preview) nogil except *
+    cdef void _send_source_tally(self) nogil except *
+    cdef void _handle_metadata_frame(self) except *
     cpdef ReceiveFrameType receive(
         self, ReceiveFrameType recv_type, uint32_t timeout_ms
     )

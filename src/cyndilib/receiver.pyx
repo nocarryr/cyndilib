@@ -303,6 +303,36 @@ cdef class Receiver:
         else:
             mstats.dropped_percent = 0
 
+    @property
+    def program_tally(self):
+        return self.source_tally.on_program
+
+    @property
+    def preview_tally(self):
+        return self.source_tally.on_preview
+
+    cpdef set_source_tally_program(self, bint value):
+        self._set_source_tally(value, self.source_tally.on_preview)
+
+    cpdef set_source_tally_preview(self, bint value):
+        self._set_source_tally(self.source_tally.on_program, value)
+
+    cdef void _set_source_tally(self, bint program, bint preview) nogil except *:
+        self.source_tally.on_program = program
+        self.source_tally.on_preview = preview
+        self._send_source_tally()
+
+    cdef void _send_source_tally(self) nogil except *:
+        NDIlib_recv_set_tally(self.ptr, &(self.source_tally))
+
+    cdef void _handle_metadata_frame(self) except *:
+        cdef MetadataRecvFrame mf = self.metadata_frame
+        cdef bint pgm, pvw
+        if mf.tag == 'ndi_tally_echo':
+            pgm = mf.attrs.get('on_program') == 'true'
+            pvw = mf.attrs.get('on_preview') == 'true'
+            self.source._set_tally(pgm, pvw)
+
     cpdef ReceiveFrameType receive(self, ReceiveFrameType recv_type, uint32_t timeout_ms):
         return self._receive(recv_type, timeout_ms)
 
@@ -384,6 +414,7 @@ cdef class Receiver:
         elif ft == ReceiveFrameType.recv_metadata:
             if has_metadata_frame:
                 metadata_frame._process_incoming(self.ptr)
+                self._handle_metadata_frame()
             else:
                 self.free_metadata(metadata_ptr)
 

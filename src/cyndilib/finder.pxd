@@ -40,6 +40,7 @@ ctypedef cpp_set[cpp_string] cpp_str_set
 cdef class Source:
     cdef Finder parent
     cdef NDIlib_source_t* ptr
+    cdef NDIlib_tally_t tally
     cdef cpp_string cpp_name
     cdef readonly str name
     cdef readonly bint valid
@@ -47,6 +48,9 @@ cdef class Source:
     @staticmethod
     cdef Source create(Finder parent, NDIlib_source_t* ptr, cpp_string cpp_name, str name)
 
+    cpdef set_program_tally(self, bint value)
+    cpdef set_preview_tally(self, bint value)
+    cdef void _set_tally(self, bint program, bint preview) nogil except *
     cpdef bint update(self)
     cdef void _set_ptr(self, NDIlib_source_t* ptr) nogil except *
     cdef void _check_ptr(self) nogil except *
