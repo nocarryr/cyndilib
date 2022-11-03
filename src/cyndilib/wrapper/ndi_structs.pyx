@@ -82,3 +82,20 @@ cdef void audio_frame_destroy(NDIlib_audio_frame_v3_t* p) nogil except *:
     #     #     mem_free(p.p_metadata)
     #     #     # p.p_metadata = NULL
     #     mem_free(p)
+
+cdef NDIlib_metadata_frame_t* metadata_frame_create() nogil except *:
+    cdef NDIlib_metadata_frame_t* p = <NDIlib_metadata_frame_t*>mem_alloc(sizeof(NDIlib_metadata_frame_t))
+    if p is NULL:
+        raise_mem_err()
+    p.length = 0
+    p.timecode = NDIlib_send_timecode_synthesize
+    p.p_data = NULL
+    return p
+
+cdef void metadata_frame_destroy(NDIlib_metadata_frame_t* p) nogil except *:
+    pass
+    # if p is not NULL:
+    #     if p.p_data is not NULL:
+    #         mem_free(p.p_data)
+    #         p.p_data = NULL
+    #     mem_free(p)

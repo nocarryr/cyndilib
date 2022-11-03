@@ -320,3 +320,6 @@ cdef void video_frame_destroy(NDIlib_video_frame_v2_t* p) nogil except *
 cdef NDIlib_audio_frame_v3_t* audio_frame_create() nogil except *
 cdef NDIlib_audio_frame_v3_t* audio_frame_create_default() nogil except *
 cdef void audio_frame_destroy(NDIlib_audio_frame_v3_t* p) nogil except *
+
+cdef NDIlib_metadata_frame_t* metadata_frame_create() nogil except *
+cdef void metadata_frame_destroy(NDIlib_metadata_frame_t* p) nogil except *

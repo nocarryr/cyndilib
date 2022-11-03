@@ -9,6 +9,7 @@ from .locks cimport RLock, Condition, Event
 from .finder cimport Source
 from .video_frame cimport VideoRecvFrame
 from .audio_frame cimport AudioRecvFrame
+from .metadata_frame cimport MetadataRecvFrame
 from .framesync cimport FrameSync
 from .callback cimport Callback
 
@@ -46,6 +47,7 @@ cdef class Receiver:
     cdef readonly FrameSync frame_sync
     cdef readonly VideoRecvFrame video_frame
     cdef readonly AudioRecvFrame audio_frame
+    cdef readonly MetadataRecvFrame metadata_frame
     cdef readonly str source_name
     cdef readonly bint has_video_frame, has_audio_frame, has_metadata_frame
     cdef readonly RLock connection_lock
@@ -64,6 +66,7 @@ cdef class Receiver:
 
     cpdef set_video_frame(self, VideoRecvFrame vf)
     cpdef set_audio_frame(self, AudioRecvFrame af)
+    cpdef set_metadata_frame(self, MetadataRecvFrame mf)
     cpdef set_source(self, Source src)
     cpdef connect_to(self, Source src)
     cdef void _connect_to(self, NDIlib_source_t* src) except *

@@ -130,9 +130,10 @@ cdef class Receiver:
             source_name, color_format, bandwidth,
             allow_video_fields, recv_name,
         )
+        self.metadata_frame = MetadataRecvFrame()
         self.has_video_frame = False
         self.has_audio_frame = False
-        self.has_metadata_frame = False
+        self.has_metadata_frame = True
 
         cdef NDIlib_recv_create_v3_t* src_p = self.settings.build_create_p()
         try:
@@ -170,6 +171,10 @@ cdef class Receiver:
         # if af is not None:
         #     self.audio_ptr = af.ptr
         self.has_audio_frame = af is not None
+
+    cpdef set_metadata_frame(self, MetadataRecvFrame mf):
+        self.metadata_frame = mf
+        self.has_metadata_frame = mf is not None
 
     cpdef set_source(self, Source src):
         if self.source is src:
@@ -306,10 +311,13 @@ cdef class Receiver:
     ) except *:
         cdef VideoRecvFrame video_frame = self.video_frame
         cdef AudioRecvFrame audio_frame = self.audio_frame
-        cdef bint has_video_frame = self.has_video_frame, has_audio_frame = self.has_audio_frame
+        cdef MetadataRecvFrame metadata_frame = self.metadata_frame
+        cdef bint has_video_frame = self.has_video_frame
+        cdef bint has_audio_frame = self.has_audio_frame
+        cdef bint has_metadata_frame = self.has_metadata_frame
         cdef NDIlib_video_frame_v2_t* video_ptr
         cdef NDIlib_audio_frame_v3_t* audio_ptr
-        cdef NDIlib_metadata_frame_t* metadata_ptr = NULL
+        cdef NDIlib_metadata_frame_t* metadata_ptr
         cdef bint buffers_full = False
         cdef int recv_type_flags = <int>recv_type
 
@@ -333,6 +341,16 @@ cdef class Receiver:
         else:
             audio_ptr = NULL
 
+        if recv_type & ReceiveFrameType.recv_metadata and has_metadata_frame:
+            if metadata_frame.can_receive():
+                metadata_ptr = metadata_frame.ptr
+            else:
+                recv_type_flags ^= ReceiveFrameType.recv_metadata
+                buffers_full = True
+                metadata_ptr = NULL
+        else:
+            metadata_ptr = NULL
+
         if recv_type_flags != <int>recv_type:
             recv_type = ReceiveFrameType(recv_type_flags)
 
@@ -350,6 +368,8 @@ cdef class Receiver:
             video_frame._prepare_incoming(self.ptr)
         elif ft == ReceiveFrameType.recv_audio and has_audio_frame:
             audio_frame._prepare_incoming(self.ptr)
+        elif ft == ReceiveFrameType.recv_metadata and has_metadata_frame:
+            metadata_frame._prepare_incoming(self.ptr)
 
         if ft == ReceiveFrameType.recv_video:
             if has_video_frame:
@@ -362,7 +382,10 @@ cdef class Receiver:
             else:
                 self.free_audio(audio_ptr)
         elif ft == ReceiveFrameType.recv_metadata:
-            self.free_metadata(metadata_ptr)
+            if has_metadata_frame:
+                metadata_frame._process_incoming(self.ptr)
+            else:
+                self.free_metadata(metadata_ptr)
 
         return ft
 
@@ -469,6 +492,8 @@ class RecvThread(threading.Thread):
             assert receiver.has_video_frame
         if recv_frame_type & ReceiveFrameType.recv_audio:
             assert receiver.has_audio_frame
+        if recv_frame_type & ReceiveFrameType.recv_metadata:
+            assert receiver.has_metadata_frame
         try:
             worker.run()
         except Exception:
