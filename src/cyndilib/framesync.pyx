@@ -133,11 +133,16 @@ cdef class FrameSyncWorker:
                     self.wait_for_evt(.1)
                     continue
                 now = self.now()
-                if self.next_timestamp >= now or self.next_timestamp == -1:
+
+
+                if (self.can_capture() and
+                    self.next_timestamp >= now or self.next_timestamp == -1):
+
                     captured = self.do_capture()
                     if captured:
                         self.trigger_callback()
                     self.next_timestamp = self.calc_next_ts(self.now())
+
                 else:
                     wait_time = self.next_timestamp - now
                     if wait_time <= 0:
@@ -167,6 +172,9 @@ cdef class FrameSyncWorker:
     cdef bint has_frame(self) except *:
         return False
 
+    cdef bint can_capture(self) except *:
+        return False
+
     cdef bint do_capture(self) except *:
         pass
 
@@ -185,6 +193,9 @@ cdef class FrameSyncWorker:
 
 cdef class VideoWorker(FrameSyncWorker):
     cdef VideoFrameSync video_frame
+
+    cdef bint can_capture(self) except *:
+        return True
 
     cdef bint do_capture(self) except *:
         self.frame_sync._capture_video()
@@ -216,6 +227,9 @@ cdef class AudioWorker(FrameSyncWorker):
 
     def __cinit__(self, *args, **kwargs):
         self.target_nsamples = 800
+
+    cdef bint can_capture(self) except *:
+        return self.frame_sync._audio_samples_available() >= self.target_nsamples
 
     cdef bint do_capture(self) except *:
         cdef size_t nsamp
