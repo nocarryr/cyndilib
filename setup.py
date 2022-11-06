@@ -25,7 +25,7 @@ else:
 PROJECT_PATH = Path(__file__).parent
 WIN32 = sys.platform == 'win32'
 MACOS = sys.platform == 'darwin'
-IS_BUILD = len({'sdist', 'bdist_wheel', 'build_ext'} & set(sys.argv)) > 0
+IS_BUILD = True
 LIB_DIRS = []
 INCLUDE_PATH = [get_python_inc()]
 
