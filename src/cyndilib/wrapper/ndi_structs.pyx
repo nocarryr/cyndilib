@@ -43,6 +43,21 @@ cdef NDIlib_video_frame_v2_t* video_frame_create_default() nogil except *:
     p.timestamp = 0
     return p
 
+cdef void video_frame_copy(
+    NDIlib_video_frame_v2_t* src,
+    NDIlib_video_frame_v2_t* dest
+) nogil except *:
+    dest.xres = src.xres
+    dest.yres = src.yres
+    dest.FourCC = src.FourCC
+    dest.frame_rate_N = src.frame_rate_N
+    dest.frame_rate_D = src.frame_rate_D
+    dest.picture_aspect_ratio = src.picture_aspect_ratio
+    dest.frame_format_type = src.frame_format_type
+    dest.timecode = src.timecode
+    dest.timestamp = src.timestamp
+
+
 cdef void video_frame_destroy(NDIlib_video_frame_v2_t* p) nogil except *:
     pass
     # if p is not NULL:
@@ -72,6 +87,19 @@ cdef NDIlib_audio_frame_v3_t* audio_frame_create_default() nogil except *:
     p.timestamp = 0
     p.p_data = NULL
     return p
+
+cdef void audio_frame_copy(
+    NDIlib_audio_frame_v3_t* src,
+    NDIlib_audio_frame_v3_t* dest
+) nogil except *:
+    dest.sample_rate = src.sample_rate
+    dest.no_channels = src.no_channels
+    dest.no_samples = src.no_samples
+    dest.timecode = src.timecode
+    dest.FourCC = src.FourCC
+    dest.channel_stride_in_bytes = src.channel_stride_in_bytes
+    dest.timestamp = src.timestamp
+
 
 cdef void audio_frame_destroy(NDIlib_audio_frame_v3_t* p) nogil except *:
     pass
