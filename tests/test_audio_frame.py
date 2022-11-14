@@ -1,72 +1,19 @@
 import time
 from pprint import pprint
 from functools import partial
-from collections import namedtuple
 import threading
 import traceback
 import pytest
 
 import numpy as np
 
+from conftest import AudioParams
+
 from cyndilib.audio_frame import AudioRecvFrame, AudioFrameSync
 
 from _test_audio_frame import fill_audio_frame, fill_audio_frame_sync, audio_frame_process_events
 
 
-
-AudioParams = namedtuple('AudioParams', [
-    'sample_rate', 'num_channels', 'num_samples', 'num_segments', 's_perseg',
-    'samples_3d', 'samples_2d'],
-    defaults=[
-        48000, 2, 48000*2, 48000*2//6000, 6000, None, None,
-    ]
-)
-
-# DEFAULT_AUDIO_PARAMS = AudioParams(
-#     sample_rate=48000,
-#     num_channels=2,
-#     num_samples=48000 * 2,
-#     s_perseg=6000,
-#     num_segments = 48000 * 2 // 6000,
-#     samples_3d=None,
-#     samples_2d=None,
-# )
-
-@pytest.fixture
-def fake_audio_builder():
-    def build_fake_data(
-        params: AudioParams
-        # sample_rate: int,
-        # num_channels: int,
-        # num_samples: int,
-        # num_segments: int,
-        # s_perseg: int,
-    ) -> AudioParams:
-        print(f'N={params.num_samples}')
-        fc = 2000
-        sig_dbFS = -6
-        sig_amp = 10 ** (sig_dbFS/20)
-        nse_dbFS = -30
-        nse_amp = 10 ** (nse_dbFS/20)
-        t = np.arange(params.num_samples) / params.sample_rate
-        a = sig_amp*np.sin(2*np.pi*fc*t)
-        print(f'a.size={a.size}')
-        a2 = np.zeros((params.num_channels, params.num_samples), dtype=a.dtype)
-        for i in range(params.num_channels):
-            a2[i,...] = a + nse_amp*np.random.uniform(-1, 1, a.size)
-        a = np.asarray(a2, dtype=np.float32)
-        b = np.zeros((params.num_segments, params.num_channels, params.s_perseg), dtype=a.dtype)
-        s_perseg = params.s_perseg
-        for i in range(params.num_segments):
-            for j in range(params.num_channels):
-                b[i,j,:] = a[j,i*s_perseg:i*s_perseg+s_perseg]
-
-        return params._replace(samples_3d=b, samples_2d=a)
-        # result = AudioParams(
-        #     sample_rate, num_channels, num_samples, num_segments, s_perseg, b, a,
-        # )
-        # return result
-    return build_fake_data
 
 @pytest.fixture(params=[2, 8, 16, 32])
 def num_seconds(request):
