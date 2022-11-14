@@ -37,6 +37,7 @@ def parse_xml(str xml):
 cdef class MetadataFrame:
     def __cinit__(self, *args, **kwargs):
         self.ptr = metadata_frame_create()
+        self.xml_bytes = b''
 
     def __init__(self, *args, **kwargs):
         self.tag = None
@@ -72,6 +73,12 @@ cdef class MetadataFrame:
     cdef void _set_timecode(self, int64_t value) nogil:
         self.ptr.timecode = value
 
+    def __repr__(self):
+        return f'<{self.__class__.__name__}: "{self}">'
+
+    def __str__(self):
+        return self.xml_bytes.decode('UTF-8')
+
 
 cdef class MetadataRecvFrame(MetadataFrame):
     cdef bint can_receive(self) nogil except *:
@@ -80,7 +87,8 @@ cdef class MetadataRecvFrame(MetadataFrame):
         self.tag = None
         self.attrs.clear()
     cdef void _process_incoming(self, NDIlib_recv_instance_t recv_ptr) except *:
-        cdef str data_str = self.ptr.p_data.decode('UTF-8')
+        self.xml_bytes = self.ptr.p_data
+        cdef str data_str = self.xml_bytes.decode('UTF-8')
         if len(data_str):
             tag, attrs = parse_xml(data_str)
             if tag is not None:
@@ -88,6 +96,57 @@ cdef class MetadataRecvFrame(MetadataFrame):
                 self.attrs = attrs
 
         NDIlib_recv_free_metadata(recv_ptr, self.ptr)
+
+
+cdef class MetadataSendFrame(MetadataFrame):
+    def __init__(self, str tag, object initdict=None, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        self.tag = tag
+        cdef dict d = {}
+        if initdict is not None:
+            d.update(initdict)
+        d.update(kwargs)
+        self.attrs.update(d)
+        self._serialize()
+
+    def set_tag(self, str tag):
+        super().set_tag(tag)
+        self._serialize()
+
+    def __setitem__(self, str key, str value):
+        self.attrs[key] = value
+        self._serialize()
+
+    def update(self, dict other):
+        self._update(other)
+
+    cdef void _update(self, dict other) except *:
+        self.attrs.update(other)
+        self._serialize()
+
+    def clear(self):
+        self._clear()
+
+    cdef void _clear(self) except *:
+        self.tag = ''
+        self.attrs.clear()
+        self._serialize()
+
+    cdef bint _serialize(self) except *:
+        cdef bint has_attrs = len(self.attrs) > 0, has_tag = len(self.tag) > 0
+        cdef str key, val, result_str = ''
+
+        if has_tag:
+            if has_attrs:
+                result_str = ' '.join([f'{key}="{val}"' for key, val in self.attrs.items()])
+            result_str = f'<{self.tag} {result_str}/>'
+            self.xml_bytes = result_str.encode('UTF-8')
+            self.ptr.p_data = self.xml_bytes.c_str()
+        else:
+            self.xml_bytes = b''
+            self.ptr.p_data = self.xml_bytes.c_str()
+        return has_tag
+
 
 def test():
     import time

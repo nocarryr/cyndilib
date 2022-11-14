@@ -19,6 +19,14 @@ cdef class Source:
         obj._set_ptr(ptr)
         return obj
 
+    @staticmethod
+    cdef Source create_no_parent(NDIlib_source_t* ptr):
+        cdef Source obj = Source()
+        obj.cpp_name = cpp_string(ptr.p_ndi_name)
+        obj.name = obj.cpp_name.decode('UTF-8')
+        obj._set_ptr(ptr)
+        return obj
+
     @property
     def program_tally(self):
         return self.tally.on_program

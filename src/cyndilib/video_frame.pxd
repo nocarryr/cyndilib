@@ -1,6 +1,7 @@
 # cython: language_level=3
 # distutils: language = c++
 
+from cython cimport view
 from libc.stdint cimport *
 from libcpp.deque cimport deque as cpp_deque
 from libcpp.set cimport set as cpp_set
@@ -9,6 +10,7 @@ cimport numpy as cnp
 from .wrapper cimport *
 from .buffertypes cimport *
 from .locks cimport RLock, Condition
+from .send_frame_status cimport *
 
 
 cdef class VideoFrame:
@@ -19,9 +21,9 @@ cdef class VideoFrame:
     cdef (int, int) _get_resolution(self) nogil except *
     cdef void _set_resolution(self, int xres, int yres) nogil
     cdef int _get_xres(self) nogil
-    cdef void _set_xres(self, int value) nogil
+    cdef void _set_xres(self, int value) nogil except *
     cdef int _get_yres(self) nogil
-    cdef void _set_yres(self, int value) nogil
+    cdef void _set_yres(self, int value) nogil except *
     cdef FourCC _get_fourcc(self) nogil except *
     cdef void _set_fourcc(self, FourCC value) nogil except *
     cdef frame_rate_t* _get_frame_rate(self) nogil except *
@@ -77,3 +79,37 @@ cdef class VideoFrameSync(VideoFrame):
     cdef size_t view_count
 
     cdef void _process_incoming(self, NDIlib_framesync_instance_t fs_ptr) nogil except *
+
+
+cdef class VideoSendFrame(VideoFrame):
+    cdef VideoSendFrame_status send_status
+    cdef readonly VideoSendFrame parent_frame
+    cdef readonly VideoSendFrame child_frame
+    cdef FourCCPackInfo pack_info
+    cdef view.array view
+    cdef readonly bint has_child, has_parent
+    cdef readonly size_t child_count
+    cdef Py_ssize_t[1] shape
+    cdef Py_ssize_t[1] strides
+
+    cdef void _destroy(self) except *
+    cdef bint _write_available(self) nogil except *
+    cdef VideoSendFrame _prepare_buffer_write(self)
+    cdef void _set_buffer_write_complete(self, VideoSendFrame_status* send_status) nogil except *
+    cdef VideoSendFrame _prepare_memview_write(self)
+    cdef void _write_data_to_memview(
+        self,
+        cnp.uint8_t[:] data,
+        cnp.uint8_t[:] view,
+        VideoSendFrame_status* send_status
+    ) nogil except *
+    cdef VideoSendFrame_status* _get_next_write_frame(self) nogil except *
+    cdef bint _send_frame_available(self) nogil except *
+    cdef VideoSendFrame_status* _get_send_frame(self) nogil except *
+    cdef void _on_sender_write(self, VideoSendFrame_status* s_ptr) nogil except *
+    cdef void _set_sender_status(self, bint attached) except *
+    cdef void _create_child_frames(self, size_t count) except *
+    cdef void _create_child_frame(self) except *
+    cdef void _on_child_created(self) nogil except *
+    cdef void _recalc_pack_info(self) nogil except *
+    cdef void _rebuild_array(self) except *

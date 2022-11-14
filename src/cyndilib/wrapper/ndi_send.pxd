@@ -116,3 +116,17 @@ cdef extern from "Processing.NDI.Send.h" nogil:
     # // Retrieve the source information for the given sender instance.  This pointer is valid until NDIlib_send_destroy is called.
     # PROCESSINGNDILIB_API
     const NDIlib_source_t* NDIlib_send_get_source_name(NDIlib_send_instance_t p_instance)
+
+
+cdef NDIlib_send_create_t* send_t_create(
+    const char* ndi_name,
+    const char* groups
+) nogil except *
+
+cdef void send_t_initialize(
+    NDIlib_send_create_t* p,
+    const char* ndi_name,
+    const char* groups,
+) nogil except *
+
+cdef void send_t_destroy(NDIlib_send_create_t* p) nogil except *

@@ -15,3 +15,4 @@ ctypedef fused frame_rate_ft:
 ctypedef float float32_t
 ctypedef double float64_t
 ctypedef long double float128_t
+ctypedef Py_ssize_t Py_intptr_t

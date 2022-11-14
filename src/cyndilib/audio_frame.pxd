@@ -1,6 +1,7 @@
 # cython: language_level=3
 # distutils: language = c++
 
+from cython cimport view
 from libc.stdint cimport *
 from libcpp.deque cimport deque as cpp_deque
 from libcpp.set cimport set as cpp_set
@@ -9,6 +10,7 @@ cimport numpy as cnp
 from .wrapper cimport *
 from .buffertypes cimport *
 from .locks cimport RLock, Condition
+from .send_frame_status cimport *
 
 
 cdef class AudioFrame:
@@ -88,3 +90,43 @@ cdef class AudioFrameSync(AudioFrame):
     cdef size_t view_count
 
     cdef void _process_incoming(self, NDIlib_framesync_instance_t fs_ptr) nogil except *
+
+
+cdef class AudioSendFrame(AudioFrame):
+    cdef AudioSendFrame_status send_status
+    cdef readonly AudioSendFrame parent_frame
+    cdef readonly AudioSendFrame child_frame
+    cdef view.array view
+    cdef readonly bint has_child, has_parent
+    cdef readonly size_t child_count
+    cdef readonly size_t max_num_samples
+    cdef Py_ssize_t[2] max_shape
+    cdef Py_ssize_t[2] shape
+    cdef Py_ssize_t[2] strides
+
+    cpdef set_max_num_samples(self, size_t n)
+    cdef void _destroy(self) except *
+    cdef bint _write_available(self) nogil except *
+    cdef void _set_shape_from_memview(
+        self,
+        AudioSendFrame_status* send_status,
+        cnp.float32_t[:,:] data,
+    ) nogil except *
+    cdef AudioSendFrame _prepare_buffer_write(self)
+    cdef void _set_buffer_write_complete(self, AudioSendFrame_status* send_status) nogil except *
+    cdef AudioSendFrame _prepare_memview_write(self)
+    cdef void _write_data_to_memview(
+        self,
+        cnp.float32_t[:,:] data,
+        cnp.float32_t[:,:] view,
+        AudioSendFrame_status* send_status
+    ) nogil except *
+    cdef AudioSendFrame_status* _get_next_write_frame(self) nogil except *
+    cdef bint _send_frame_available(self) nogil except *
+    cdef AudioSendFrame_status* _get_send_frame(self) nogil except *
+    cdef void _on_sender_write(self, AudioSendFrame_status* s_ptr) nogil except *
+    cdef void _set_sender_status(self, bint attached) except *
+    cdef void _create_child_frames(self, size_t count) except *
+    cdef void _create_child_frame(self) except *
+    cdef void _on_child_created(self) nogil except *
+    cdef void _rebuild_array(self) except *

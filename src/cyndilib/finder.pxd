@@ -48,6 +48,9 @@ cdef class Source:
     @staticmethod
     cdef Source create(Finder parent, NDIlib_source_t* ptr, cpp_string cpp_name, str name)
 
+    @staticmethod
+    cdef Source create_no_parent(NDIlib_source_t* ptr)
+
     cpdef set_program_tally(self, bint value)
     cpdef set_preview_tally(self, bint value)
     cdef void _set_tally(self, bint program, bint preview) nogil except *

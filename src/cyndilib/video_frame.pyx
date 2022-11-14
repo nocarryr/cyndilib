@@ -1,6 +1,8 @@
 cimport cython
+from cpython.ref cimport PyObject
 from libc.string cimport memcpy
 
+from fractions import Fraction
 import numpy as np
 
 cdef class VideoFrame:
@@ -11,11 +13,10 @@ cdef class VideoFrame:
         self.ptr = video_frame_create_default()
         if self.ptr is NULL:
             raise MemoryError()
-        self.frame_rate.numerator = self.ptr.frame_rate_N
-        self.frame_rate.denominator = self.ptr.frame_rate_D
 
     def __init__(self, *args, **kwargs):
-        pass
+        self.frame_rate.numerator = self.ptr.frame_rate_N
+        self.frame_rate.denominator = self.ptr.frame_rate_D
 
     def __dealloc__(self):
         cdef NDIlib_video_frame_v2_t* p = self.ptr
@@ -38,11 +39,17 @@ cdef class VideoFrame:
             fr_str = f'{fr_dbl:.0f}'
         return f'{yres}{fieldStr}{fr_str}'
 
+    def get_resolution(self):
+        return self._get_resolution
+    def set_resolution(self, int xres, int yres):
+        self._set_resolution(xres, yres)
     cdef (int, int) _get_resolution(self) nogil except *:
         return (self.ptr.xres, self.ptr.yres)
     cdef void _set_resolution(self, int xres, int yres) nogil:
         self.ptr.xres = xres
         self.ptr.yres = yres
+        if self.ptr.yres > 0:
+            self._set_aspect(self.ptr.xres / <double>(self.ptr.yres))
 
     @property
     def xres(self):
@@ -54,18 +61,32 @@ cdef class VideoFrame:
 
     cdef int _get_xres(self) nogil:
         return self.ptr.xres
-    cdef void _set_xres(self, int value) nogil:
+    cdef void _set_xres(self, int value) nogil except *:
         self.ptr.xres = value
+        if self.ptr.yres > 0:
+            self._set_aspect(self.ptr.xres / <double>(self.ptr.yres))
 
     cdef int _get_yres(self) nogil:
         return self.ptr.yres
-    cdef void _set_yres(self, int value) nogil:
+    cdef void _set_yres(self, int value) nogil except *:
         self.ptr.yres = value
+        if self.ptr.yres > 0:
+            self._set_aspect(self.ptr.xres / <double>(self.ptr.yres))
 
+    def get_fourcc(self):
+        return self._get_fourcc()
+    def set_fourcc(self, FourCC value):
+        self._set_fourcc(value)
     cdef FourCC _get_fourcc(self) nogil except *:
         return fourcc_type_uncast(self.ptr.FourCC)
     cdef void _set_fourcc(self, FourCC value) nogil except *:
         self.ptr.FourCC = fourcc_type_cast(value)
+
+    def get_frame_rate(self):
+        return Fraction(self.ptr.frame_rate_N, self.ptr.frame_rate_D)
+    def set_frame_rate(self, value):
+        cdef int[2] fr = [value.numerator, value.denominator]
+        self._set_frame_rate(fr)
 
     cdef frame_rate_t* _get_frame_rate(self) nogil except *:
         self.frame_rate.numerator = self.ptr.frame_rate_N
@@ -413,6 +434,223 @@ cdef class VideoFrameSync(VideoFrame):
         self.shape[0] = size_in_bytes
         self.strides[0] = sizeof(uint8_t)
         self.fs_ptr = fs_ptr
+
+
+cdef class VideoSendFrame(VideoFrame):
+    def __cinit__(self, *args, **kwargs):
+        self.send_status.id = NULL_ID
+        self.send_status.next_send_id = NULL_ID
+        self.send_status.last_send_id = NULL_ID
+        self.send_status.write_available = True
+        self.send_status.send_ready = False
+        self.send_status.attached_to_sender = False
+        self.send_status.next = NULL
+        self.send_status.prev = NULL
+        self.send_status.frame_ptr = &(self.ptr)
+        self.shape[0] = 0
+        self.strides[0] = sizeof(uint8_t)
+
+    def __init__(self, VideoSendFrame parent_frame=None, *args, **kwargs):
+        cdef void* self_ptr = <void*>self
+        self.send_status.id = <Py_intptr_t>self_ptr
+        self.parent_frame = parent_frame
+        self.has_parent = parent_frame is not None
+        if self.has_parent:
+            self.send_status.prev = &(parent_frame.send_status)
+            video_frame_copy(parent_frame.ptr, self.ptr)
+        self.view = None
+        super().__init__(*args, **kwargs)
+
+        self.child_count = 0
+        self.child_frame = None
+        self.has_child = False
+        self._recalc_pack_info()
+
+    def __dealloc__(self):
+        # self.ptr.p_data = NULL
+        self.send_status.prev = NULL
+        self.send_status.next = NULL
+        self.send_status.frame_ptr = NULL
+        self.child_frame = None
+        self.parent_frame = None
+
+    @property
+    def id(self):
+        return self.send_status.id
+
+    @property
+    def write_available(self):
+        return self.send_status.write_available
+    @write_available.setter
+    def write_available(self, bint value):
+        self.send_status.write_available = value
+
+    @property
+    def attached_to_sender(self):
+        return self.send_status.attached_to_sender
+
+    def destroy(self):
+        self._destroy()
+
+    cdef void _destroy(self) except *:
+        self.send_status.next = NULL
+        self.send_status.prev = NULL
+        if self.has_child:
+            self.child_frame.has_parent = False
+            self.child_frame._destroy()
+            self.has_child = False
+            self.child_frame = None
+        if self.has_parent:
+            self.parent_frame.has_child = False
+            self.parent_frame._destroy()
+            self.has_parent = False
+            self.parent_frame = None
+        self.child_count = 0
+
+    def __getbuffer__(self, Py_buffer *buffer, int flags):
+        cdef VideoSendFrame_status* send_status = self._get_next_write_frame()
+        if send_status is NULL:
+            raise_exception('no send pointer')
+        cdef NDIlib_video_frame_v2_t* ptr = send_status.frame_ptr[0]
+        cdef PyObject* obj_ptr = <PyObject*>send_status.id
+        buffer.buf = ptr.p_data
+        buffer.format = 'B'
+        buffer.internal = NULL
+        buffer.itemsize = sizeof(uint8_t)
+        buffer.len = self.pack_info.total_size
+        buffer.ndim = 1
+        buffer.obj = <object>obj_ptr
+        buffer.readonly = 0
+        buffer.shape = self.shape
+        buffer.strides = self.strides
+        buffer.suboffsets = NULL
+
+    def __releasebuffer__(self, Py_buffer *buffer):
+        pass
+
+    def get_write_available(self):
+        return self._write_available()
+
+    cdef bint _write_available(self) nogil except *:
+        return self.send_status.next_send_id == NULL_ID
+
+    def __enter__(self):
+        cdef VideoSendFrame obj = self._prepare_buffer_write()
+        return obj
+
+    def __exit__(self, exc_type, exc, tb):
+        if exc_type is None:
+            self._set_buffer_write_complete(&(self.send_status))
+
+    cdef VideoSendFrame _prepare_buffer_write(self):
+        cdef VideoSendFrame_status* send_status = self._get_next_write_frame()
+        cdef PyObject* obj_ptr = <PyObject*>send_status.id
+        cdef VideoSendFrame obj = <object>obj_ptr
+        return obj
+
+    cdef void _set_buffer_write_complete(self, VideoSendFrame_status* send_status) nogil except *:
+        frame_status_set_send_id(send_status, send_status.id)
+
+    cdef VideoSendFrame _prepare_memview_write(self):
+        cdef VideoSendFrame obj = self._prepare_buffer_write()
+        obj.view.data = <char *>obj.ptr.p_data
+        return obj
+
+    cdef void _write_data_to_memview(
+        self,
+        cnp.uint8_t[:] data,
+        cnp.uint8_t[:] view,
+        VideoSendFrame_status* send_status
+    ) nogil except *:
+        view[:] = data
+        self.view.data = NULL
+        self._set_buffer_write_complete(send_status)
+
+    cdef VideoSendFrame_status* _get_next_write_frame(self) nogil except *:
+        return frame_status_get_writer(&(self.send_status))
+
+    cdef bint _send_frame_available(self) nogil except *:
+        return self.send_status.next_send_id != NULL_ID
+
+    cdef VideoSendFrame_status* _get_send_frame(self) nogil except *:
+        cdef VideoSendFrame_status* r = frame_status_get_sender(&(self.send_status))
+        return r
+
+    cdef void _on_sender_write(self, VideoSendFrame_status* s_ptr) nogil except *:
+        frame_status_clear_write(s_ptr, s_ptr.id)
+
+    cdef void _set_sender_status(self, bint attached) except *:
+        if attached:
+            self._recalc_pack_info()
+            self._rebuild_array()
+        self.send_status.attached_to_sender = attached
+        if self.has_child:
+            self.child_frame._set_sender_status(attached)
+
+    cdef void _create_child_frames(self, size_t count) except *:
+        if count > 0:
+            self._create_child_frame()
+            self.child_frame._create_child_frames(count - 1)
+
+    cdef void _create_child_frame(self) except *:
+        assert not self.has_child
+        self.child_frame = VideoSendFrame(self)
+        self.send_status.next = &(self.child_frame.send_status)
+        self._on_child_created()
+
+    cdef void _on_child_created(self) nogil except *:
+        self.child_count += 1
+        self.has_child = True
+        if self.has_parent:
+            self.parent_frame._on_child_created()
+
+    cdef void _set_xres(self, int value) nogil except *:
+        if self.has_child or self.has_parent:
+            raise_exception('Cannot alter frame')
+        self.ptr.xres = value
+        # self._recalc_pack_info()
+
+    cdef void _set_yres(self, int value) nogil except *:
+        if self.has_child or self.has_parent:
+            raise_exception('Cannot alter frame')
+        self.ptr.yres = value
+        self._recalc_pack_info()
+
+    cdef void _set_fourcc(self, FourCC value) nogil except *:
+        if self.has_child or self.has_parent:
+            raise_exception('Cannot alter frame')
+        self.ptr.FourCC = fourcc_type_cast(value)
+        # self._recalc_pack_info()
+
+    cdef void _recalc_pack_info(self) nogil except *:
+        self.pack_info.fourcc = self._get_fourcc()
+        self.pack_info.xres = self.ptr.xres
+        self.pack_info.yres = self.ptr.yres
+        if self.pack_info.xres == 0:
+            return
+        if self.pack_info.yres == 0:
+            return
+        calc_fourcc_pack_info(&(self.pack_info))
+
+    cdef void _rebuild_array(self) except *:
+        assert not self.attached_to_sender
+        if self.shape[0] == self.pack_info.total_size:
+            return
+        self.view = view.array(
+            shape=(self.pack_info.total_size,),
+            itemsize=sizeof(uint8_t),
+            format='B',
+            allocate_buffer=False,
+        )
+        cdef uint8_t* p_data = self.ptr.p_data
+        if p_data is not NULL:
+            self.ptr.p_data = NULL
+            mem_free(p_data)
+        self.ptr.p_data = <uint8_t*>mem_alloc(self.pack_info.total_size)
+        if self.ptr.p_data is NULL:
+            raise_mem_err()
+        self.shape[0] = self.pack_info.total_size
+
 
 @cython.boundscheck(False)
 @cython.wraparound(False)
