@@ -70,6 +70,7 @@ cdef NDIlib_audio_frame_v3_t* audio_frame_create_default() nogil except *:
     p.FourCC = NDIlib_FourCC_audio_type_FLTP
     p.channel_stride_in_bytes = 0
     p.timestamp = 0
+    p.p_data = NULL
     return p
 
 cdef void audio_frame_destroy(NDIlib_audio_frame_v3_t* p) nogil except *:
