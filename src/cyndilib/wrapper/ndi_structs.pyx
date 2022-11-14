@@ -99,3 +99,88 @@ cdef void metadata_frame_destroy(NDIlib_metadata_frame_t* p) nogil except *:
     #         mem_free(p.p_data)
     #         p.p_data = NULL
     #     mem_free(p)
+
+cdef FourCCPackInfo* fourcc_pack_info_create() nogil except *:
+    cdef FourCCPackInfo* p = <FourCCPackInfo*>mem_alloc(sizeof(FourCCPackInfo))
+    if p is NULL:
+        raise_mem_err()
+    cdef size_t i
+    p.fourcc = FourCC.UYVY
+    p.xres = 0
+    p.yres = 0
+    p.num_planes = 0
+    p.total_size = 0
+    for i in range(4):
+        p.line_strides[i] = 0
+        p.stride_offsets[i] = 0
+    return p
+
+cdef void fourcc_pack_info_destroy(FourCCPackInfo* p) nogil except *:
+    if p is not NULL:
+        mem_free(p)
+
+
+cdef FourCCPackInfo* get_fourcc_pack_info(FourCC fourcc, size_t xres, size_t yres) nogil except *:
+    cdef FourCCPackInfo* p = fourcc_pack_info_create()
+    p.fourcc = fourcc
+    p.xres = xres
+    p.yres = yres
+    calc_fourcc_pack_info(p)
+    return p
+
+
+cdef void calc_fourcc_pack_info(FourCCPackInfo* p) nogil except *:
+    cdef size_t xres = p.xres, yres = p.yres
+    cdef size_t bytes_per_pixel
+
+    if p.fourcc == FourCC.UYVY:
+        p.num_planes = 1
+        bytes_per_pixel = sizeof(uint8_t) * 4
+        p.line_strides[0] = bytes_per_pixel * xres
+        p.total_size = bytes_per_pixel * xres * yres
+    elif p.fourcc == FourCC.UYVA:
+        p.num_planes = 2
+        bytes_per_pixel = sizeof(uint8_t) * 5           # YUVY + alpha plane
+        p.line_strides[0] = sizeof(uint8_t) * 4 * xres
+        p.line_strides[1] = sizeof(uint8_t) * xres
+        p.stride_offsets[1] = p.line_strides[0] * yres
+        p.total_size = bytes_per_pixel * xres * yres
+    elif p.fourcc == FourCC.P216:
+        p.num_planes = 2
+        bytes_per_pixel = sizeof(uint16_t) * 2          # <uint16_t>Y + <uint16_t>UV (second plane)
+        p.line_strides[0] = sizeof(uint16_t) * xres
+        p.line_strides[1] = sizeof(uint16_t) * xres
+        p.stride_offsets[1] = p.line_strides[0] * yres
+        p.total_size = bytes_per_pixel * xres * yres
+    elif p.fourcc == FourCC.PA16:
+        p.num_planes = 3
+        bytes_per_pixel = sizeof(uint16_t) * 3          # <uint16_t>Y + <uint16_t>UV + <uint16_t>A
+        p.line_strides[0] = sizeof(uint16_t) * xres
+        p.line_strides[1] = sizeof(uint16_t) * xres
+        p.line_strides[2] = sizeof(uint16_t) * xres
+        p.stride_offsets[1] = p.line_strides[0] * yres
+        p.stride_offsets[2] = p.stride_offsets[1] + p.line_strides[1] * yres
+        p.total_size = bytes_per_pixel * xres * yres
+    elif p.fourcc == FourCC.YV12 or p.fourcc == FourCC.I420:
+        p.num_planes = 3
+        bytes_per_pixel = sizeof(uint8_t) * 2           # just google it
+        p.line_strides[0] = sizeof(uint8_t) * xres
+        p.line_strides[1] = p.line_strides[0] // 2
+        p.line_strides[2] = p.line_strides[1]
+        p.stride_offsets[1] = p.line_strides[0] * yres
+        p.stride_offsets[2] = p.stride_offsets[1] * (yres // 2)
+        p.total_size = p.line_strides[0] * yres + (p.line_strides[1] * yres // 2)
+    elif p.fourcc == FourCC.NV12:
+        p.num_planes = 2
+        bytes_per_pixel = sizeof(uint8_t) * 2           # <uint8_t>Y + <uint8_t>UV
+        p.line_strides[0] = sizeof(uint8_t) * xres
+        p.line_strides[1] = sizeof(uint8_t) * xres
+        p.stride_offsets[1] = p.line_strides[0] * yres
+        p.total_size = bytes_per_pixel * xres * yres
+    elif p.fourcc == FourCC.BGRA or p.fourcc == FourCC.BGRX or p.fourcc == FourCC.RGBA or p.fourcc == FourCC.RGBX:
+        p.num_planes = 1
+        bytes_per_pixel = sizeof(uint8_t) * 4           # BGRX_BGRA, RGBX_RGBA
+        p.line_strides[0] = sizeof(uint8_t) * 4 * xres
+        p.total_size = p.line_strides[0] * yres
+    else:
+        raise_withgil(PyExc_ValueError, 'Unknown FourCC type')

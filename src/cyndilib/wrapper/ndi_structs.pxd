@@ -297,6 +297,20 @@ cdef inline NDIlib_FourCC_video_type_e fourcc_type_cast(FourCC value) nogil exce
 cdef inline FourCC fourcc_type_uncast(NDIlib_FourCC_video_type_e value) nogil except *:
     return <FourCC>value
 
+cdef struct FourCCPackInfo:
+    size_t xres
+    size_t yres
+    FourCC fourcc
+    size_t num_planes
+    size_t total_size
+    size_t[4] line_strides
+    size_t[4] stride_offsets
+
+cdef FourCCPackInfo* fourcc_pack_info_create() nogil except *
+cdef void fourcc_pack_info_destroy(FourCCPackInfo* p) nogil except *
+cdef FourCCPackInfo* get_fourcc_pack_info(FourCC fourcc, size_t xres, size_t yres) nogil except *
+cdef void calc_fourcc_pack_info(FourCCPackInfo* p) nogil except *
+
 cpdef enum FrameFormat:
     progressive = NDIlib_frame_format_type_progressive
     interleaved = NDIlib_frame_format_type_interleaved
