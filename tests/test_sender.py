@@ -51,7 +51,7 @@ def test_send_video(fake_video_frames):
         iter_end_ts = time.time()
 
     iter_duration = iter_end_ts - iter_start_ts
-    expected_dur = one_frame * video_data.num_frames
+    expected_dur = one_frame * num_frames
     print(f'{iter_duration=}, {float(expected_dur)=}')
     assert expected_dur - .5 <= iter_duration <= expected_dur + .5
 
@@ -256,8 +256,7 @@ def test_send_video_and_audio_threaded(request, fake_av_frames):
     one_frame = 1 / video_data.frame_rate
     wait_time = float(one_frame)
 
-    go_cond0 = threading.Condition()
-    go_cond1 = threading.Condition()
+    go_cond = threading.Condition()
 
     cur_iteration = 0
     while cur_iteration < num_full_repeats:
@@ -271,7 +270,7 @@ def test_send_video_and_audio_threaded(request, fake_av_frames):
             # time.sleep(.1)
             with go_cond:
                 print('notify_all')
-                go_cond0.notify_all()
+                go_cond.notify_all()
                 time.sleep(.5)
             # vid_thread.stopped.wait()
             # aud_thread.stopped.wait()

@@ -14,8 +14,6 @@ cdef class Sender:
         self.video_frame = None
         self.audio_frame = None
         # self.metadata_frame = None
-        self.tally.on_program = False
-        self.tally.on_preview = False
 
     def __init__(
         self,
