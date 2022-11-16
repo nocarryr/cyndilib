@@ -228,6 +228,9 @@ cdef class VideoRecvFrame(VideoFrame):
         with self.read_lock:
             self.view_count -= 1
 
+    def get_view_count(self):
+        return self.view_count
+
     @cython.boundscheck(False)
     @cython.wraparound(False)
     cdef void _check_read_array_size(self) except *:
