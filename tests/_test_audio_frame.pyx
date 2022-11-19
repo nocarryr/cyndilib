@@ -68,10 +68,15 @@ def fill_audio_frame(
     cnp.float32_t[:,:] samples,
     size_t sample_rate,
     double timestamp,
-    bint do_process=True
+    bint do_process=True,
+    bint check_can_receive=False
 ):
     cdef NDIlib_audio_frame_v3_t* frame = audio_frame.ptr
     cdef NDIlib_recv_instance_t recv_ptr = NULL
+
+    if check_can_receive:
+        if not audio_frame.can_receive():
+            return None, None
 
     ndi_ts = fill_audio_frame_struct(frame, samples, sample_rate, timestamp)
 
