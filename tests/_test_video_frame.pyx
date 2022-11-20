@@ -1,6 +1,8 @@
 # cython: language_level=3
 # distutils: language = c++
 # distutils: include_dirs=NUMPY_INCLUDE
+# distutils: libraries=DISTUTILS_LIBRARIES
+# distutils: library_dirs=DISTUTILS_LIB_DIRS
 
 cimport cython
 

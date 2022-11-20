@@ -1,12 +1,25 @@
 #! /usr/bin/env python3
 
 import os
+import sys
 import glob
 import shlex
 import multiprocessing
+from pathlib import Path
 from distutils.sysconfig import get_python_inc
 import numpy
 from Cython.Build import cythonize, Cythonize
+
+PROJECT_PATH = Path(__file__).parent
+WIN32 = sys.platform == 'win32'
+MACOS = sys.platform == 'darwin'
+
+if WIN32:
+    SDK_DIR = PROJECT_PATH / 'NDI SDK for Windows'
+elif MACOS:
+    SDK_DIR = Path('/Library/NDI SDK for Apple')
+else:
+    SDK_DIR = None
 
 ROOT_PATH = os.path.abspath(os.path.dirname(__file__))
 TESTS_PATH = os.path.join(ROOT_PATH, 'tests')
@@ -15,6 +28,7 @@ if CPU_COUNT is None:
     CPU_COUNT = 0
 
 INCLUDE_PATH = [numpy.get_include()]
+LIB_DIRS = []
 
 CYTHONIZE_CMD = 'cythonize {opts} {pyx_file}'
 
@@ -25,6 +39,42 @@ COMPILER_DIRECTIVES = {
 run_distutils = Cythonize.run_distutils
 _FakePool = Cythonize._FakePool
 extended_iglob = Cythonize.extended_iglob
+
+def ndi_include():
+    if MACOS:
+        p = SDK_DIR / 'include'
+        if p.exists():
+            INCLUDE_PATH.append(str(p))
+    elif WIN32:
+        p = SDK_DIR / 'include'
+        if p.exists():
+            INCLUDE_PATH.append(str(p))
+
+def get_ndi_libdir():
+    if WIN32:
+        lib_dir = SDK_DIR / 'Lib' / 'x64'
+        src_p = SDK_DIR / 'Bin' / 'x64'
+        dest_p = PROJECT_PATH / 'src' / 'cyndilib'
+        for fn in src_p.iterdir():
+            if not fn.is_file():
+                continue
+            dest_fn = dest_p / fn.name
+            if dest_fn.exists():
+                continue
+            shutil.copy2(fn, dest_fn)
+        LIB_DIRS.append(str(lib_dir))
+    elif MACOS:
+        lib_dir = SDK_DIR / 'lib' / 'macOS'
+        LIB_DIRS.append(str(lib_dir))
+
+
+def get_ndi_libname():
+    if WIN32:
+        return 'Processing.NDI.Lib.x64'
+    return 'ndi'
+
+ndi_include()
+get_ndi_libdir()
 
 def cython_compile(path_pattern, options):
     pool = None
@@ -38,7 +88,11 @@ def cython_compile(path_pattern, options):
             nthreads=options.parallel,
             exclude_failures=options.keep_going,
             exclude=options.excludes,
-            aliases={'NUMPY_INCLUDE':INCLUDE_PATH},
+            aliases={
+                'NUMPY_INCLUDE':INCLUDE_PATH,
+                'DISTUTILS_LIBRARIES':[get_ndi_libname()],
+                'DISTUTILS_LIB_DIRS':LIB_DIRS,
+            },
             compiler_directives=options.directives,
             compile_time_env=options.compile_time_env,
             force=options.force,
