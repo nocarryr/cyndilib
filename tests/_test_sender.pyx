@@ -23,7 +23,6 @@ cdef extern from * nogil:
     #include <chrono>
     #include <thread>
     #include <stdint.h>
-    using namespace std::chrono_literals;
 
     void sleep_for(double seconds){
         int64_t i = (int64_t)seconds * 1000000;

@@ -87,6 +87,7 @@ cdef class Sender:
             raise_exception('Cannot start sender. No frame objects')
         self._running = True
         cdef NDIlib_send_instance_t ptr
+        cdef void* source_ptr
         try:
             if self.has_video_frame:
                 self.video_frame._create_child_frames(self.num_video_buffers - 1)
@@ -99,7 +100,10 @@ cdef class Sender:
             self.ptr = NDIlib_send_create(&(self.send_create))
             if self.ptr is NULL:
                 raise_mem_err()
-            self.source_ptr = NDIlib_send_get_source_name(self.ptr)
+
+            # Cast from void* to avoid clang "const" compile errors
+            source_ptr = <void*>NDIlib_send_get_source_name(self.ptr)
+            self.source_ptr = <NDIlib_source_t*>source_ptr
             assert self.source_ptr is not NULL
             self.source = Source.create_no_parent(self.source_ptr)
         except Exception as exc:
