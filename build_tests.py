@@ -11,11 +11,12 @@ import numpy
 from Cython.Build import cythonize, Cythonize
 
 PROJECT_PATH = Path(__file__).parent
+NDI_INCLUDE = PROJECT_PATH / 'src' / 'cyndilib' / 'wrapper' / 'include'
 WIN32 = sys.platform == 'win32'
 MACOS = sys.platform == 'darwin'
 
 if WIN32:
-    SDK_DIR = PROJECT_PATH / 'NDI SDK for Windows'
+    SDK_DIR = Path(os.environ.get('PROGRAMFILES')) / 'NDI' / 'NDI 5 SDK'
 elif MACOS:
     SDK_DIR = Path('/Library/NDI SDK for Apple')
 else:
@@ -27,7 +28,7 @@ CPU_COUNT = os.cpu_count()
 if CPU_COUNT is None:
     CPU_COUNT = 0
 
-INCLUDE_PATH = [numpy.get_include()]
+INCLUDE_PATH = [str(NDI_INCLUDE), numpy.get_include()]
 LIB_DIRS = []
 
 CYTHONIZE_CMD = 'cythonize {opts} {pyx_file}'
@@ -40,28 +41,14 @@ run_distutils = Cythonize.run_distutils
 _FakePool = Cythonize._FakePool
 extended_iglob = Cythonize.extended_iglob
 
-def ndi_include():
-    if MACOS:
-        p = SDK_DIR / 'include'
-        if p.exists():
-            INCLUDE_PATH.append(str(p))
-    elif WIN32:
-        p = SDK_DIR / 'include'
-        if p.exists():
-            INCLUDE_PATH.append(str(p))
-
 def get_ndi_libdir():
     if WIN32:
-        lib_dir = SDK_DIR / 'Lib' / 'x64'
-        src_p = SDK_DIR / 'Bin' / 'x64'
-        dest_p = PROJECT_PATH / 'src' / 'cyndilib'
-        for fn in src_p.iterdir():
-            if not fn.is_file():
-                continue
-            dest_fn = dest_p / fn.name
-            if dest_fn.exists():
-                continue
-            shutil.copy2(fn, dest_fn)
+        lib_dir = PROJECT_PATH / 'src' / 'cyndilib' / 'wrapper' / 'lib'
+        dll_dir = lib_dir.parent / 'bin'
+        assert lib_dir.exists()
+        assert dll_dir.exists()
+        assert len(list(lib_dir.glob('*.lib')))
+        assert len(list(dll_dir.glob('*.dll')))
         LIB_DIRS.append(str(lib_dir))
     elif MACOS:
         lib_dir = SDK_DIR / 'lib' / 'macOS'
@@ -73,7 +60,6 @@ def get_ndi_libname():
         return 'Processing.NDI.Lib.x64'
     return 'ndi'
 
-ndi_include()
 get_ndi_libdir()
 
 def cython_compile(path_pattern, options):
