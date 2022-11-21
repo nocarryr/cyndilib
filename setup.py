@@ -54,6 +54,10 @@ def get_ndi_libdir():
                         continue
                     shutil.copy2(fn, dest_fn)
         LIB_DIRS.append(str(lib_dir))
+    elif MACOS:
+        sdk_dir = Path('/Library/NDI SDK for Apple')
+        lib_dir = sdk_dir / 'lib' / 'macOS'
+        LIB_DIRS.append(str(lib_dir))
 
 def get_ndi_libname():
     if WIN32:
