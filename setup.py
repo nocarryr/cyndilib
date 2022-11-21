@@ -33,20 +33,26 @@ INCLUDE_PATH = [str(NDI_INCLUDE), get_python_inc()]
 
 def get_ndi_libdir():
     if WIN32:
-        # p = Path(os.environ.get('PROGRAMFILES'))
-        # p = p / 'NDI' / 'NDI 5 SDK' / 'Lib' / 'x64'
-        # p = PROJECT_PATH / 'src' / 'cyndilib' / 'wrapper' / 'lib'
-        sdk_dir = PROJECT_PATH / 'NDI SDK for Windows'
-        lib_dir = sdk_dir / 'Lib' / 'x64'
-        src_p = sdk_dir / 'Bin' / 'x64'
-        dest_p = PROJECT_PATH / 'src' / 'cyndilib'
-        for fn in src_p.iterdir():
-            if not fn.is_file():
-                continue
-            dest_fn = dest_p / fn.name
-            if dest_fn.exists():
-                continue
-            shutil.copy2(fn, dest_fn)
+        p = Path(os.environ.get('PROGRAMFILES'))
+        sdk_dir = p / 'NDI' / 'NDI 5 SDK'
+        lib_dir = PROJECT_PATH / 'src' / 'cyndilib' / 'wrapper' / 'lib'
+        dll_dir = lib_dir.parent / 'bin'
+        if not sdk_dir.exists():
+            assert lib_dir.exists()
+            assert dll_dir.exists()
+            assert len(list(lib_dir.glob('*.lib')))
+            assert len(list(dll_dir.glob('*.dll')))
+        else:
+            lib_src = sdk_dir / 'Lib' / 'x64'
+            dll_src = sdk_dir / 'Bin' / 'x64'
+            for src_p, dst_p in zip([lib_src, dll_src], [lib_dir, dll_dir]):
+                for fn in src_p.iterdir():
+                    if not fn.is_file():
+                        continue
+                    dest_fn = dst_p / fn.name
+                    if dest_fn.exists():
+                        continue
+                    shutil.copy2(fn, dest_fn)
         LIB_DIRS.append(str(lib_dir))
 
 def get_ndi_libname():
