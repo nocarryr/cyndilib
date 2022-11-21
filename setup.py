@@ -27,19 +27,9 @@ WIN32 = sys.platform == 'win32'
 MACOS = sys.platform == 'darwin'
 IS_BUILD = True
 LIB_DIRS = []
-INCLUDE_PATH = [get_python_inc()]
+NDI_INCLUDE = PROJECT_PATH / 'src' / 'cyndilib' / 'wrapper' / 'include'
+INCLUDE_PATH = [str(NDI_INCLUDE), get_python_inc()]
 
-def get_ndi_include():
-    if MACOS:
-        p = Path('/Library/NDI SDK for Apple/include')
-        if p.exists():
-            INCLUDE_PATH.append(str(p))
-    elif WIN32:
-        # p = Path(os.environ.get('PROGRAMFILES'))
-        # p = p / 'NDI' / 'NDI 5 SDK' / 'Include'
-        p = PROJECT_PATH / 'src' / 'cyndilib' / 'wrapper' / 'include'
-        if p.exists():
-            INCLUDE_PATH.append(str(p))
 
 def get_ndi_libdir():
     if WIN32:
@@ -65,7 +55,6 @@ def get_ndi_libname():
     return 'ndi'
 
 if IS_BUILD:
-    get_ndi_include()
     get_ndi_libdir()
 
 try:
