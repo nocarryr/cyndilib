@@ -291,7 +291,6 @@ cdef class FinderThreadWorker:
         self.sleep_evt = Event()
         self.running = False
         # self.waiting = Event()
-        print('FinderThreadWorker init')
 
     cdef void run(self) except *:
         cdef bint first_loop = True
@@ -301,10 +300,8 @@ cdef class FinderThreadWorker:
             if first_loop:
                 self.finder.finder_thread_running.set()
                 first_loop = False
-            print('FinderThreadWorker waiting')
             # self.waiting.set()
             changed = self.finder._wait_for_sources(self.timeout_ms)
-            print(f'FinderThreadWorker wait complete: changed={changed}')
             if self.finder.num_sources == 0:
                 time.sleep(.1)
             else:
@@ -322,14 +319,12 @@ class FinderThread(threading.Thread):
     # cdef Finder finder
     def __init__(self, Finder finder):
         super().__init__()
-        print('FinderThread init')
         self.finder = Finder
         self.worker = FinderThreadWorker(finder)
         self.running = False
         self.stopped = threading.Event()
 
     def run(self):
-        print('FinderThread.run')
         cdef FinderThreadWorker worker = self.worker
         try:
             worker.run()
