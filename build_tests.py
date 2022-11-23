@@ -4,32 +4,23 @@ import os
 import sys
 import glob
 import shlex
+import json
 import multiprocessing
 from pathlib import Path
 from distutils.sysconfig import get_python_inc
+from pkg_resources import resource_filename
 import numpy
 from Cython.Build import cythonize, Cythonize
 
-PROJECT_PATH = Path(__file__).parent
-NDI_INCLUDE = PROJECT_PATH / 'src' / 'cyndilib' / 'wrapper' / 'include'
 WIN32 = sys.platform == 'win32'
 MACOS = sys.platform == 'darwin'
 
-if WIN32:
-    SDK_DIR = Path(os.environ.get('PROGRAMFILES')) / 'NDI' / 'NDI 5 SDK'
-elif MACOS:
-    SDK_DIR = Path('/Library/NDI SDK for Apple')
-else:
-    SDK_DIR = None
 
 ROOT_PATH = os.path.abspath(os.path.dirname(__file__))
 TESTS_PATH = os.path.join(ROOT_PATH, 'tests')
 CPU_COUNT = os.cpu_count()
 if CPU_COUNT is None:
     CPU_COUNT = 0
-
-INCLUDE_PATH = [str(NDI_INCLUDE), numpy.get_include()]
-LIB_DIRS = []
 
 CYTHONIZE_CMD = 'cythonize {opts} {pyx_file}'
 
@@ -41,28 +32,70 @@ run_distutils = Cythonize.run_distutils
 _FakePool = Cythonize._FakePool
 extended_iglob = Cythonize.extended_iglob
 
-def get_ndi_libdir():
-    if WIN32:
-        lib_dir = PROJECT_PATH / 'src' / 'cyndilib' / 'wrapper' / 'lib'
-        dll_dir = lib_dir.parent / 'bin'
-        assert lib_dir.exists()
-        assert dll_dir.exists()
-        assert len(list(lib_dir.glob('*.lib')))
-        assert len(list(dll_dir.glob('*.dll')))
-        LIB_DIRS.append(str(lib_dir))
-    elif MACOS:
-        lib_dir = SDK_DIR / 'lib' / 'macOS'
-        LIB_DIRS.append(str(lib_dir))
+def get_cython_metadata(src_file: Path):
+    """Read the distutils metadata embedded in cythonized sources
 
+    The JSON-formatted "Cython Metadata" contains all of the necessary compiler
+    and linker options discovered by "cythonize()" to be passed as kwargs to
+    recreate Extension objects without Cython installed
 
-def get_ndi_libname():
-    if WIN32:
-        return 'Processing.NDI.Lib.x64'
-    return 'ndi'
+    ::
+        /* BEGIN: Cython Metadata
+            {
+                "distutils": {
+                    "depends": ["..."],
+                    "extra_compile_args": ["..."],
+                    "include_dirs": ["..."],
+                    "language": "c/c++",
+                    "name": "...",
+                    "sources": ["..."]
+                }
+            }
+        END: Cython Metadata */
 
-get_ndi_libdir()
+    """
+    if not isinstance(src_file, Path):
+        src_file = Path(src_file)
+    if src_file.suffix not in ['.c', '.cpp']:
+        return None
+    start_found = False
+    end_found = False
+    meta_lines = []
+    i = -1
+    with src_file.open('rt') as f:
+        for line in f:
+            i += 1
+            if not start_found:
+                if 'BEGIN: Cython Metadata' in line:
+                    start_found = True
+                elif i > 100:
+                    return None
+            else:
+                if 'END: Cython Metadata' in line:
+                    end_found = True
+                    break
+                meta_lines.append(line)
+    if not end_found or not len(meta_lines):
+        return None
+    s = '\n'.join(meta_lines)
+    return json.loads(s)
+
+def get_ndi_metadata():
+    src_file = Path(resource_filename('cyndilib.wrapper', 'ndi_structs.cpp'))
+    if not src_file.exists():
+        raise RuntimeError('cyndilib must be compiled first')
+    metadata = get_cython_metadata(src_file)
+    keys = [
+        'extra_compile_args', 'include_dirs', 'libraries',
+        'library_dirs', 'runtime_library_dirs',
+    ]
+    return {key:metadata['distutils'].get(key) for key in keys}
 
 def cython_compile(path_pattern, options):
+    distutils_meta = get_ndi_metadata()
+    aliases = {f'DISTUTILS_{k.upper()}':v for k,v in distutils_meta.items()}
+    print(f'{aliases=}')
+
     pool = None
     all_paths = map(os.path.abspath, extended_iglob(path_pattern))
     all_paths = [p for p in all_paths]
@@ -74,11 +107,7 @@ def cython_compile(path_pattern, options):
             nthreads=options.parallel,
             exclude_failures=options.keep_going,
             exclude=options.excludes,
-            aliases={
-                'NUMPY_INCLUDE':INCLUDE_PATH,
-                'DISTUTILS_LIBRARIES':[get_ndi_libname()],
-                'DISTUTILS_LIB_DIRS':LIB_DIRS,
-            },
+            aliases=aliases,
             compiler_directives=options.directives,
             compile_time_env=options.compile_time_env,
             force=options.force,
