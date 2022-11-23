@@ -13,12 +13,18 @@ if USE_CYTHON:
     # sys.argv.remove('--use-cython')
     from Cython.Build import cythonize
     from Cython.Compiler import Options
-    from annotate_index import AnnotateIndex
+    try:
+        from annotate_index import AnnotateIndex
+    except ImportError:
+        AnnotateIndex = False
     Options.fast_fail = True
 
     USE_PROFILE = '--use-profile' in sys.argv
     if USE_PROFILE:
         sys.argv.remove('--use-profile')
+    ANNOTATE = '--annotate' in sys.argv
+    if ANNOTATE:
+        sys.argv.remove('--annotate')
 else:
     USE_PROFILE = False
 
@@ -188,7 +194,7 @@ if USE_CYTHON:
     ]
     ext_modules = cythonize(
         ext_modules,
-        annotate=True,
+        annotate=ANNOTATE,
         compiler_directives=compiler_directives,
         # compiler_directives={
         #     'embedsignature':True,
@@ -204,7 +210,8 @@ if USE_CYTHON:
         for c in root.walk():
             print('{} -> {}'.format(c, c.to_path('index.html')))
             c.write_html()
-    build_annotate_index(ext_modules)
+    if ANNOTATE and AnnotateIndex is not None:
+        build_annotate_index(ext_modules)
 else:
     ext_modules = build_extensions(PROJECT_PATH / 'src' / 'cyndilib')
 
