@@ -1,5 +1,6 @@
 import os
 import sys
+import sysconfig
 import shutil
 import json
 from pathlib import Path
@@ -33,6 +34,7 @@ WIN32 = sys.platform == 'win32'
 MACOS = sys.platform == 'darwin'
 IS_BUILD = True
 LIB_DIRS = []
+RUNTIME_LIB_DIRS = []
 NDI_INCLUDE = PROJECT_PATH / 'src' / 'cyndilib' / 'wrapper' / 'include'
 INCLUDE_PATH = [str(NDI_INCLUDE), get_python_inc()]
 
@@ -41,17 +43,16 @@ def get_ndi_libdir():
     if WIN32:
         p = Path(os.environ.get('PROGRAMFILES'))
         sdk_dir = p / 'NDI' / 'NDI 5 SDK'
+        lib_sys = sdk_dir / 'Lib' / 'x64'
+        dll_sys = sdk_dir / 'Bin' / 'x64'
         lib_dir = PROJECT_PATH / 'src' / 'cyndilib' / 'wrapper' / 'lib'
         dll_dir = lib_dir.parent / 'bin'
-        if not sdk_dir.exists():
-            assert lib_dir.exists()
-            assert dll_dir.exists()
-            assert len(list(lib_dir.glob('*.lib')))
-            assert len(list(dll_dir.glob('*.dll')))
-        else:
-            lib_src = sdk_dir / 'Lib' / 'x64'
-            dll_src = sdk_dir / 'Bin' / 'x64'
-            for src_p, dst_p in zip([lib_src, dll_src], [lib_dir, dll_dir]):
+
+        if not len(list(lib_dir.glob('*.lib'))):
+            assert lib_sys.exists()
+            lib_sys = sdk_dir / 'Lib' / 'x64'
+            dll_sys = sdk_dir / 'Bin' / 'x64'
+            for src_p, dst_p in zip([lib_sys, dll_sys], [lib_dir, dll_dir]):
                 for fn in src_p.iterdir():
                     if not fn.is_file():
                         continue
@@ -59,11 +60,19 @@ def get_ndi_libdir():
                     if dest_fn.exists():
                         continue
                     shutil.copy2(fn, dest_fn)
+            LIB_DIRS.append(str(lib_dir))
+        else:
+            LIB_DIRS.append(str(lib_sys))
+    else:
+        lib_dir = PROJECT_PATH / 'src' / 'cyndilib' / 'wrapper' / 'bin'
+        if not MACOS:
+            arch = sysconfig.get_config_var('MULTIARCH')
+            if arch:
+                p = lib_dir / arch
+                if p.exists():
+                    lib_dir = p
         LIB_DIRS.append(str(lib_dir))
-    elif MACOS:
-        sdk_dir = Path('/Library/NDI SDK for Apple')
-        lib_dir = sdk_dir / 'lib' / 'macOS'
-        LIB_DIRS.append(str(lib_dir))
+        RUNTIME_LIB_DIRS.append(str(lib_dir))
 
 def get_ndi_libname():
     if WIN32:
@@ -180,6 +189,8 @@ if USE_CYTHON:
         extra_compile_args.append('-fpermissive')
     if not len(LIB_DIRS):
         LIB_DIRS = None
+    if not len(RUNTIME_LIB_DIRS):
+        RUNTIME_LIB_DIRS = None
 
     ext_modules = [
         Extension(
@@ -188,6 +199,7 @@ if USE_CYTHON:
             extra_compile_args=extra_compile_args,
             libraries=[get_ndi_libname()],
             library_dirs=LIB_DIRS,
+            runtime_library_dirs=RUNTIME_LIB_DIRS,
             define_macros=ext_macros,
             # define_macros=[('CYTHON_TRACE', 1), ('CYTHON_TRACE_NOGIL', 1)]
         ),
