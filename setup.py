@@ -96,136 +96,55 @@ class CyBuildError(CCompilerError):
         return '{}  (try building with "--use-cython")'.format(self.msg)
 
 
-def get_cython_metadata(src_file):
-    """Read the distutils metadata embedded in cythonized sources
+compiler_directives = {'embedsignature':True}
 
-    The JSON-formatted "Cython Metadata" contains all of the necessary compiler
-    and linker options discovered by "cythonize()" to be passed as kwargs to
-    recreate Extension objects without Cython installed
-
-    ::
-        /* BEGIN: Cython Metadata
-            {
-                "distutils": {
-                    "depends": ["..."],
-                    "extra_compile_args": ["..."],
-                    "include_dirs": ["..."],
-                    "language": "c/c++",
-                    "name": "...",
-                    "sources": ["..."]
-                }
-            }
-        END: Cython Metadata */
-
-    """
-    if not isinstance(src_file, Path):
-        src_file = Path(src_file)
-    if src_file.suffix not in ['.c', '.cpp']:
-        return None
-    start_found = False
-    end_found = False
-    meta_lines = []
-    i = -1
-    with src_file.open('rt') as f:
-        for line in f:
-            i += 1
-            if not start_found:
-                if 'BEGIN: Cython Metadata' in line:
-                    start_found = True
-                elif i > 100:
-                    return None
-            else:
-                if 'END: Cython Metadata' in line:
-                    end_found = True
-                    break
-                meta_lines.append(line)
-    if not end_found or not len(meta_lines):
-        return None
-    s = '\n'.join(meta_lines)
-    return json.loads(s)
-
-def build_extensions(pkg_dir, search_pattern='**/*.pyx'):
-    """Create Extension objects from ".c" and ".cpp" sources built by Cython
-
-    Searches for ".pyx" files in ``pkg_dir`` and their corresponding ".c" or ".cpp"
-    files. ``get_cython_metadata()`` is then used to initialize the Extension
-
-    """
-    if not isinstance(pkg_dir, Path):
-        pkg_dir = Path(pkg_dir)
-    extensions = []
-    names = set()
-    for pyx_file in pkg_dir.glob(search_pattern):
-        src_file = None
-        for suffix in ['.c', '.cpp']:
-            src_file = pyx_file.with_suffix(suffix)
-            if src_file.exists():
-                break
-            else:
-                src_file = None
-        if src_file is None:
-            raise CyBuildError('Could not find valid source for "{}"'.format(pyx_file))
-        meta = get_cython_metadata(src_file)
-        print(meta)
-        if meta is None:
-            raise CyBuildError('Could not read metadata from source "{}"'.format(src_file))
-        ext_name = meta['module_name']
-        assert ext_name not in names
-        names.add(ext_name)
-        extensions.append(Extension(**meta['distutils']))
-    return extensions
-
-if USE_CYTHON:
-    compiler_directives = {'embedsignature':True}
-    if USE_PROFILE:
-        ext_macros = [('CYTHON_TRACE', 1), ('CYTHON_TRACE_NOGIL', 1)]
-        compiler_directives.update({'profile':True, 'linetrace':True})
-    else:
-        ext_macros = None
-    extra_compile_args = []
-    if WIN32:
-        extra_compile_args.append('/Zc:strictStrings')
-    else:
-        extra_compile_args.append('-fpermissive')
-    if not len(LIB_DIRS):
-        LIB_DIRS = None
-    if not len(RUNTIME_LIB_DIRS):
-        RUNTIME_LIB_DIRS = None
-
-    ext_modules = [
-        Extension(
-            '*', ['src/**/*.pyx'],
-            include_dirs=INCLUDE_PATH,
-            extra_compile_args=extra_compile_args,
-            libraries=[get_ndi_libname()],
-            library_dirs=LIB_DIRS,
-            runtime_library_dirs=RUNTIME_LIB_DIRS,
-            define_macros=ext_macros,
-            # define_macros=[('CYTHON_TRACE', 1), ('CYTHON_TRACE_NOGIL', 1)]
-        ),
-    ]
-    ext_modules = cythonize(
-        ext_modules,
-        annotate=ANNOTATE,
-        compiler_directives=compiler_directives,
-        # compiler_directives={
-        #     'embedsignature':True,
-        #     # 'profile':True,
-        #     # 'linetrace':True,
-        # },
-    )
-    def build_annotate_index(extensions):
-        root = AnnotateIndex('', root_dir=PROJECT_PATH / 'src')
-        for ext in extensions:
-            pkg_dir = Path(ext.sources[0]).parent
-            pkg = root.add_module(ext.name)
-        for c in root.walk():
-            print('{} -> {}'.format(c, c.to_path('index.html')))
-            c.write_html()
-    if ANNOTATE and AnnotateIndex is not None:
-        build_annotate_index(ext_modules)
+if USE_PROFILE:
+    ext_macros = [('CYTHON_TRACE', 1), ('CYTHON_TRACE_NOGIL', 1)]
+    compiler_directives.update({'profile':True, 'linetrace':True})
 else:
-    ext_modules = build_extensions(PROJECT_PATH / 'src' / 'cyndilib')
+    ext_macros = None
+
+extra_compile_args = []
+
+if WIN32:
+    extra_compile_args.append('/Zc:strictStrings')
+else:
+    extra_compile_args.append('-fpermissive')
+
+if not len(LIB_DIRS):
+    LIB_DIRS = None
+if not len(RUNTIME_LIB_DIRS):
+    RUNTIME_LIB_DIRS = None
+
+ext_modules = [
+    Extension(
+        '*', ['src/**/*.pyx'],
+        include_dirs=INCLUDE_PATH,
+        extra_compile_args=extra_compile_args,
+        libraries=[get_ndi_libname()],
+        library_dirs=LIB_DIRS,
+        runtime_library_dirs=RUNTIME_LIB_DIRS,
+        define_macros=ext_macros,
+        # define_macros=[('CYTHON_TRACE', 1), ('CYTHON_TRACE_NOGIL', 1)]
+    ),
+]
+
+ext_modules = cythonize(
+    ext_modules,
+    annotate=ANNOTATE,
+    compiler_directives=compiler_directives,
+)
+
+def build_annotate_index(extensions):
+    root = AnnotateIndex('', root_dir=PROJECT_PATH / 'src')
+    for ext in extensions:
+        pkg_dir = Path(ext.sources[0]).parent
+        pkg = root.add_module(ext.name)
+    for c in root.walk():
+        print('{} -> {}'.format(c, c.to_path('index.html')))
+        c.write_html()
+if ANNOTATE and AnnotateIndex is not None:
+    build_annotate_index(ext_modules)
 
 setup(
     ext_modules=ext_modules,
