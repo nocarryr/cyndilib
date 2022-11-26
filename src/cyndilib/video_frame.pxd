@@ -15,6 +15,7 @@ from .send_frame_status cimport *
 
 cdef class VideoFrame:
     cdef NDIlib_video_frame_v2_t* ptr
+    cdef FourCCPackInfo pack_info
     cdef frame_rate_t frame_rate
 
     cpdef str get_format_string(self)
@@ -45,6 +46,7 @@ cdef class VideoFrame:
     cdef void _set_timestamp(self, int64_t value) nogil
     cdef size_t _get_data_size(self) nogil
     cpdef size_t get_data_size(self)
+    cdef void _recalc_pack_info(self) nogil except *
 
 cdef class VideoRecvFrame(VideoFrame):
     cdef readonly size_t max_buffers
@@ -85,7 +87,6 @@ cdef class VideoSendFrame(VideoFrame):
     cdef VideoSendFrame_status send_status
     cdef readonly VideoSendFrame parent_frame
     cdef readonly VideoSendFrame child_frame
-    cdef FourCCPackInfo pack_info
     cdef view.array view
     cdef readonly bint has_child, has_parent
     cdef readonly size_t child_count
@@ -111,5 +112,4 @@ cdef class VideoSendFrame(VideoFrame):
     cdef void _create_child_frames(self, size_t count) except *
     cdef void _create_child_frame(self) except *
     cdef void _on_child_created(self) nogil except *
-    cdef void _recalc_pack_info(self) nogil except *
     cdef void _rebuild_array(self) except *

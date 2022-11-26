@@ -63,6 +63,7 @@ cdef class VideoFrame:
         return self.ptr.xres
     cdef void _set_xres(self, int value) nogil except *:
         self.ptr.xres = value
+        self._recalc_pack_info()
         if self.ptr.yres > 0:
             self._set_aspect(self.ptr.xres / <double>(self.ptr.yres))
 
@@ -70,6 +71,7 @@ cdef class VideoFrame:
         return self.ptr.yres
     cdef void _set_yres(self, int value) nogil except *:
         self.ptr.yres = value
+        self._recalc_pack_info()
         if self.ptr.yres > 0:
             self._set_aspect(self.ptr.xres / <double>(self.ptr.yres))
 
@@ -81,6 +83,7 @@ cdef class VideoFrame:
         return fourcc_type_uncast(self.ptr.FourCC)
     cdef void _set_fourcc(self, FourCC value) nogil except *:
         self.ptr.FourCC = fourcc_type_cast(value)
+        self._recalc_pack_info()
 
     def get_frame_rate(self):
         return Fraction(self.ptr.frame_rate_N, self.ptr.frame_rate_D)
@@ -127,7 +130,7 @@ cdef class VideoFrame:
         return self._get_buffer_size()
 
     cdef size_t _get_buffer_size(self) nogil except *:
-        return self.ptr.line_stride_in_bytes * self.ptr.yres
+        return self.pack_info.total_size
 
     cdef uint8_t* _get_data(self) nogil:
         return self.ptr.p_data
@@ -158,9 +161,24 @@ cdef class VideoFrame:
     #     return ndi_time_to_posix(self.ptr.timestamp)
 
     cdef size_t _get_data_size(self) nogil:
-        return self.ptr.line_stride_in_bytes * self.ptr.yres
+        return self.pack_info.total_size
     cpdef size_t get_data_size(self):
         return self._get_data_size()
+
+    cdef void _recalc_pack_info(self) nogil except *:
+        cdef FourCC fcc = self._get_fourcc()
+        cdef bint changed = False
+        if self.pack_info.fourcc != fcc:
+            self.pack_info.fourcc = fcc
+            changed = True
+        if self.ptr.xres != self.pack_info.xres or self.ptr.yres != self.pack_info.yres:
+            self.pack_info.xres = self.ptr.xres
+            self.pack_info.yres = self.ptr.yres
+            changed = True
+        if self.pack_info.xres == 0 or self.pack_info.yres == 0:
+            return
+        if changed:
+            calc_fourcc_pack_info(&(self.pack_info))
 
 
 cdef class VideoRecvFrame(VideoFrame):
@@ -345,6 +363,7 @@ cdef class VideoRecvFrame(VideoFrame):
 
     cdef void _prepare_incoming(self, NDIlib_recv_instance_t recv_ptr) except *:
         cdef size_t bfr_idx
+        self._recalc_pack_info()
         self._check_write_array_size()
         if self.read_indices.size() == self.max_buffers:
             with self.read_lock:
@@ -432,6 +451,7 @@ cdef class VideoFrameSync(VideoFrame):
         if self.view_count > 0:
             raise_withgil(PyExc_ValueError, 'cannot write with view active')
 
+        self._recalc_pack_info()
         cdef NDIlib_video_frame_v2_t* p = self.ptr
         cdef size_t size_in_bytes = self._get_buffer_size()
         self.shape[0] = size_in_bytes
@@ -624,16 +644,6 @@ cdef class VideoSendFrame(VideoFrame):
             raise_exception('Cannot alter frame')
         self.ptr.FourCC = fourcc_type_cast(value)
         # self._recalc_pack_info()
-
-    cdef void _recalc_pack_info(self) nogil except *:
-        self.pack_info.fourcc = self._get_fourcc()
-        self.pack_info.xres = self.ptr.xres
-        self.pack_info.yres = self.ptr.yres
-        if self.pack_info.xres == 0:
-            return
-        if self.pack_info.yres == 0:
-            return
-        calc_fourcc_pack_info(&(self.pack_info))
 
     cdef void _rebuild_array(self) except *:
         assert not self.attached_to_sender
