@@ -77,8 +77,8 @@ def setup_sender(
     sender.set_video_frame(vf)
 
     af = AudioSendFrame()
-    af.set_sample_rate(audio_data.sample_rate)
-    af.set_num_channels(audio_data.num_channels)
+    af.sample_rate = audio_data.sample_rate
+    af.num_channels = audio_data.num_channels
     af.set_max_num_samples(audio_data.s_perseg)
     sender.set_audio_frame(af)
 

@@ -576,7 +576,7 @@ def test_buffer_overwrite(fake_audio_data_longer):
         ndi_timestamps[i] = ndi_ts
         bfr_len = audio_frame.get_buffer_depth()
         print(f'{i=}, {bfr_len=}, {read_indices=}')
-        cur_timestamp = audio_frame.get_timestamp()
+        cur_timestamp = audio_frame.timestamp
         assert cur_timestamp == ndi_ts
 
         if i >= max_buffers:

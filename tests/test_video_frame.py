@@ -15,6 +15,7 @@ def test():
         buffer_into_video_frame(vf, width, height, expected_data)
         assert vf.get_buffer_depth() == 1
         assert vf.get_view_count() == 0
+        assert vf.get_buffer_size() == width * height * 4
         result = np.frombuffer(vf, dtype=np.uint8)
         assert vf.get_view_count() == 1
         result = result.copy()
