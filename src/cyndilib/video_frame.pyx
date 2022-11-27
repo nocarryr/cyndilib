@@ -6,9 +6,8 @@ from fractions import Fraction
 import numpy as np
 
 cdef class VideoFrame:
-    # cdef NDIlib_video_frame_v2_t* ptr
-    # cdef frame_rate_t frame_rate
-
+    """Base class for video frames
+    """
     def __cinit__(self, *args, **kwargs):
         self.ptr = video_frame_create_default()
         if self.ptr is NULL:
@@ -25,6 +24,9 @@ cdef class VideoFrame:
             video_frame_destroy(p)
 
     cpdef str get_format_string(self):
+        """Get the video format as a string based off of resolution, frame rate
+        and field format ("1080i59.94", etc)
+        """
         cdef int yres = self._get_yres()
         if yres <= 0:
             return 'unknown'
@@ -40,8 +42,12 @@ cdef class VideoFrame:
         return f'{yres}{fieldStr}{fr_str}'
 
     def get_resolution(self):
+        """Get the video resolution as a tuple of ``(width, height)``
+        """
         return self._get_resolution
     def set_resolution(self, int xres, int yres):
+        """Set the video resolution
+        """
         self._set_resolution(xres, yres)
     cdef (int, int) _get_resolution(self) nogil except *:
         return (self.ptr.xres, self.ptr.yres)
@@ -53,10 +59,14 @@ cdef class VideoFrame:
 
     @property
     def xres(self):
+        """X resolution (width)
+        """
         return self._get_xres()
 
     @property
     def yres(self):
+        """Y resolution (height)
+        """
         return self._get_yres()
 
     cdef int _get_xres(self) nogil:
@@ -75,9 +85,19 @@ cdef class VideoFrame:
         if self.ptr.yres > 0:
             self._set_aspect(self.ptr.xres / <double>(self.ptr.yres))
 
+    @property
+    def fourcc(self):
+        """The current :class:`~.wrapper.ndi_structs.FourCC` format type
+        """
+        return self._get_fourcc()
+
     def get_fourcc(self):
+        """Get the :class:`~.wrapper.ndi_structs.FourCC` format type
+        """
         return self._get_fourcc()
     def set_fourcc(self, FourCC value):
+        """Set the :class:`~.wrapper.ndi_structs.FourCC` format type
+        """
         self._set_fourcc(value)
     cdef FourCC _get_fourcc(self) nogil except *:
         return fourcc_type_uncast(self.ptr.FourCC)
@@ -85,9 +105,13 @@ cdef class VideoFrame:
         self.ptr.FourCC = fourcc_type_cast(value)
         self._recalc_pack_info()
 
-    def get_frame_rate(self):
+    def get_frame_rate(self) -> Fraction:
+        """Get the video frame rate
+        """
         return Fraction(self.ptr.frame_rate_N, self.ptr.frame_rate_D)
-    def set_frame_rate(self, value):
+    def set_frame_rate(self, value: Fraction):
+        """Set the video frame rate
+        """
         cdef int[2] fr = [value.numerator, value.denominator]
         self._set_frame_rate(fr)
 
@@ -150,10 +174,16 @@ cdef class VideoFrame:
         self.ptr.timestamp = value
 
     def get_timestamp_posix(self):
+        """Get the current :term:`timestamp <ndi-timestamp>` converted to float
+        seconds (posix)
+        """
         cdef double r = ndi_time_to_posix(self.ptr.timestamp)
         return r
 
     def get_timecode_posix(self):
+        """Get the current :term:`timecode <ndi-timecode>` converted to float
+        seconds (posix)
+        """
         cdef double r = ndi_time_to_posix(self.ptr.timecode)
         return r
 
@@ -182,6 +212,20 @@ cdef class VideoFrame:
 
 
 cdef class VideoRecvFrame(VideoFrame):
+    """Video frame to be used with a :class:`.receiver.Receiver`
+
+    Arguments:
+        max_buffers (int, optional): The maximum number of items to store
+            in the buffer. Defaults to ``4``
+
+    Incoming data from the receiver is placed into temporary buffers so it can
+    be read without possibly losing frames.
+
+    The buffer items retain both the frame data and corresponding timestamps.
+    They can be read using the :meth:`fill_p_data` method or using the
+    :ref:`buffer protocol <frame-buffer-protocol>`.
+
+    """
     def __cinit__(self, *args, **kwargs):
         self.video_bfrs = av_frame_bfr_create(self.video_bfrs)
         self.read_bfr = av_frame_bfr_create(self.video_bfrs)
@@ -272,13 +316,28 @@ cdef class VideoRecvFrame(VideoFrame):
 
             arr[...] = all_frame_data[bfr_idx,...]
 
-    def get_buffer_depth(self):
+    def get_buffer_depth(self) -> int:
+        """Get the number of buffered frames
+        """
         return self.read_indices.size()
 
-    def buffer_full(self):
+    def buffer_full(self) -> bint:
+        """Returns True if the buffers are all in use
+        """
         return self.read_indices.size() >= self.max_buffers
 
     def skip_frames(self, bint eager):
+        """Discard buffered frame(s)
+
+        If the buffers remain full and the application can't keep up,
+        this can be used as a last resort.
+
+        Arguments:
+            eager (bool): If True, discard all buffered frames except one
+                (the most recently received). If False, only discard one frame
+
+        Returns the number of frames skipped
+        """
         cdef size_t idx, max_remain, cur_size, num_skipped = 0
         with self.read_lock:
             cur_size = self.read_indices.size()
@@ -302,6 +361,12 @@ cdef class VideoRecvFrame(VideoFrame):
     @cython.boundscheck(False)
     @cython.wraparound(False)
     def fill_p_data(self, cnp.uint8_t[:] dest):
+        """Copy the first buffered frame data into the given
+        destination array (or memoryview).
+
+        The array should be typed as unsigned 8-bit integers sized to match
+        that of :meth:`~VideoFrame.get_buffer_size`
+        """
         cdef size_t bfr_len, vc, bfr_idx
         cdef cnp.uint8_t[:,:] all_frame_data = self.all_frame_data
         cdef cnp.uint8_t[:] read_view = self.current_frame_data
@@ -406,6 +471,18 @@ cdef class VideoRecvFrame(VideoFrame):
                 NDIlib_recv_free_video_v2(recv_ptr, self.ptr)
 
 cdef class VideoFrameSync(VideoFrame):
+    """Video frame for use with :class:`.framesync.FrameSync`
+
+    Unlike :class:`VideoRecvFrame`, this object does not store or buffer any
+    data. It will always contain the most recent video frame data after a call to
+    :meth:`.framesync.FrameSync.capture_video`.
+
+    This is by design since the FrameSync methods utilize buffering from within
+    the |NDI| library.
+
+    Data can be read using the :meth:`get_array` method or by using the
+    :ref:`buffer protocol <frame-buffer-protocol>`.
+    """
     def __cinit__(self, *args, **kwargs):
         self.shape[0] = 0
         self.strides[0] = 0
@@ -416,6 +493,9 @@ cdef class VideoFrameSync(VideoFrame):
         self.fs_ptr = NULL
 
     def get_array(self):
+        """Get the video frame data as an :class:`numpy.ndarray` of unsigned
+        8-bit integers
+        """
         cdef cnp.ndarray[cnp.uint8_t, ndim=1] arr = np.empty(self.shape, dtype=np.uint8)
         cdef cnp.uint8_t[:] arr_view = arr
         cdef cnp.uint8_t[:] self_view = self
@@ -460,6 +540,15 @@ cdef class VideoFrameSync(VideoFrame):
 
 
 cdef class VideoSendFrame(VideoFrame):
+    """Video frame for use with :class:`.sender.Sender`
+
+    .. note::
+
+        Instances of this class are not intended to be created directly nor are
+        its methods. They are instead called from the :class:`sender.Sender`
+        write methods.
+
+    """
     def __cinit__(self, *args, **kwargs):
         self.send_status.id = NULL_ID
         self.send_status.next_send_id = NULL_ID

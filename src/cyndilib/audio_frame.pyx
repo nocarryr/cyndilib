@@ -6,8 +6,10 @@ cimport numpy as cnp
 import numpy as np
 
 
-cdef class AudioFrame:
 
+cdef class AudioFrame:
+    """Base class for audio frames
+    """
     def __cinit__(self, *args, **kwargs):
         self.ptr = audio_frame_create_default()
         if self.ptr is NULL:
@@ -22,9 +24,13 @@ cdef class AudioFrame:
         if p is not NULL:
             audio_frame_destroy(p)
 
-    def get_sample_rate(self):
+    @property
+    def sample_rate(self):
+        """The current sample rate
+        """
         return self._get_sample_rate()
-    def set_sample_rate(self, size_t value):
+    @sample_rate.setter
+    def sample_rate(self, size_t value):
         self._set_sample_rate(value)
 
     cdef int _get_sample_rate(self) nogil:
@@ -32,9 +38,13 @@ cdef class AudioFrame:
     cdef void _set_sample_rate(self, int value) nogil:
         self.ptr.sample_rate = value
 
-    def get_num_channels(self):
+    @property
+    def num_channels(self):
+        """Number of audio channels
+        """
         return self._get_num_channels()
-    def set_num_channels(self, size_t value):
+    @num_channels.setter
+    def num_channels(self, size_t value):
         self._set_num_channels(value)
 
     cdef int _get_num_channels(self) nogil:
@@ -42,15 +52,44 @@ cdef class AudioFrame:
     cdef void _set_num_channels(self, int value) nogil:
         self.ptr.no_channels = value
 
+    @property
+    def num_samples(self):
+        """Number of samples available for read or write
+        """
+        return self._get_num_samples()
+    @num_samples.setter
+    def num_samples(self, size_t value):
+        self._set_num_samples(value)
+
     cdef int _get_num_samples(self) nogil:
         return self.ptr.no_samples
     cdef void _set_num_samples(self, int value) nogil:
         self.ptr.no_samples = value
 
+    @property
+    def timecode(self):
+        """The frame's current :term:`ndi-timestamp`
+        """
+        return self._get_timecode()
+    @timecode.setter
+    def timecode(self, size_t value):
+        self._set_timecode(value)
+
     cdef int64_t _get_timecode(self) nogil:
         return self.ptr.timecode
     cdef int64_t _set_timecode(self, int64_t value) nogil:
         self.ptr.timecode = value
+
+    @property
+    def channel_stride(self):
+        """The number of bytes in the data pointer between channels
+
+        Typically calculated as :code:`num_samples * sizeof(float32_t)`
+        """
+        return self._get_channel_stride()
+    @channel_stride.setter
+    def channel_stride(self, size_t value):
+        self._set_channel_stride(value)
 
     cdef int _get_channel_stride(self) nogil:
         return self.ptr.channel_stride_in_bytes
@@ -69,8 +108,15 @@ cdef class AudioFrame:
         cdef bytes result = self.ptr.p_metadata
         return result
 
-    def get_timestamp(self):
+    @property
+    def timestamp(self):
+        """The per-frame :term:`ndi-timestamp`
+        """
         return self._get_timestamp()
+    @timestamp.setter
+    def timestamp(self, int value):
+        self._set_timestamp(value)
+
     cdef int64_t _get_timestamp(self) nogil:
         return self.ptr.timestamp
     cdef void _set_timestamp(self, int64_t value) nogil:
@@ -78,8 +124,29 @@ cdef class AudioFrame:
 
 
 cdef class AudioRecvFrame(AudioFrame):
+    """Audio frame to be used with a :class:`.receiver.Receiver`
+
+    Arguments:
+        max_buffers (int, optional): The maximum number of items to store
+            in the buffer. Defaults to ``8``
+
+    Incoming data from the receiver is placed into temporary buffers so it can
+    be read without possibly losing frames. Each buffer will be of shape
+    (:attr:`~AudioFrame.num_channels` :attr:`~AudioFrame.num_samples`).
+
+    The buffer items retain both the data frames and their corresponding timestamps.
+    They can be read using the methods :meth:`get_read_data`,
+    :meth:`get_all_read_data`, :meth:`fill_read_data` and :meth:`fill_all_read_data`.
+
+    .. _frame-buffer-protocol:
+
+    This object also implements the :ref:`buffer protocol <bufferobjects>`
+    meaning it can be used anywhere a :class:`memoryview` is expeted. When used
+    this way, the view will contain the same information as the :meth:`get_read_data`
+    method.
+
+    """
     def __cinit__(self, *args, **kwargs):
-        self.max_buffers = kwargs.get('max_buffers', 8)
         self.audio_bfrs = av_frame_bfr_create(self.audio_bfrs)
         if self.audio_bfrs is NULL:
             raise MemoryError()
@@ -88,8 +155,9 @@ cdef class AudioRecvFrame(AudioFrame):
         self.current_timecode = 0
         self.current_timestamp = 0
 
-    def __init__(self, *args, **kwargs):
+    def __init__(self, size_t max_buffers=8, *args, **kwargs):
         super().__init__(*args, **kwargs)
+        self.max_buffers = max_buffers
         self.read_lock = RLock()
         self.write_lock = RLock()
         self.read_ready = Condition(self.read_lock)
@@ -106,23 +174,47 @@ cdef class AudioRecvFrame(AudioFrame):
             self.audio_bfrs = NULL
             av_frame_bfr_destroy(bfr)
 
+    # @property
+    # def buffer_depth(self):
+    #     """The current number of frames available in the read buffer
+    #     """
+    #     return self.get_buffer_depth()
+
     cpdef size_t get_buffer_depth(self):
+        """The current number of frames available in the read buffer
+        """
         return self.read_indices.size()
 
-    def get_frame_timestamps(self):
+    def get_frame_timestamps(self) -> list[int]:
+        """Get a list of the :term:`frame timestamps <ndi-timestamp>` in the
+        read buffer
+        """
         cdef int64_t ts
         cdef list l = [ts for ts in self.frame_timestamps]
         return l
+
+    @property
+    def read_length(self) -> int:
+        """The total number of samples in the read buffer
+        (not multiplied by :attr:`num_channels`)
+        """
+        return self.get_read_length()
 
     cpdef size_t get_read_length(self):
         cdef size_t bfr_len = self.read_indices.size()
         return bfr_len * self.all_frame_data.shape[2]
 
     cpdef (size_t, size_t) get_read_shape(self):
+        """Get the read array shape as ``(num_channels, num_samples)``
+        """
         cdef cnp.float32_t[:,:,:] arr = self.all_frame_data
         return arr.shape[1], arr.shape[2]
 
     cpdef get_all_read_data(self):
+        """Get all available data in the read buffer as a 2-d array
+
+        The shape of the result will be (:attr:`~AudioFrame.num_channels`, :attr:`read_length`)
+        """
         cdef size_t bfr_len
         cdef cnp.ndarray[cnp.float32_t, ndim=2] result
         cdef cnp.ndarray[cnp.int64_t, ndim=1] timestamps
@@ -164,6 +256,18 @@ cdef class AudioRecvFrame(AudioFrame):
         cnp.int64_t[:] timestamps,
         size_t bfr_len,
     ) nogil except *:
+        """Copy all available read data into the given *result* array limited by
+        *bfr_len*.
+
+        Also copies the timestamps for each buffered item into the *timestamps*
+        array
+
+        Returns a tuple of
+
+        * ``nbfrs``: The number of buffer items filled
+        * ``col_idx``: The index of the last column (last axis) filled on the result
+
+        """
         cdef size_t nbfr_cols = all_frame_data.shape[2]
         cdef size_t col_idx=0, nbfrs=0, bfr_idx, i
 
@@ -182,6 +286,13 @@ cdef class AudioRecvFrame(AudioFrame):
         return nbfrs, col_idx
 
     cpdef get_read_data(self):
+        """Get the first available item in the read buffer
+
+        Returns a tuple of
+
+        * ``frame_data``: A 2-d array of float32 with shape of :meth:`get_read_shape`
+        * ``timestamp``: The :term:`timestamp <ndi-timestamp>` of the data
+        """
         cdef cnp.float32_t[:,:,:] all_frame_data = self.all_frame_data
         cdef bint advance = False
         cdef size_t bfr_idx, bfr_len = self.read_indices.size()
@@ -204,6 +315,12 @@ cdef class AudioRecvFrame(AudioFrame):
         return self.current_frame_data, timestamp
 
     def fill_read_data(self, cnp.float32_t[:,:] dest):
+        """Copy the first available read item in the buffer into the given array
+
+        The array must equal that of :meth:`get_read_shape`
+
+        Returns the :term:`timestamp <ndi-timestamp>` of the data
+        """
         if not self.read_indices.size():
             raise IndexError('No data')
         cdef cnp.float32_t[:,:,:] all_frame_data = self.all_frame_data
@@ -222,6 +339,20 @@ cdef class AudioRecvFrame(AudioFrame):
         return timestamp
 
     def fill_all_read_data(self, cnp.float32_t[:,:] dest, cnp.int64_t[:] timestamps):
+        """Copy all available read data into the given *dest* array and the
+        item :term:`timestamps <ndi-timestamp>` into the given *timestamps* array.
+
+        The shape of the *dest* array on the first axis should equal
+        :attr:`num_channels` and the second should be at least :attr:`read_length`.
+
+        The *timestamps* array should be of at least :attr:`read_length` size
+
+        Returns a tuple of
+
+        * ``nbfrs``: The number of buffer items filled
+        * ``col_idx``: The index of the last column (last axis) filled on the result
+
+        """
         cdef cnp.float32_t[:,:,:] all_frame_data = self.all_frame_data
         cdef size_t bfr_len, nbfrs_filled, col_idx
         with self.read_lock:
@@ -396,7 +527,19 @@ cdef class AudioRecvFrame(AudioFrame):
 
 
 cdef class AudioFrameSync(AudioFrame):
+    """Audio frame for use with :class:`.framesync.FrameSync`
 
+    Unlike :class:`AudioRecvFrame`, this object does not store or buffer any
+    data. It will always contain the most recent audio data after a call to
+    :meth:`.framesync.FrameSync.capture_audio` or
+    :meth:`.framesync.FrameSync.capture_available_audio`.
+
+    This is by design since the FrameSync methods utilize buffering from within
+    the |NDI| library.
+
+    Data can be read using the :meth:`get_array` method or by using the
+    :ref:`buffer protocol <frame-buffer-protocol>`.
+    """
     def __cinit__(self, *args, **kwargs):
         for i in range(2):
             self.shape[i] = 0
@@ -407,6 +550,9 @@ cdef class AudioFrameSync(AudioFrame):
         self.fs_ptr = NULL
 
     def get_array(self):
+        """Get the current data as a :class:`ndarray` of float32 with shape
+        (:attr:`~AudioFrame.num_channels`, :attr:`~AudioFrame.num_samples`)
+        """
         cdef cnp.ndarray[cnp.float32_t, ndim=2] arr = np.empty(self.shape, dtype=np.float32)
         cdef cnp.float32_t[:,:] arr_view = arr
         cdef cnp.float32_t[:,:] self_view = self
@@ -454,6 +600,20 @@ cdef class AudioFrameSync(AudioFrame):
 
 
 cdef class AudioSendFrame(AudioFrame):
+    """Audio frame for use with :class:`.sender.Sender`
+
+    .. note::
+
+        Instances of this class are not intended to be created directly nor are
+        its methods. They are instead called from the :class:`sender.Sender`
+        write methods.
+
+    Attributes:
+        max_num_samples (int, readonly): The maximum :attr:`~AudioFrame.num_samples`
+            to be used.
+        max_shape(tuple[int, int], readonly):
+
+    """
     def __cinit__(self, *args, **kwargs):
         self.send_status.id = NULL_ID
         self.send_status.next_send_id = NULL_ID
@@ -497,13 +657,6 @@ cdef class AudioSendFrame(AudioFrame):
     @property
     def id(self):
         return self.send_status.id
-
-    @property
-    def write_available(self):
-        return self.send_status.write_available
-    @write_available.setter
-    def write_available(self, bint value):
-        self.send_status.write_available = value
 
     @property
     def attached_to_sender(self):

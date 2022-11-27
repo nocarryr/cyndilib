@@ -35,6 +35,39 @@ def parse_xml(str xml):
 
 
 cdef class MetadataFrame:
+    """An |NDI| metadata frame
+
+    Metadata frames carry miscellaneous information between sources and receivers
+    formatted as a single XML tag.
+
+    The data can be application-specific although there are some reserved
+    namespaces and tag names for standardized use:
+
+    .. code-block:: xml
+
+        <ndi_tally_echo on_program="true" on_preview="false"/>
+
+        <ndi_product long_name="NDILib Receive Example"
+                     short_name="NDILib Receive"
+                     manufacturer="CoolCo, inc."
+                     version="1.000.000"
+                     model_name="PBX-42Q"
+                     session_name="My Midday Show"
+                     serial="ABCDEFG"/>
+
+    This class provides an interface to the parsed xml data with the attributes
+    available in the :attr:`attrs` attribute or through dict-like methods::
+
+        >>> metadata_frame['on_program']
+        'true'
+        >>> metadata_frame.get('on_preview')
+        'false'
+
+    Attributes:
+        tag (str): The xml tag name
+        attrs (dict): The xml attributes
+
+    """
     def __cinit__(self, *args, **kwargs):
         self.ptr = metadata_frame_create()
         self.xml_bytes = b''
@@ -81,6 +114,8 @@ cdef class MetadataFrame:
 
 
 cdef class MetadataRecvFrame(MetadataFrame):
+    """A MetadataFrame used in :class:`.receiver.Receiver`
+    """
     cdef bint can_receive(self) nogil except *:
         return True
     cdef void _prepare_incoming(self, NDIlib_recv_instance_t recv_ptr) except *:
@@ -99,6 +134,13 @@ cdef class MetadataRecvFrame(MetadataFrame):
 
 
 cdef class MetadataSendFrame(MetadataFrame):
+    """A MetadataFrame used in :class:`.sender.Sender`
+
+    The attributes in this class can be set using dict-like methods::
+
+        >>> metadata_frame['program_tally'] = "false"
+        >>> metadata_frame.update({'preview_tally':'true'})
+    """
     def __init__(self, str tag, object initdict=None, *args, **kwargs):
         super().__init__(*args, **kwargs)
         self.tag = tag

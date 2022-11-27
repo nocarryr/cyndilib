@@ -5,6 +5,28 @@ import threading
 import time
 
 cdef class FrameSync:
+    """A wrapper around the |NDI| frame synchronization module
+
+    When receiving streams, the frame sync methods in the |NDI| library use
+    various buffering and clock-timing techniques to keep video and audio
+    data in sync with each other.
+
+    Timing "jitter" between capture calls is also accounted for which reduces
+    the amount of critically-timed application code as compared to the direct
+    approach needed for :class:`~.receiver.Receiver`.
+
+    .. note::
+
+        Instances of this class are automatically created by the
+        :class:`~receiver.Receiver` and therefore not intended to be created
+        directly.
+
+    Attributes:
+        video_frame (VideoFrameSync):
+        audio_frame (AudioFrameSync):
+
+
+    """
     def __cinit__(self, Receiver receiver, **kwargs):
         self.receiver = receiver
         cdef NDIlib_recv_instance_t recv_ptr = receiver.ptr
@@ -21,21 +43,46 @@ cdef class FrameSync:
             NDIlib_framesync_destroy(ptr)
 
     def set_video_frame(self, VideoFrameSync video_frame):
+        """Set the :attr:`video_frame`
+        """
         self._set_video_frame(video_frame)
 
     def set_audio_frame(self, AudioFrameSync audio_frame):
+        """Set the :attr:`audio_frame`
+        """
         self._set_audio_frame(audio_frame)
 
     def capture_video(self, FrameFormat fmt = FrameFormat.progressive):
+        """Capture video
+
+        After this call, the captured data will be available in the
+        :attr:`video_frame`
+        """
         self._capture_video(fmt)
 
-    def capture_available_audio(self):
+    def capture_available_audio(self) -> int:
+        """Capture all available audio samples
+
+        After this call, the captured data will be available in the
+        :attr:`audio_frame`
+
+        Returns the number of samples captured
+        """
         return self._capture_available_audio()
 
-    def capture_audio(self, size_t no_samples):
+    def capture_audio(self, size_t no_samples) -> int:
+        """Capture available audio samples up to *no_samples*
+
+        After this call, the captured data will be available in the
+        :attr:`audio_frame`
+
+        Returns the number of samples captured
+        """
         return self._capture_audio(no_samples)
 
-    def audio_samples_available(self):
+    def audio_samples_available(self) -> int:
+        """Get the number of audio samples currently available for capture
+        """
         return self._audio_samples_available()
 
     cdef void _set_video_frame(self, VideoFrameSync video_frame) except *:
@@ -98,8 +145,18 @@ cdef class FrameSync:
         NDIlib_framesync_free_audio_v2(self.ptr, audio_ptr)
 
 
+cdef class FrameSyncWorker():
+    """Worker for :class:`FrameSyncThread`
 
-cdef class FrameSyncWorker:
+    Attributes:
+        frame_sync (FrameSync): The parent FrameSync instance
+        running (bool): Current run state
+        callback (Callback): Callback triggered when a new frame is available
+        target_fps (float): The target frame rate
+        target_interval (float): Interval between frames defined as :math:`1/F_r`
+        frame_rate (fractions.Fraction): The current frame rate
+
+    """
     cdef FrameSync frame_sync
     cdef Event wait_event
     cdef bint running
@@ -156,6 +213,8 @@ cdef class FrameSyncWorker:
                 break
 
     cdef void trigger_callback(self) except *:
+        """Trigger the :attr:`callback` if set
+        """
         if self.callback.has_callback:
             self.callback.trigger_callback()
 
@@ -192,6 +251,8 @@ cdef class FrameSyncWorker:
 
 
 cdef class VideoWorker(FrameSyncWorker):
+    """Worker used by :class:`FrameSyncThread` for video frames
+    """
     cdef VideoFrameSync video_frame
 
     cdef bint can_capture(self) except *:
@@ -222,6 +283,8 @@ cdef class VideoWorker(FrameSyncWorker):
             self.target_interval = 1 / self.target_fps
 
 cdef class AudioWorker(FrameSyncWorker):
+    """Worker used by :class:`FrameSyncThread` for audio frames
+    """
     cdef AudioFrameSync audio_frame
     cdef size_t target_nsamples
 
@@ -274,6 +337,23 @@ cdef class AudioWorker(FrameSyncWorker):
 
 
 class FrameSyncThread(threading.Thread):
+    """A thread designed for use with :class:`FrameSync`
+
+    This can be used to handle video and audio using two separate threads. One
+    thread would be set to use :attr:`~ReceiveFrameType.recv_video` and the
+    other to :attr:`~ReceiveFrameType.recv_audio`.
+
+    Arguments:
+        frame_sync (FrameSync): The FrameSync instance
+        ft (ReceiveFrameType): The type(s) of frames to receive (either
+            :attr:`~.receiver.ReceiveFrameType.recv_video` or
+            :attr:`~.receiver.ReceiveFrameType.recv_audio`)
+
+    Attributes:
+        worker (FrameSyncWorker): Either a :class:`VideoWorker`
+            or :class:`AudioWorker`
+
+    """
     def __init__(self, FrameSync frame_sync, ReceiveFrameType ft):
         super().__init__()
         self.ft = ft
@@ -296,10 +376,14 @@ class FrameSyncThread(threading.Thread):
             self.stopped.set()
 
     def stop(self):
+        """Stop the thread
+        """
         cdef FrameSyncWorker w = self.worker
         w.stop()
 
     def set_callback(self, cb):
+        """Set the callback
+        """
         cdef FrameSyncWorker w = self.worker
         w.callback.set_callback(cb)
 

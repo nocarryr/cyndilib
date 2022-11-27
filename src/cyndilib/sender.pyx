@@ -5,6 +5,25 @@ from libc.math cimport lround
 
 
 cdef class Sender:
+    """Sends video and audio streams
+
+
+    Attributes:
+        ndi_name (str): The |NDI| source name to use
+        ndi_source (Source): A source object representing the sender
+        video_frame (VideoSendFrame):
+        audio_frame (AudioSendFrame):
+        metadata_frame (MetadataSendFrame):
+        num_video_buffers (int): Number of video frames to allocate as buffers
+        num_audio_buffers (int): Number of audio frames to allocate as buffers
+        clock_video (bool): True if the video frames should clock themselves.
+            If False, no rate limiting will be applied to keep within the
+            desired frame rate
+        clock_audio (bool): True if the audio frames should clock themselves.
+            If False, no rate limiting will be applied to keep within the
+            desired frame rate
+
+    """
     def __cinit__(self, *args, **kwargs):
         self.ptr = NULL
         self.source_ptr = NULL
@@ -47,18 +66,26 @@ cdef class Sender:
 
     @property
     def name(self):
+        """The current name of the source
+
+        This may be different than what was supplied during initialization
+        """
         if self.source is not None:
             return self.source.name
         return self.ndi_name
 
     @property
     def program_tally(self):
+        """The current program tally state of the sender
+        """
         if self.source is not None:
             return self.source.tally.on_program
         return False
 
     @property
     def preview_tally(self):
+        """The current preview tally state of the sender
+        """
         if self.source is not None:
             return self.source.tally.on_preview
         return False
@@ -68,9 +95,13 @@ cdef class Sender:
         return self.has_video_frame or self.has_audio_frame
 
     def open(self):
+        """Open the sender
+        """
         self._open()
 
     def close(self):
+        """Close the sender and free all resources
+        """
         self._close()
 
     def __enter__(self):
@@ -135,12 +166,16 @@ cdef class Sender:
             self.audio_frame._set_sender_status(False)
 
     cpdef set_video_frame(self, VideoSendFrame vf):
+        """Set the :attr:`video_frame`
+        """
         if self._running:
             raise Exception('Cannot add frame while sender is open')
         self.video_frame = vf
         self.has_video_frame = vf is not None
 
     cpdef set_audio_frame(self, AudioSendFrame af):
+        """Set the :attr:`audio_frame`
+        """
         if self._running:
             raise Exception('Cannot add frame while sender is open')
         self.audio_frame = af
@@ -153,6 +188,18 @@ cdef class Sender:
             raise_exception('ptr is NULL')
 
     def write_video_and_audio(self, cnp.uint8_t[:] video_data, cnp.float32_t[:,:] audio_data):
+        """Write and send the given video and audio data
+
+        The video data will be sent asynchronously (as described in
+        :meth:`write_video_async`).
+
+        Arguments:
+            video_data: A 1-d array or memoryview of unsigned 8-bit integers
+                formatted as described in :class:`.wrapper.FourCCPackInfo`
+            audio_data: A 2-d array or memoryview of 32-bit floats with shape
+                ``(num_channels, num_samples)``
+
+        """
         return self._write_video_and_audio(video_data, audio_data)
 
     cdef bint _write_video_and_audio(
@@ -195,6 +242,12 @@ cdef class Sender:
         return vid_result and aud_result
 
     def write_video(self, cnp.uint8_t[:] data):
+        """Write the given video data and send it
+
+        Arguments:
+            data: A 1-d array or memoryview of unsigned 8-bit integers
+                formatted as described in :class:`.wrapper.FourCCPackInfo`
+        """
         return self._write_video(data)
 
     cdef bint _write_video(self, cnp.uint8_t[:] data) except *:
@@ -213,6 +266,20 @@ cdef class Sender:
         return True
 
     def write_video_async(self, cnp.uint8_t[:] data):
+        """Write the given video data and send it asynchronously
+
+        This call will return immediately and the required operations on the
+        data will be handled separately by the |NDI| library.
+
+        .. note::
+
+            This is not an :keyword:`async def` function
+
+        Arguments:
+            data: A 1-d array or memoryview of unsigned 8-bit integers
+                formatted as described in :class:`.wrapper.FourCCPackInfo`
+
+        """
         return self._write_video_async(data)
 
     cdef bint _write_video_async(self, cnp.uint8_t[:] data) except *:
@@ -257,6 +324,12 @@ cdef class Sender:
         return True
 
     def write_audio(self, cnp.float32_t[:,:] data):
+        """Write the given audio data and send it
+
+        Arguments:
+            data: A 2-d array or memoryview of 32-bit floats with shape
+                ``(num_channels, num_samples)``
+        """
         return self._write_audio(data)
 
     cdef bint _write_audio(self, cnp.float32_t[:,:] data) except *:

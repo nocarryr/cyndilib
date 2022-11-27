@@ -4,6 +4,13 @@ import time
 import threading
 
 cdef class Source:
+    """Represents an |NDI| source
+
+    Attributes:
+        name (str, readonly): The source name
+        valid (bool, readonly): True if this source is currently tracked by the
+            |NDI| library
+    """
     def __cinit__(self):
         self.parent = None
         self.ptr = NULL
@@ -29,16 +36,36 @@ cdef class Source:
 
     @property
     def program_tally(self):
+        """A :class:`bool` indicating the source's program tally state
+        """
         return self.tally.on_program
 
     @property
     def preview_tally(self):
+        """A :class:`bool` indicating the source's preview tally state
+        """
         return self.tally.on_preview
 
     cpdef set_program_tally(self, bint value):
+        """Set the source's program tally to the given state
+
+        .. note::
+
+            This is only valid for sources attached to an active
+            :class:`.receiver.Receiver`
+
+        """
         self.tally.on_program = value
 
     cpdef set_preview_tally(self, bint value):
+        """Set the source's preview tally to the given state
+
+        .. note::
+
+            This is only valid for sources attached to an active
+            :class:`.receiver.Receiver`
+
+        """
         self.tally.on_preview = value
 
     cdef void _set_tally(self, bint program, bint preview) nogil except *:
@@ -70,9 +97,16 @@ cdef class Source:
 
 
 cdef class Finder:
-    # cdef NDIlib_find_instance_t find_p
-    # cdef NDIlib_source_t* source_ptr
-    # cdef readonly list source_names
+    """Discovers |NDI| sources available on the network
+
+    Attributes:
+        notify (Condition): A :class:`~.locks.Condition` to notify listeners
+            when sources are added or removed
+        num_sources (int): The current number of sources found
+        change_callback: A callback to be used when sources are added or removed
+        finder_thread: The thread used to make blocking calls to update sources
+
+    """
 
     def __init__(self):
         # self.source_names = []
@@ -93,12 +127,16 @@ cdef class Finder:
             NDIlib_find_destroy(p)
 
     def open(self):
+        """Starts the :attr:`finder_thread` and begins searching for sources
+        """
         assert self.finder_thread is None
         self.finder_thread = FinderThread(self)
         self.finder_thread.start()
         self.finder_thread_running.wait()
 
     def close(self):
+        """Closes the :attr:`finder_thread`
+        """
         assert self.finder_thread is not None
         t = self.finder_thread
         self.finder_thread = None
@@ -106,6 +144,8 @@ cdef class Finder:
         t.join()
 
     cpdef get_source_names(self):
+        """Get the discovered sources as a ``list[str]``
+        """
         cdef list result = []
         cdef cpp_string cppname
         cdef str name
@@ -116,10 +156,14 @@ cdef class Finder:
         return result
 
     def iter_sources(self):
+        """Iterate over the current sources as :class:`Source` objects
+        """
         with self.notify:
             yield from self.source_obj_map.values()
 
     cpdef Source get_source(self, str name):
+        """Get a :class:`Source` by its :attr:`~Source.name`
+        """
         return self.source_obj_map.get(name)
 
     cdef NDIlib_source_t* _get_source_ptr(self, cpp_string name) nogil except *:
@@ -134,6 +178,8 @@ cdef class Finder:
         return self.num_sources
 
     def set_change_callback(self, object cb):
+        """Set the :attr:`change_callback`
+        """
         self.change_callback.set_callback(cb)
 
     cdef void _trigger_callback(self) nogil except *:
@@ -143,6 +189,13 @@ cdef class Finder:
             self.change_callback.trigger_callback()
 
     def update_sources(self):
+        """Manually update the current sources tracked by the |NDI| library
+
+        .. warning::
+
+            This method should typically not be called directly and especially
+            not if the :attr:`finder_thread` is in use.
+        """
         with self.notify:
             self._update_sources()
             return self.get_source_names()
@@ -207,6 +260,8 @@ cdef class Finder:
         return changed
 
     def wait(self, timeout=None):
+        """Wait for a source to be added or removed
+        """
         if timeout is None:
             self._wait()
             return True
@@ -229,6 +284,23 @@ cdef class Finder:
         return notified
 
     def wait_for_sources(self, float timeout):
+        """Wait for the |NDI| library to report a change in its source list
+
+        If a change was detected a call to :meth:`update_sources` should follow.
+
+        Arguments:
+            timeout (float): Time (in seconds) to block before a change is
+                detected
+
+        Returns:
+            bool: Flag indicating if a change was detected before the timout was reached
+
+        .. warning::
+
+            This method should typically not be called directly and especially
+            not if the :attr:`finder_thread` is in use.
+
+        """
         cdef uint32_t timeout_ms = int(timeout * 1000)
         return self._wait_for_sources(timeout_ms)
 

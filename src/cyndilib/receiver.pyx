@@ -78,13 +78,29 @@ cdef class RecvCreate:
 
 
 cdef class Receiver:
-    # cdef RecvCreate settings
-    # cdef readonly VideoRecvFrame video_frame
-    # cdef readonly AudioRecvFrame audio_frame
-    # cdef readonly str source_name
-    # cdef readonly bint has_video_frame, has_audio_frame, has_metadata_frame
-    # cdef NDIlib_recv_instance_t ptr
-    # cdef NDIlib_recv_create_v3_t recv_create
+    """A receiver for |NDI| streams
+
+    Arguments:
+        source_name (str, optional): The |NDI| source name to connect to. An
+            empty string (default) indicates no source
+        source (Source, optional): A :class:`~.finder.Source` object
+            to connect to. ``None`` (default) indices no source.
+        color_format: The :class:`.wrapper.RecvColorFormat` to accept
+        bandwidth: The :class:`.wrapper.RecvBandwidth` to use
+        allow_video_fields: ``True`` if interlaced video frames can be handled.
+            If ``False``, only progressive frames will be delivered.
+        recv_name: Name for the receiver
+
+
+    Attributes:
+        source_name (str): The current |NDI| source name
+        source (Source): The current :class:`~.finder.Source` object
+        video_frame (VideoRecvFrame):
+        audio_frame (AudioRecvFrame):
+        metadata_frame (MetadataRecvFrame):
+        framesync (FrameSync):
+
+    """
     def __cinit__(self, *args, **kwargs):
         self.ptr = NULL
         self.source_ptr = NULL
@@ -157,6 +173,8 @@ cdef class Receiver:
             NDIlib_recv_destroy(p)
 
     cpdef set_video_frame(self, VideoRecvFrame vf):
+        """Set the :attr:`video_frame`
+        """
         # if self.video_frame is not None:
         #     self.video_ptr = NULL
         self.video_frame = vf
@@ -165,6 +183,8 @@ cdef class Receiver:
         self.has_video_frame = vf is not None
 
     cpdef set_audio_frame(self, AudioRecvFrame af):
+        """Set the :attr:`audio_frame`
+        """
         # if self.audio_frame is not None:
         #     self.audio_ptr = NULL
         self.audio_frame = af
@@ -173,10 +193,17 @@ cdef class Receiver:
         self.has_audio_frame = af is not None
 
     cpdef set_metadata_frame(self, MetadataRecvFrame mf):
+        """Set the :attr:`metadata_frame`
+        """
         self.metadata_frame = mf
         self.has_metadata_frame = mf is not None
 
     cpdef set_source(self, Source src):
+        """Set the current :attr:`source`
+
+        If the source is None, disconnects if necessary. Otherwise, attempt to
+        connect to it.
+        """
         if self.source is src:
             return
         if self._is_connected():
@@ -194,6 +221,8 @@ cdef class Receiver:
                 self._connect_to(src.ptr)
 
     cpdef connect_to(self, Source src):
+        """Alias for :meth:`set_source`
+        """
         self.set_source(src)
 
     cdef void _connect_to(self, NDIlib_source_t* src) except *:
@@ -204,6 +233,8 @@ cdef class Receiver:
         self._set_connected(True)
 
     def disconnect(self):
+        """Disconnect from the :attr:`source` (if connected)
+        """
         self.set_source(None)
 
     cdef void _disconnect(self) nogil except *:
@@ -225,6 +256,8 @@ cdef class Receiver:
         self._is_connected()
 
     def is_connected(self):
+        """Returns True if currently connected
+        """
         return self._is_connected()
 
     cdef bint _is_connected(self) nogil except *:
@@ -305,16 +338,34 @@ cdef class Receiver:
 
     @property
     def program_tally(self):
+        """Indicates the program tally state as set by :meth:`set_source_tally_program`
+        """
         return self.source_tally.on_program
 
     @property
     def preview_tally(self):
+        """Indicates the preview tally state as set by :meth:`set_source_tally_program`
+        """
         return self.source_tally.on_preview
 
     cpdef set_source_tally_program(self, bint value):
+        """Set the program tally state for the currently connected source.
+
+        This method sends a tally command to the source and does not necessarily
+        affect the state of the :attr:`source` object's tally. It will be updated
+        independently when tally metadata is received.
+
+        This is because other receivers may have also sent tally messages to the
+        source. When this occurs, the source's tally remains "on" until **all**
+        of its connected receivers have set it to "off" (like a bitwise "OR")
+        """
         self._set_source_tally(value, self.source_tally.on_preview)
 
     cpdef set_source_tally_preview(self, bint value):
+        """Set the preview tally state for the currently connected source
+
+        See notes in the :meth:`set_source_tally_program` method
+        """
         self._set_source_tally(self.source_tally.on_program, value)
 
     cdef void _set_source_tally(self, bint program, bint preview) nogil except *:
@@ -334,6 +385,21 @@ cdef class Receiver:
             self.source._set_tally(pgm, pvw)
 
     cpdef ReceiveFrameType receive(self, ReceiveFrameType recv_type, uint32_t timeout_ms):
+        """Receive frame data of the given type
+
+        If requesting a video or audio frame and the result indicates data was
+        received, the incoming frame data will be available in the
+        :attr:`video_frame` or :attr:`audio_frame`.
+
+        Arguments:
+            recv_type (ReceiveFrameType): The frame type(s) to receive
+            timeout_ms (int): Time (in milliseconds) to wait for a frame to be
+                available
+
+        Returns a :class:`ReceiveFrameType` indicating what was received.  If
+        nothing was available before the timeout, the result will be
+        :attr:`ReceiveFrameType.nothing`
+        """
         return self._receive(recv_type, timeout_ms)
 
     cdef ReceiveFrameType _receive(
@@ -503,6 +569,25 @@ cdef class RecvThreadWorker:
         self.running = False
 
 class RecvThread(threading.Thread):
+    """A thread designed for use with :class:`Receiver`
+
+    Repeatedly calls :meth:`Receiver.receive` using the supplied arguments.
+    A callback is then triggered whenever new frames are received.
+
+
+    This can be used to handle video and audio using two separate threads. One
+    thread would be set to use :attr:`~ReceiveFrameType.recv_video` and the
+    other to :attr:`~ReceiveFrameType.recv_audio`.
+
+    Arguments:
+        receiver (Receiver): The receiver instance
+        timeout_ms (int): Timeout (in milliseconds) to use when calling
+            :meth:`Receiver.receive`
+        recv_frame_type (ReceiveFrameType): The type(s) of frames to receive
+        wait_time (float): Amount of time (in seconds) to sleep between calls to
+            :meth:`Receiver.receive`
+
+    """
     def __init__(
         self,
         Receiver receiver,
@@ -534,11 +619,15 @@ class RecvThread(threading.Thread):
             self.stopped.set()
 
     def stop(self):
+        """Stop the thread
+        """
         cdef RecvThreadWorker w = self.worker
         w.stop()
         self.stopped.wait()
 
     def set_callback(self, cb):
+        """Set the callback used to indicate new frames
+        """
         cdef RecvThreadWorker w = self.worker
         w.callback.set_callback(cb)
 

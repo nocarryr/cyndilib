@@ -14,6 +14,8 @@ kivy = {extras = ["base"], version = "*"}
 pytest = "*"
 pytest-profiling = "*"
 snakeviz = "*"
+sphinx = "*"
+furo = "*"
 
 [requires]
 python_version = "3.10"
