@@ -60,9 +60,8 @@ def get_ndi_libdir():
                     if dest_fn.exists():
                         continue
                     shutil.copy2(fn, dest_fn)
-            LIB_DIRS.append(str(lib_dir))
         else:
-            LIB_DIRS.append(str(lib_sys))
+            lib_dir = lib_sys
     else:
         lib_dir = PROJECT_PATH / 'src' / 'cyndilib' / 'wrapper' / 'bin'
         if not MACOS:
@@ -71,6 +70,7 @@ def get_ndi_libdir():
                 p = lib_dir / arch
                 if p.exists():
                     lib_dir = p
+        lib_dir = lib_dir.resolve()
         LIB_DIRS.append(str(lib_dir))
         RUNTIME_LIB_DIRS.append(str(lib_dir))
 
