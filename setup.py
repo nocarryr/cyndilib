@@ -1,6 +1,6 @@
 import os
 import sys
-import sysconfig
+import platform
 import shutil
 import json
 from pathlib import Path
@@ -8,6 +8,7 @@ from setuptools import setup, find_packages
 from distutils.extension import Extension
 from distutils.sysconfig import get_python_inc
 from distutils.errors import CCompilerError
+from distutils.util import get_platform
 
 USE_CYTHON = True#'--use-cython' in sys.argv
 if USE_CYTHON:
@@ -65,11 +66,18 @@ def get_ndi_libdir():
     else:
         lib_dir = PROJECT_PATH / 'src' / 'cyndilib' / 'wrapper' / 'bin'
         if not MACOS:
-            arch = sysconfig.get_config_var('MULTIARCH')
-            if arch:
-                p = lib_dir / arch
-                if p.exists():
-                    lib_dir = p
+            platform_str = get_platform()
+            if not platform_str.startswith('linux-'):
+                raise Exception(f'Unknown platform: "{platform_str}"')
+            if 'i686' in platform_str:
+                arch = 'i686-linux-gnu'
+            elif 'x86_64' in platform_str:
+                arch = 'x86_64-linux-gnu'
+            elif 'aarch64' in platform_str:
+                arch = 'aarch64-rpi4-linux-gnueabi'
+            else:
+                raise Exception(f'Unsupported platform: "{platform_str}"')
+            lib_dir = lib_dir / arch
         lib_dir = lib_dir.resolve()
         LIB_DIRS.append(str(lib_dir))
         RUNTIME_LIB_DIRS.append(str(lib_dir))
