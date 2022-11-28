@@ -1,0 +1,3 @@
+Cython>=0.29.6
+numpy
+-r doc/requirements.txt
