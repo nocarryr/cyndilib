@@ -63,6 +63,7 @@ def get_ndi_libdir():
                     shutil.copy2(fn, dest_fn)
         else:
             lib_dir = lib_sys
+        LIB_DIRS.extend([str(dll_dir.resolve()), str(lib_dir.resolve())])
     else:
         lib_dir = PROJECT_PATH / 'src' / 'cyndilib' / 'wrapper' / 'bin'
         if not MACOS:
