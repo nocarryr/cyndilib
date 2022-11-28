@@ -7,3 +7,7 @@ build = "cp3{7,8,9,10}-*"
 
 [tool.cibuildwheel.linux]
 before-all = "yum install -y avahi-libs"
+
+[[tool.cibuildwheel.overrides]]
+select = "*-musllinux*"
+before-all = "apk add avahi-libs"
