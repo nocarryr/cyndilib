@@ -16,6 +16,17 @@ library is written in `Cython`_ for performance purposes. By design, "cyndilib"
 may be used within other Cython code.
 
 
+Links
+*****
+
+.. list-table::
+
+  * - Project Home
+    - https://github.com/nocarryr/cyndilib
+  * - Documentation
+    - https://cyndilib.readthedocs.io
+
+
 Installation
 ************
 
