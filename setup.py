@@ -38,9 +38,19 @@ LIB_DIRS = []
 RUNTIME_LIB_DIRS = []
 NDI_INCLUDE = PROJECT_PATH / 'src' / 'cyndilib' / 'wrapper' / 'include'
 INCLUDE_PATH = [str(NDI_INCLUDE), get_python_inc()]
-
+PACKAGE_DATA = {
+    '*':[
+        'LICENSE', 'README*', 'libndi_licenses.txt',
+        '*.pxd', '*.pyx', '*.c', '*.cpp',
+    ],
+    'cyndilib.wrapper.include':['*.h'],
+    'cyndilib.wrapper.bin':['*.txt'],
+    'cyndilib.wrapper.lib':[],
+}
 
 def get_ndi_libdir():
+    lib_pkg_data = []
+    bin_pkg_data = []
     if WIN32:
         p = Path(os.environ.get('PROGRAMFILES'))
         sdk_dir = p / 'NDI' / 'NDI 5 SDK'
@@ -62,9 +72,13 @@ def get_ndi_libdir():
                         continue
                     shutil.copy2(fn, dest_fn)
         LIB_DIRS.extend([str(dll_dir.resolve()), str(lib_dir.resolve())])
+        bin_pkg_data.append('*.dll')
+        lib_pkg_data.append('*.lib')
     else:
         lib_dir = PROJECT_PATH / 'src' / 'cyndilib' / 'wrapper' / 'bin'
-        if not MACOS:
+        if MACOS:
+            bin_pkg_data.append('*.dylib')
+        else:
             platform_str = get_platform()
             if not platform_str.startswith('linux-'):
                 raise Exception(f'Unknown platform: "{platform_str}"')
@@ -77,9 +91,13 @@ def get_ndi_libdir():
             else:
                 raise Exception(f'Unsupported platform: "{platform_str}"')
             lib_dir = lib_dir / arch
+            bin_pkg_data.append(f'{arch}/*.so')
         lib_dir = lib_dir.resolve()
         LIB_DIRS.append(str(lib_dir))
         RUNTIME_LIB_DIRS.append(str(lib_dir))
+
+        PACKAGE_DATA['cyndilib.wrapper.bin'].extend(bin_pkg_data)
+        PACKAGE_DATA['cyndilib.wrapper.lib'].extend(lib_pkg_data)
 
 def get_ndi_libname():
     if WIN32:
@@ -156,4 +174,5 @@ if ANNOTATE and AnnotateIndex is not None:
 setup(
     ext_modules=ext_modules,
     include_package_data=True,
+    package_data=PACKAGE_DATA,
 )
