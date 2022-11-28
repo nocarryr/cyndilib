@@ -1,3 +1,9 @@
 [build-system]
 requires = ["setuptools", "wheel", "numpy", "cython>=0.29.32"]
 build-backend = "setuptools.build_meta:__legacy__"
+
+[tool.cibuildwheel]
+build = "cp3{7,8,9,10}-*"
+
+[tool.cibuildwheel.linux]
+before-all = "yum install -y avahi-libs"
