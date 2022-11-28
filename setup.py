@@ -16,7 +16,7 @@ if USE_CYTHON:
     from Cython.Compiler import Options
     try:
         from annotate_index import AnnotateIndex
-    except ImportError:
+    except (ImportError, SyntaxError):
         AnnotateIndex = False
     Options.fast_fail = True
 
