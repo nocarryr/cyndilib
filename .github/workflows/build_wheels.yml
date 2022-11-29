@@ -58,6 +58,7 @@ jobs:
             fi
           fi
           echo "test_skip=$CIBW_TEST_SKIP" >> $GITHUB_OUTPUT
+        shell: bash
 
       - name: Build wheels
         id: build_wheel
