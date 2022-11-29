@@ -12,6 +12,8 @@ from pkg_resources import resource_filename
 import numpy
 from Cython.Build import cythonize, Cythonize
 
+import cyndilib
+
 WIN32 = sys.platform == 'win32'
 MACOS = sys.platform == 'darwin'
 
@@ -89,7 +91,9 @@ def get_ndi_metadata():
         'extra_compile_args', 'include_dirs', 'libraries',
         'library_dirs', 'runtime_library_dirs',
     ]
-    return {key:metadata['distutils'].get(key) for key in keys}
+    data = {key:metadata['distutils'].get(key) for key in keys}
+    data['include_dirs'] = [cyndilib.get_include(), numpy.get_include()]
+    return data
 
 def cython_compile(path_pattern, options):
     distutils_meta = get_ndi_metadata()
