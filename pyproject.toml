@@ -13,6 +13,7 @@ test-command = [
     "python {project}/build_tests.py",
     "py.test {project}/tests/ --ignore {project}/tests/test_sender.py",
 ]
+test-skip = "cp37-*"
 
 [tool.cibuildwheel.linux]
 before-all = "yum install -y avahi-libs"
