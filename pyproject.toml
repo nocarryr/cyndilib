@@ -5,6 +5,14 @@ build-backend = "setuptools.build_meta:__legacy__"
 [tool.cibuildwheel]
 build = "cp3{7,8,9,10}-*"
 skip = "*-musllinux*"
+test-requires = [
+    "pytest",
+    "cython>=0.29.32",
+]
+test-command = [
+    "python {project}/build_tests.py",
+    "py.test tests/ --ignore tests/test_sender.py",
+]
 
 [tool.cibuildwheel.linux]
 before-all = "yum install -y avahi-libs"
