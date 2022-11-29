@@ -65,7 +65,7 @@ jobs:
         env:
           CIBW_ARCHS: ${{ matrix.arch }}
           CIBW_TEST_SKIP: ${{ steps.cibuildwheel_env.outputs.test_skip }}
-        if: ${{ github.event.name != "workflow_dispatch" }} || (${{ inputs.os_type == matrix.os }} || ${{ inputs.os_type == "all" }})
+        if: ${{ github.event.name }} != "workflow_dispatch" || (${{ inputs.os_type }} == matrix.os || ${{ inputs.os_type }} == "all")
         #    ...
         # with:
         #   package-dir: .
