@@ -52,12 +52,19 @@ jobs:
         id: cibuildwheel_env
         run: |
           CIBW_TEST_SKIP="cp37-*"
+          SKIP_CIBW="false"
           if [ "${{ github.event.name }}" == "workflow_dispatch" ]; then
             if [ "${{ inputs.skip_tests }}" == "true" ]; then
               CIBW_TEST_SKIP="*"
             fi
+            if [ "${{ inputs.os_type }}" != "all" ]; then
+              if [ "${{ inputs.os_type}}" != "${{ matrix.os }}" ]; then
+                SKIP_CIBW="true"
+              fi
+            fi
           fi
           echo "test_skip=$CIBW_TEST_SKIP" >> $GITHUB_OUTPUT
+          echo "skip_build=$SKIP_CIBW" >> $GITHUB_OUTPUT
         shell: bash
 
       - name: Build wheels
@@ -66,7 +73,7 @@ jobs:
         env:
           CIBW_ARCHS: ${{ matrix.arch }}
           CIBW_TEST_SKIP: ${{ steps.cibuildwheel_env.outputs.test_skip }}
-        if: ${{ github.event.name }} != "workflow_dispatch" || (${{ inputs.os_type }} == matrix.os || ${{ inputs.os_type }} == "all")
+        if: ${{ !(steps.cibuildwheel_env.outputs.skip_build) }}
         #    ...
         # with:
         #   package-dir: .
