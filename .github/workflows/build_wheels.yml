@@ -83,7 +83,7 @@ jobs:
         env:
           CIBW_ARCHS: ${{ matrix.arch }}
           CIBW_TEST_SKIP: ${{ steps.cibuildwheel_env.outputs.test_skip }}
-        if: ${{ !(steps.cibuildwheel_env.outputs.skip_build) }}
+        if: ${{ steps.cibuildwheel_env.outputs.skip_build }} != "true"
         #    ...
         # with:
         #   package-dir: .
