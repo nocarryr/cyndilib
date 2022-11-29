@@ -3,9 +3,6 @@
 # cython: profile=True
 # distutils: language = c++
 # distutils: include_dirs=DISTUTILS_INCLUDE_DIRS
-# distutils: libraries=DISTUTILS_LIBRARIES
-# distutils: library_dirs=DISTUTILS_LIBRARY_DIRS
-# distutils: runtime_library_dirs=DISTUTILS_RUNTIME_LIBRARY_DIRS
 # distutils: extra_compile_args=DISTUTILS_EXTRA_COMPILE_ARGS
 # distutils: define_macros=CYTHON_TRACE_NOGIL=1
 
