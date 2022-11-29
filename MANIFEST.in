@@ -1,0 +1,4 @@
+include *README* *LICENSE* *libndi_licenses* *requirements*
+recursive-include src/cyndilib *.pxd *.pyx *.h
+recursive-include tests *.py *.pyx
+include *build_tests.py
