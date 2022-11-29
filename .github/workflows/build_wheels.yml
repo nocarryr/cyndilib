@@ -73,6 +73,6 @@ jobs:
         #   config-file: "{package}/pyproject.toml"
 
       - uses: actions/upload-artifact@v3
-        if: ${{ steps.build_wheel.outcome == "success" }}
+        if: ${{ steps.build_wheel.outcome }} == "success"
         with:
           path: ./wheelhouse/*.whl
