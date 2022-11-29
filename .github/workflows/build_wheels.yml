@@ -1,6 +1,26 @@
 name: Build Wheels
 
-on: [push, pull_request]
+on:
+  push:
+    branches: [ main ]
+  pull_request:
+    branches: [ main ]
+  workflow_dispatch:
+    inputs:
+      skip_tests:
+        description: "Skip cibuildwheel tests"
+        required: true
+        type: boolean
+      os_type:
+        description: "OS"
+        default: "all"
+        type: choice
+        options:
+        - macos-latest
+        - ubuntu-latest
+        - windows-latest
+        - all
+
 
 jobs:
   build_wheels:
@@ -28,10 +48,24 @@ jobs:
         if: matrix.os == 'ubuntu-latest'
         uses: docker/setup-qemu-action@v2
 
+      - name: Set cibuildwheel env
+        id: cibuildwheel_env
+        run: |
+          CIBW_TEST_SKIP="cp37-*"
+          if [ "${{ github.event.name }}" == "workflow_dispatch" ]; then
+            if [ "${{ inputs.skip_tests }}" == "true" ]; then
+              CIBW_TEST_SKIP="*"
+            fi
+          fi
+          echo "test_skip=$CIBW_TEST_SKIP" >> $GITHUB_OUTPUT
+
       - name: Build wheels
+        id: build_wheel
         uses: pypa/cibuildwheel@v2.11.2
         env:
           CIBW_ARCHS: ${{ matrix.arch }}
+          CIBW_TEST_SKIP: ${{ steps.cibuildwheel_env.outputs.test_skip }}
+        if: ${{ github.event.name != "workflow_dispatch" }} || (${{ inputs.os_type == matrix.os }} || ${{ inputs.os_type == "all" }})
         #    ...
         # with:
         #   package-dir: .
@@ -39,5 +73,6 @@ jobs:
         #   config-file: "{package}/pyproject.toml"
 
       - uses: actions/upload-artifact@v3
+        if: ${{ steps.build_wheel.outcome == "success" }}
         with:
           path: ./wheelhouse/*.whl
