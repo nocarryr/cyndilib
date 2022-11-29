@@ -4,11 +4,12 @@ on: [push, pull_request]
 
 jobs:
   build_wheels:
-    name: Build wheels on ${{ matrix.os }}_${{ matrix.arch }}
+    name: Build wheels on ${{ matrix.os }}_${{ matrix.python-build }}-${{ matrix.arch }}
     runs-on: ${{ matrix.os }}
     strategy:
       fail-fast: false
       matrix:
+        python-build: ["cp37", "cp38", "cp39", "cp310"]
         include:
           - os: macos-latest
             arch: auto
@@ -32,6 +33,7 @@ jobs:
         uses: pypa/cibuildwheel@v2.11.2
         env:
           CIBW_ARCHS: ${{ matrix.arch }}
+          CIBW_BUILD: "${{ matrix.python-build }}-*"
         #    ...
         # with:
         #   package-dir: .
