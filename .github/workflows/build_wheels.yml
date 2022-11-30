@@ -34,40 +34,39 @@ jobs:
       fail-fast: false
       matrix:
         include:
-          include:
-          - os: macos-latest
-            arch: auto
-            python-version: "cp3{7,8,9,10}"
-          - os: ubuntu-latest
-            arch: x86_64
-            python-version: "cp3{7,8,9,10}"
-          - os: windows-latest
-            arch: AMD64
-            python-version: "cp3{7,8,9,10}"
-          - os: ubuntu-latest
-            arch: aarch64
-            python-version: "cp37"
-          - os: ubuntu-latest
-            arch: aarch64
-            python-version: "cp38"
-          - os: ubuntu-latest
-            arch: aarch64
-            python-version: "cp39"
-          - os: ubuntu-latest
-            arch: aarch64
-            python-version: "cp310"
-          - os: ubuntu-latest
-            arch: i686
-            python-version: "cp37"
-          - os: ubuntu-latest
-            arch: i686
-            python-version: "cp38"
-          - os: ubuntu-latest
-            arch: i686
-            python-version: "cp39"
-          - os: ubuntu-latest
-            arch: i686
-            python-version: "cp310"
+        - os: macos-latest
+          arch: auto
+          python-version: "cp3{7,8,9,10}"
+        - os: ubuntu-latest
+          arch: x86_64
+          python-version: "cp3{7,8,9,10}"
+        - os: windows-latest
+          arch: AMD64
+          python-version: "cp3{7,8,9,10}"
+        - os: ubuntu-latest
+          arch: aarch64
+          python-version: "cp37"
+        - os: ubuntu-latest
+          arch: aarch64
+          python-version: "cp38"
+        - os: ubuntu-latest
+          arch: aarch64
+          python-version: "cp39"
+        - os: ubuntu-latest
+          arch: aarch64
+          python-version: "cp310"
+        - os: ubuntu-latest
+          arch: i686
+          python-version: "cp37"
+        - os: ubuntu-latest
+          arch: i686
+          python-version: "cp38"
+        - os: ubuntu-latest
+          arch: i686
+          python-version: "cp39"
+        - os: ubuntu-latest
+          arch: i686
+          python-version: "cp310"
 
     steps:
       - uses: actions/checkout@v3
