@@ -26,7 +26,7 @@ Links
   * - Documentation
     - https://cyndilib.readthedocs.io
   * - PyPI
-    - https://pypi.org/projects/cyndilib
+    - https://pypi.org/project/cyndilib
 
 
 Installation
