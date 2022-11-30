@@ -20,6 +20,10 @@ on:
         - ubuntu-latest
         - windows-latest
         - all
+      allow_deploy:
+        description: "Deploy to PyPI"
+        required: true
+        type: boolean
 
 
 jobs:
@@ -82,3 +86,19 @@ jobs:
         if: ${{ steps.build_wheel.outcome }} == "success"
         with:
           path: ./wheelhouse/*.whl
+
+  deploy:
+      name: 'Deploy to PyPI'
+      needs: [build_wheels]
+      runs-on: ubuntu-latest
+      if: ${{ success() && inputs.allow_deploy == 'true' }}
+      steps:
+      - uses: actions/download-artifact@v3
+        with:
+          name: artifact
+          path: dist
+
+      - uses: pypa/gh-action-pypi-publish@v1.5.0
+        with:
+          user: __token__
+          password: ${{ secrets.PYPI_PASSWORD }}
