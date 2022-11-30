@@ -25,16 +25,20 @@ Links
     - https://github.com/nocarryr/cyndilib
   * - Documentation
     - https://cyndilib.readthedocs.io
+  * - PyPI
+    - https://pypi.org/projects/cyndilib
 
 
 Installation
 ************
 
-This project is not yet published on `PyPI <https://pypi.org/>`_, but it is
-planned to be very soon. For now, building from source is the only method
-available. In the future, this will be::
+Installation via ``pip`` is supported using pre-built platform wheels::
 
     pip install cyndilib
+
+All of the necessary headers and Cython files are included in the distribution.
+This will allow for development of applications directly using
+``cimport`` directives.
 
 
 Building
