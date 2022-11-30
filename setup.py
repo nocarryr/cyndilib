@@ -96,8 +96,8 @@ def get_ndi_libdir():
         LIB_DIRS.append(str(lib_dir))
         RUNTIME_LIB_DIRS.append(str(lib_dir))
 
-        PACKAGE_DATA['cyndilib.wrapper.bin'].extend(bin_pkg_data)
-        PACKAGE_DATA['cyndilib.wrapper.lib'].extend(lib_pkg_data)
+    PACKAGE_DATA['cyndilib.wrapper.bin'].extend(bin_pkg_data)
+    PACKAGE_DATA['cyndilib.wrapper.lib'].extend(lib_pkg_data)
 
 def get_ndi_libname():
     if WIN32:
