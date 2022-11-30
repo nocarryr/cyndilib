@@ -70,8 +70,9 @@ This should display more useful error messages.
 Usage
 *****
 
-Documentation is not yet built for this project, but will be soon. For now,
-take a look at the example code and tests.
+Documentation can be found at https://cyndilib.readthedocs.io.
+Since this project is still in its early stages of development however,
+a look at the example code and tests in the repository might be more useful.
 
 
 License
