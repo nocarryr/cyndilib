@@ -70,7 +70,7 @@ jobs:
         id: build_wheel
         uses: pypa/cibuildwheel@v2.11.2
         env:
-          CIBW_BUILD: "${{ matrix.python-version }}-*"
+          CIBW_BUILD: ${{ matrix.python-version }}-*
           CIBW_ARCHS: ${{ matrix.arch }}
           CIBW_TEST_SKIP: ${{ steps.cibuildwheel_env.outputs.test_skip }}
         if: ${{ inputs.os_type }} != "" && (${{ inputs.os_type }} == matrix.os || ${{ inputs.os_type }} == "all")
