@@ -113,9 +113,9 @@ jobs:
 
   deploy:
       name: 'Deploy to PyPI'
-      needs: [build_wheels]
+      needs: build_wheels
       runs-on: ubuntu-latest
-      if: ${{ success() && inputs.allow_deploy == 'true' }}
+      if: ${{ inputs.allow_deploy }}
       steps:
       - uses: actions/download-artifact@v3
         with:
