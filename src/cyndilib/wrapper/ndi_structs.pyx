@@ -203,8 +203,8 @@ cdef void calc_fourcc_pack_info(FourCCPackInfo* p) nogil except *:
         p.line_strides[1] = p.line_strides[0] // 2
         p.line_strides[2] = p.line_strides[1]
         p.stride_offsets[1] = p.line_strides[0] * yres
-        p.stride_offsets[2] = p.stride_offsets[1] * (yres // 2)
-        p.total_size = p.line_strides[0] * yres + (p.line_strides[1] * yres // 2)
+        p.stride_offsets[2] = p.stride_offsets[1] + yres // 2
+        p.total_size = p.stride_offsets[2] + p.line_strides[2] * yres // 2
     elif p.fourcc == FourCC.NV12:
         p.num_planes = 2
         bytes_per_pixel = sizeof(uint8_t) * 2           # <uint8_t>Y + <uint8_t>UV
