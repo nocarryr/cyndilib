@@ -11,3 +11,4 @@
    :caption: Modules:
 
    ndi_structs
+   ndi_recv
