@@ -2,12 +2,13 @@
 # Heavily influenced from FastRLock: https://github.com/scoder/fastrlock
 
 import threading
-from time import time as _time
 from itertools import islice
 from collections import deque
 
 from cpython.ref cimport Py_INCREF, Py_DECREF
 from cpython.mem cimport PyMem_Malloc, PyMem_Free
+
+from .clock cimport time
 
 
 cdef inline bint _lock_lock(LockStatus_s *lock, long current_thread,
@@ -341,9 +342,9 @@ cdef class Condition:
         while not result:
             if has_timeout:
                 if endtime == -1:
-                    endtime = _time() + waittime
+                    endtime = time() + waittime
                 else:
-                    waittime = endtime - _time()
+                    waittime = endtime - time()
                     if waittime <= 0:
                         break
             self.wait(waittime)

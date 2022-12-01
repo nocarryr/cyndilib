@@ -1,7 +1,8 @@
 from libc.string cimport strdup
 cimport cython
 import threading
-import time
+
+from .clock cimport time, sleep
 
 
 cdef NDIlib_frame_type_e recv_frame_type_cast(ReceiveFrameType ft) nogil except *:
@@ -555,8 +556,7 @@ cdef class RecvThreadWorker:
                 self.wait_for_evt(.1)
 
     cdef void time_sleep(self, double timeout) nogil except *:
-        with gil:
-            time.sleep(timeout)
+        sleep(timeout)
 
     cdef void wait_for_evt(self, double timeout) nogil except *:
         with gil:
@@ -636,7 +636,6 @@ class RecvThread(threading.Thread):
         w.wait_event.set()
 
 def test():
-    import time
     from cyndilib.finder import Finder
 
 
@@ -660,7 +659,7 @@ def test():
         # if src:
         #     break
         print(i)
-        time.sleep(1)
+        sleep(1)
         i += 1
         # if not src:
         #     finder.wait()
@@ -693,5 +692,5 @@ def test():
         print('frame_type: ', frame_type)
         # if connected:
         #     break
-        time.sleep(1)
+        sleep(1)
     print('exit')

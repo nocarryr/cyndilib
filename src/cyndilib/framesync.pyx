@@ -2,7 +2,9 @@ cimport cython
 from libc.math cimport lround
 
 import threading
-import time
+
+from .clock cimport time, sleep
+
 
 cdef class FrameSync:
     """A wrapper around the |NDI| frame synchronization module
@@ -219,10 +221,10 @@ cdef class FrameSyncWorker():
             self.callback.trigger_callback()
 
     cdef void time_sleep(self, double timeout) except *:
-        time.sleep(timeout)
+        sleep(timeout)
 
     cdef double now(self) except *:
-        return time.time()
+        return time()
 
     cdef void wait_for_evt(self, double timeout) except *:
         self.wait_event.wait(timeout)

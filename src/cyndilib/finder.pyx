@@ -1,7 +1,9 @@
 from cython.operator cimport dereference
 
-import time
 import threading
+
+from .clock cimport time, sleep
+
 
 cdef class Source:
     """Represents an |NDI| source
@@ -375,7 +377,7 @@ cdef class FinderThreadWorker:
             # self.waiting.set()
             changed = self.finder._wait_for_sources(self.timeout_ms)
             if self.finder.num_sources == 0:
-                time.sleep(.1)
+                sleep(.1)
             else:
                 self.sleep_evt.wait(5)
             # self.waiting.clear()
