@@ -5,6 +5,9 @@ import threading
 from .clock cimport time, sleep
 
 
+__all__ = ('Source', 'Finder', 'FinderThreadWorker', 'FinderThread')
+
+
 cdef class Source:
     """Represents an |NDI| source
 

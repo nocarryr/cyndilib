@@ -6,6 +6,12 @@ import threading
 from .clock cimport time, sleep
 
 
+__all__ = (
+    'FrameSync', 'FrameSyncThread',
+    'FrameSyncWorker', 'VideoWorker', 'AudioWorker',
+)
+
+
 cdef class FrameSync:
     """A wrapper around the |NDI| frame synchronization module
 

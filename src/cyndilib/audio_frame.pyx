@@ -6,6 +6,8 @@ cimport numpy as cnp
 import numpy as np
 
 
+__all__ = ('AudioFrame', 'AudioRecvFrame', 'AudioFrameSync', 'AudioSendFrame')
+
 
 cdef class AudioFrame:
     """Base class for audio frames

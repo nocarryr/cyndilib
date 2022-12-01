@@ -22,6 +22,7 @@ cdef extern from * nogil:
 
 cdef extern from 'Processing.NDI.Lib.h' nogil:
     void NDILIB_CPP_DEFAULT_VALUE(long a)
+    const char* NDIlib_version()
 
     # cdef struct NDIlib_v5
 

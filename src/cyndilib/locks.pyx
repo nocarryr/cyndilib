@@ -11,6 +11,9 @@ from cpython.mem cimport PyMem_Malloc, PyMem_Free
 from .clock cimport time
 
 
+__all__ = ('Lock', 'RLock', 'Condition', 'Event')
+
+
 cdef inline bint _lock_lock(LockStatus_s *lock, long current_thread,
                             bint blocking, PY_TIMEOUT_T microseconds) nogil except -1:
 

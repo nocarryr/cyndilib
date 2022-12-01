@@ -4,6 +4,9 @@ from cpython.method cimport PyMethod_Check
 from cpython.weakref cimport PyWeakref_NewRef, PyWeakref_GetObject
 
 
+__all__ = ('Callback', 'WeakMethod')
+
+
 cdef class Callback:
     def __init__(self):
         self.has_callback = False

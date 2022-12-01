@@ -8,6 +8,9 @@ from libc.string cimport strcpy
 import re
 
 
+__all__ = ('MetadataFrame', 'MetadataRecvFrame', 'MetadataSendFrame')
+
+
 cdef object DOC_PATTERN = re.compile(r'<(?P<tag>\w+)(?P<attrs>[\w\s,",=]+)/>')
 cdef object ATTR_PATTERN = re.compile(r'(\s+(?P<name>\w+)="(?P<value>\w+)")')
 

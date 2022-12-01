@@ -4,6 +4,9 @@
 from libc.math cimport lround
 
 
+__all__ = ('Sender',)
+
+
 cdef class Sender:
     """Sends video and audio streams
 

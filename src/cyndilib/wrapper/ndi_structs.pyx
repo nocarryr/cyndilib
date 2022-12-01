@@ -1,5 +1,11 @@
 from libc.math cimport llround
 
+__all__ = ('FrameType', 'FourCC', 'FrameFormat', 'get_ndi_version')
+
+
+def get_ndi_version():
+    return NDIlib_version().decode('UTF-8')
+
 
 cdef double ndi_time_to_posix(int64_t ndi_ts) nogil except *:
     cdef float128_t result = <float128_t>ndi_ts * 1e-7
