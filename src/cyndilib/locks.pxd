@@ -95,7 +95,9 @@ cdef class Condition:
     cdef void _acquire_restore(self, (int, long) state) except *
     cdef (int, long) _release_save(self) except *
     cpdef bint _is_owned(self) except -1
+    cdef void _ensure_owned(self) except *
     cpdef bint wait(self, object timeout=*)
+    cdef bint _wait(self, bint block, double timeout=*) except *
     cpdef bint wait_for(self, object predicate, object timeout=*) except -1
     cdef void _notify(self, Py_ssize_t n=*) except *
     cdef void _notify_all(self) except *

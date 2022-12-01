@@ -281,14 +281,16 @@ cdef class Condition:
         cdef long tid = PyThread_get_thread_ident()
         return self.rlock._is_owned_c(tid)
 
+    cdef void _ensure_owned(self) except *:
+        if not self._is_owned():
+            raise RuntimeError("cannot wait on un-acquired lock")
+
     def __repr__(self):
         return "<Condition(%s, %d)>" % (self._lock, self._waiters.size())
 
     cpdef bint wait(self, object timeout=None):
         cdef bint block
         cdef double _timeout
-        cdef Lock waiter
-        cdef bint gotit = False
 
         if timeout is None:
             _timeout = -1
@@ -296,8 +298,13 @@ cdef class Condition:
         else:
             block = False
             _timeout = <double> timeout
-        if not self._is_owned():
-            raise RuntimeError("cannot wait on un-acquired lock")
+        return self._wait(block, _timeout)
+
+    cdef bint _wait(self, bint block, double timeout=-1) except *:
+        cdef Lock waiter
+        cdef bint gotit = False
+
+        self._ensure_owned()
         waiter = Lock()
         waiter._acquire(True, -1)
         # self._waiters.append(waiter)
@@ -312,8 +319,8 @@ cdef class Condition:
                 waiter._acquire(True, -1)
                 gotit = True
             else:
-                if _timeout > 0:
-                    gotit = waiter._acquire(True, _timeout)
+                if timeout > 0:
+                    gotit = waiter._acquire(True, timeout)
                 else:
                     gotit = waiter._acquire(False, -1)
             return gotit
@@ -350,7 +357,7 @@ cdef class Condition:
                     waittime = endtime - time()
                     if waittime <= 0:
                         break
-            self.wait(waittime)
+            self._wait(True, waittime)
             result = predicate()
         return result
 
@@ -360,8 +367,7 @@ cdef class Condition:
     cdef void _notify(self, Py_ssize_t n=1) except *:
         cdef Lock waiter
 
-        if not self._is_owned():
-            raise RuntimeError("cannot notify on un-acquired lock")
+        self._ensure_owned()
         # all_waiters = self._waiters
         # waiters_to_notify = deque(islice(all_waiters, n))
         # cdef obj_ptr_list_t waiters_to_notify = [v for v in enumerate(self._waiters) if i >= n]
