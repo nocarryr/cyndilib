@@ -1,5 +1,11 @@
-# Lock, RLock and Condition implemented in Cython
-# Heavily influenced from FastRLock: https://github.com/scoder/fastrlock
+
+"""Thread synchronization primitives implemented at the C level
+
+This module is **heavily** inspired by the `FastRLock`_ library with a few
+adjustments and additions.
+
+.. _FastRLock: https://github.com/scoder/fastrlock
+"""
 
 import threading
 from itertools import islice
@@ -114,6 +120,12 @@ cdef void LockStatus_destroy(LockStatus_s* lock) except *:
     PyMem_Free(lock)
 
 cdef class Lock:
+    """Implementation of :class:`threading.Lock`. A Primitive non-reentrant
+    lock (or mutex)
+
+    This class supports use as a :term:`context manager` and can be acquired
+    and released using the :keyword:`with` statement.
+    """
     def __cinit__(self):
         self._lock = LockStatus_create()
         self.name = ''
@@ -127,7 +139,10 @@ cdef class Lock:
 
     @property
     def locked(self):
+        """True if the lock is acquired
+        """
         return self._is_locked()
+
     cdef bint _is_locked(self):
         if self._lock.acquire_count > 0 or self._lock.owner >= 0 or self._lock.is_locked:
             return True
@@ -182,18 +197,60 @@ cdef class Lock:
         return self._lock.is_locked
 
     cpdef bint acquire(self, bint block=True, double timeout=-1) except -1:
+        """Acquire the lock, blocking or non-blocking
+
+        Arguments:
+            block (bool, optional): If ``True`` (the default), block until the
+                lock is unlocked. If ``False``, acquire the lock if it it isn't
+                already locked and return immediately.
+            timeout (float, optional): Maximum time (in seconds) to block
+                waiting to acquire the lock. A value of ``-1`` specifies an
+                unbounded wait.
+
+
+        .. note::
+
+            The arguments in this method vary slightly from that of
+            :meth:`threading.Lock.acquire` where it is considered an error to
+            specify a *timeout* with *blocking* set to ``False``.
+
+            In this implementation, the *block* argument is ignored if *timeout*
+            is given.
+
+        Returns:
+            bool: ``True`` if the lock was acquired, otherwise ``False``.
+
+        """
         return self._acquire(block, timeout)
+
     cpdef bint release(self) except -1:
+        """Release the lock
+
+        Raises:
+            RuntimeError: If the lock is not :attr:`locked`
+        """
         return self._release()
+
     def __enter__(self):
         self.acquire()
         return self
+
     def __exit__(self, *args):
         self.release()
+
     def __repr__(self):
         return '<{self.__class__} {self.name} (locked={self.locked}) at {id}>'.format(self=self, id=id(self))
 
 cdef class RLock(Lock):
+    """Implementation of :class:`threading.RLock`. A reentrant lock that can be
+    acquired multiple times by the same thread
+
+    Each call to :meth:`~Lock.acquire` must be followed by corresponding a call
+    to :meth:`~Lock.release` before the lock is unlocked.
+
+    This class supports use as a :term:`context manager` and can be acquired
+    and released using the :keyword:`with` statement.
+    """
     cdef bint _do_acquire(self, long owner) except -1:
         return _lock_rlock(self._lock, owner, True, -1)
 
@@ -241,7 +298,18 @@ cdef class RLock(Lock):
         return self._release_save_c()
 
 cdef class Condition:
-    def __cinit__(self, init_lock=None):
+    """Implementation of :class:`threading.Condition`. Allows one or more thread
+    to wait until they are notified by another thread.
+
+    Arguments:
+        init_lock (RLock, optional): If provided, a :class:`RLock` instance to be
+            used as the underlying lock. If not provided or ``None`` a new
+            :class:`RLock` will be created.
+
+    This class supports use as a :term:`context manager` and can be acquired
+    and released using the :keyword:`with` statement.
+    """
+    def __cinit__(self, init_lock=None, *args, **kwargs):
         cdef RLock lock
         if init_lock is not None:
             assert isinstance(init_lock, RLock)
@@ -260,12 +328,20 @@ cdef class Condition:
         self.rlock._release()
 
     cpdef bint acquire(self, bint block=True, double timeout=-1) except -1:
+        """Acquire the underlying lock
+
+        Arguments and return values match those of :meth:`Lock.acquire`
+        """
         return self.rlock._acquire(block, timeout)
 
     cdef bint _acquire(self, bint block, double timeout) except -1:
         return self.rlock._acquire(block, timeout)
 
     cpdef bint release(self) except -1:
+        """Release the underlying lock
+
+        Arguments and return values match those of :meth:`Lock.release`
+        """
         return self.rlock._release()
 
     cdef bint _release(self) except -1:
@@ -289,6 +365,26 @@ cdef class Condition:
         return "<Condition(%s, %d)>" % (self._lock, self._waiters.size())
 
     cpdef bint wait(self, object timeout=None):
+        """Wait until notified or until a timeout occurs
+
+        The underlying lock must be held before a call to this method.
+        Once called, releases lock then blocks until awakened by a call to
+        :meth:`notify` or :meth:`notify_all` by another thread, or until the
+        timeout (if given) has been reached.
+
+        Arguments:
+            timeout (float, optional): If provided, the maximum amount of time
+                (in seconds) to block. If ``-1`` is given (or ``None``), the
+                blocking duration is unbounded.
+
+        Returns:
+            bool: ``True`` if notified before the timeout (if any), ``False``
+                if a timeout was given and was reached.
+
+        Raises:
+            RuntimeError: If the lock was not acquired before this
+                method was called
+        """
         cdef bint block
         cdef double _timeout
 
@@ -337,6 +433,28 @@ cdef class Condition:
                 #     pass
 
     cpdef bint wait_for(self, object predicate, object timeout=None) except -1:
+        """Wait until a condition evaluates to ``True``
+
+        Repeatedly calls :meth:`wait` until the given predicate is satisfied or
+        the timeout has been reached.
+
+        Arguments:
+            predicate (typing.Callable): A callable whose return value will be
+                evaluated as a boolean value. Any returned value that can be
+                evaluated as ``True`` (``bool(predicate())``) will satisfy the
+                condition.
+            timeout (float, optional): If provided, the maximum amount of time
+                (in seconds) to wait for the condition to be satisfied.
+                If ``-1`` is given (or ``None``), waits indefinitely.
+
+        Returns:
+            bool: ``True`` if the condition was satisfied before the timeout
+            (if given), ``False`` otherwise.
+
+        Raises:
+            RuntimeError: If the lock was not acquired before this
+                method was called
+        """
         cdef double _timeout, endtime, waittime
         cdef bint has_timeout, result
 
@@ -362,6 +480,19 @@ cdef class Condition:
         return result
 
     def notify(self, Py_ssize_t n=1):
+        """Wake up at least *n* threads waiting for this condition variable
+
+        The lock must be acquired before this method is called. Since waiting
+        threads must reacquire the lock before returning from the
+        :meth:`wait` method, the caller must release it.
+
+        Arguments:
+            n (int): Maximum number of threads to notify. Defaults to ``1``
+
+        Raises:
+            RuntimeError: If the lock was not acquired before this
+                method was called
+        """
         self._notify(n)
 
     cdef void _notify(self, Py_ssize_t n=1) except *:
@@ -398,29 +529,57 @@ cdef class Condition:
         #         pass
 
     def notify_all(self):
+        """Like :meth:`notify`, but wakes all waiting threads
+
+        Raises:
+            RuntimeError: If the lock was not acquired before this
+                method was called
+        """
         self._notify(self._waiters.size())
 
     cdef void _notify_all(self) except *:
         self._notify(self._waiters.size())
 
 cdef class Event:
+    """Implementation of :class:`threading.Event`. A simple flag-based thread
+    communication primitive where one thread signals an event and other
+    threads wait for it.
+    """
     def __init__(self):
         self._cond = Condition()
         self._flag = False
 
     cpdef bint is_set(self):
+        """Returns ``True`` if the event has been set
+        """
         return self._flag
 
     cpdef set(self):
+        """Set the internal flag to ``True``, awakening any threads waiting for it
+        """
         with self._cond:
             self._flag = True
             self._cond.notify_all()
 
     cpdef clear(self):
+        """Reset the internal flag to ``False``.  After this, any threads making
+        a call to :meth:`wait` will block until the event is :meth:`set` again
+        """
         with self._cond:
             self._flag = False
 
     cpdef bint wait(self, object timeout=None):
+        """Block until the internal flag is ``True`` by a call to :meth:`set`
+        by another thread. If the flag is already ``True``, return immediately.
+
+        Arguments:
+            timeout (float, optional): If given, the maximum time in seconds to
+                block waiting for the flag. If ``-1`` (or ``None``), blocks
+                indefinitely.
+
+        Returns:
+            bool: ``True`` if the flag was set before a timeout, ``False`` otherwise
+        """
         cdef bint signaled
         with self._cond:
             signaled = self._flag
