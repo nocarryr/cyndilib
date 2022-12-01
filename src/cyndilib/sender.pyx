@@ -198,7 +198,7 @@ cdef class Sender:
 
         Arguments:
             video_data: A 1-d array or memoryview of unsigned 8-bit integers
-                formatted as described in :class:`.wrapper.FourCCPackInfo`
+                formatted as described in :class:`.wrapper.ndi_structs.FourCC`
             audio_data: A 2-d array or memoryview of 32-bit floats with shape
                 ``(num_channels, num_samples)``
 
@@ -249,7 +249,7 @@ cdef class Sender:
 
         Arguments:
             data: A 1-d array or memoryview of unsigned 8-bit integers
-                formatted as described in :class:`.wrapper.FourCCPackInfo`
+                formatted as described in :class:`.wrapper.ndi_structs.FourCC`
         """
         return self._write_video(data)
 
@@ -280,7 +280,7 @@ cdef class Sender:
 
         Arguments:
             data: A 1-d array or memoryview of unsigned 8-bit integers
-                formatted as described in :class:`.wrapper.FourCCPackInfo`
+                formatted as described in :class:`.wrapper.ndi_structs.FourCC`
 
         """
         return self._write_video_async(data)

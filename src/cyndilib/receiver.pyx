@@ -89,8 +89,8 @@ cdef class Receiver:
             empty string (default) indicates no source
         source (Source, optional): A :class:`~.finder.Source` object
             to connect to. ``None`` (default) indices no source.
-        color_format: The :class:`.wrapper.RecvColorFormat` to accept
-        bandwidth: The :class:`.wrapper.RecvBandwidth` to use
+        color_format: The :class:`~.wrapper.ndi_recv.RecvColorFormat` to accept
+        bandwidth: The :class:`~.wrapper.ndi_recv.RecvBandwidth` to use
         allow_video_fields: ``True`` if interlaced video frames can be handled.
             If ``False``, only progressive frames will be delivered.
         recv_name: Name for the receiver
