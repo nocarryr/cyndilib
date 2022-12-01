@@ -22,3 +22,12 @@ Glossary
     UNIX epoch
         The point at which time starts: January 1, 1970 00:00:00 (UTC) on all
         platforms
+
+    uint8
+        Unsigned 8-bit integer
+
+    uint16
+        Unsigned 16-bit integer
+
+    line stride
+        The number of bytes needed for one horizontal line of a video frame

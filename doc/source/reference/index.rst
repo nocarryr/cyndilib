@@ -2,9 +2,14 @@
 Reference
 =========
 
+:mod:`cyndilib`
+---------------
+
+.. automodule:: cyndilib
+
+
 .. toctree::
    :maxdepth: 2
-   :caption: Modules:
 
    finder
    receiver
@@ -14,4 +19,4 @@ Reference
    audio_frame
    metadata_frame
    locks
-   glossary
+   wrapper/index.rst

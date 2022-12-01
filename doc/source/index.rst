@@ -13,6 +13,7 @@ Welcome to cyndilib's documentation!
 
    overview
    reference/index.rst
+   reference/glossary.rst
 
 
 Indices and tables
