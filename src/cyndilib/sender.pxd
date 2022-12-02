@@ -25,12 +25,15 @@ cdef class Sender:
     cdef readonly bint has_video_frame, has_audio_frame
     cdef readonly bint _running
     cdef readonly size_t num_video_buffers, num_audio_buffers
+    cdef VideoSendFrame_status* last_async_sender
 
     cdef void _open(self) except *
     cdef void _close(self) except *
     cpdef set_video_frame(self, VideoSendFrame vf)
     cpdef set_audio_frame(self, AudioSendFrame af)
-    cdef void _check_running(self) nogil except *
+    cdef bint _check_running(self) nogil except *
+    cdef void _set_async_video_sender(self, VideoSendFrame_status* send_status) nogil except *
+    cdef void _clear_async_video_status(self) nogil except *
     cdef bint _write_video_and_audio(
         self,
         cnp.uint8_t[:] video_data,
