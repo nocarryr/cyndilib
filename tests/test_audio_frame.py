@@ -8,7 +8,7 @@ import pytest
 
 import numpy as np
 
-from conftest import AudioParams, write_audio
+from conftest import AudioParams
 
 from cyndilib.locks import RLock, Condition
 from cyndilib.audio_frame import AudioRecvFrame, AudioFrameSync, AudioSendFrame
