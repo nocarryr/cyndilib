@@ -56,6 +56,7 @@ cdef void video_frame_copy(
     dest.xres = src.xres
     dest.yres = src.yres
     dest.FourCC = src.FourCC
+    dest.line_stride_in_bytes = src.line_stride_in_bytes
     dest.frame_rate_N = src.frame_rate_N
     dest.frame_rate_D = src.frame_rate_D
     dest.picture_aspect_ratio = src.picture_aspect_ratio
@@ -139,16 +140,20 @@ cdef FourCCPackInfo* fourcc_pack_info_create() nogil except *:
     cdef FourCCPackInfo* p = <FourCCPackInfo*>mem_alloc(sizeof(FourCCPackInfo))
     if p is NULL:
         raise_mem_err()
+    fourcc_pack_info_init(p)
+    return p
+
+cdef void fourcc_pack_info_init(FourCCPackInfo* p) nogil except *:
     cdef size_t i
     p.fourcc = FourCC.UYVY
     p.xres = 0
     p.yres = 0
+    p.bytes_per_pixel = 0
     p.num_planes = 0
     p.total_size = 0
     for i in range(4):
         p.line_strides[i] = 0
         p.stride_offsets[i] = 0
-    return p
 
 cdef void fourcc_pack_info_destroy(FourCCPackInfo* p) nogil except *:
     if p is not NULL:
@@ -219,3 +224,4 @@ cdef void calc_fourcc_pack_info(FourCCPackInfo* p) nogil except *:
         p.total_size = p.line_strides[0] * yres
     else:
         raise_withgil(PyExc_ValueError, 'Unknown FourCC type')
+    p.bytes_per_pixel = bytes_per_pixel

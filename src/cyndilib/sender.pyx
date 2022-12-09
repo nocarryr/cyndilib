@@ -36,6 +36,7 @@ cdef class Sender:
         self.video_frame = None
         self.audio_frame = None
         # self.metadata_frame = None
+        self.last_async_sender = NULL
 
     def __init__(
         self,
@@ -66,6 +67,8 @@ cdef class Sender:
         self.ptr = NULL
         if ptr is not NULL:
             NDIlib_send_destroy(ptr)
+        self.audio_frame = None
+        self.video_frame = None
 
     @property
     def name(self):
@@ -124,10 +127,8 @@ cdef class Sender:
         cdef void* source_ptr
         try:
             if self.has_video_frame:
-                self.video_frame._create_child_frames(self.num_video_buffers - 1)
                 self.video_frame._set_sender_status(True)
             if self.has_audio_frame:
-                self.audio_frame._create_child_frames(self.num_audio_buffers - 1)
                 self.audio_frame._set_sender_status(True)
             self.send_create.clock_video = self.clock_video
             self.send_create.clock_audio = self.clock_audio
@@ -160,9 +161,9 @@ cdef class Sender:
         cdef NDIlib_send_instance_t ptr = self.ptr
         self.ptr = NULL
         if ptr is not NULL:
-            if self.has_video_frame:
-                NDIlib_send_send_video_async_v2(ptr, NULL)
-                self._clear_async_video_status()
+            NDIlib_send_send_video_async_v2(ptr, NULL)
+            NDIlib_send_send_audio_v3(ptr, NULL)
+            self._clear_async_video_status()
             NDIlib_send_destroy(ptr)
         if self.has_video_frame:
             self.video_frame._destroy()
@@ -194,16 +195,16 @@ cdef class Sender:
             raise_exception('ptr is NULL')
         return True
 
-    cdef void _set_async_video_sender(self, VideoSendFrame_status* send_status) nogil except *:
+    cdef void _set_async_video_sender(self, VideoSendFrame_item_s* item) nogil except *:
         self._clear_async_video_status()
-        self.last_async_sender = send_status
+        self.last_async_sender = item
 
     cdef void _clear_async_video_status(self) nogil except *:
-        cdef VideoSendFrame_status* send_status = self.last_async_sender
-        if send_status is NULL:
+        cdef VideoSendFrame_item_s* item = self.last_async_sender
+        if item is NULL:
             return
         self.last_async_sender = NULL
-        self.video_frame._on_sender_write(send_status)
+        self.video_frame._on_sender_write(item)
 
     def write_video_and_audio(self, cnp.uint8_t[:] video_data, cnp.float32_t[:,:] audio_data):
         """Write and send the given video and audio data
@@ -227,38 +228,40 @@ cdef class Sender:
     ) except *:
         if not self._check_running():
             return False
-        cdef VideoSendFrame_status* vid_send_status
-        cdef NDIlib_video_frame_v2_t* vid_ptr
-        cdef AudioSendFrame_status* aud_send_status
-        cdef NDIlib_audio_frame_v3_t* aud_ptr
+        cdef VideoSendFrame_item_s* vid_item
+        cdef AudioSendFrame_item_s* aud_item
+        cdef NDIlib_video_frame_v2_t* vid_ptr = self.video_frame.ptr
+        cdef NDIlib_audio_frame_v3_t aud_send_frame
         cdef bint vid_result = True, aud_result = True
 
-        vid_send_status = self.video_frame._get_next_write_frame()
-        aud_send_status = self.audio_frame._get_next_write_frame()
+        vid_item = self.video_frame._prepare_buffer_write()
+        aud_item = self.audio_frame._prepare_buffer_write()
+        cdef Py_ssize_t* outer_shape = self.audio_frame.send_status.shape
         cdef cnp.uint8_t[:] vid_memview = self.video_frame
         cdef cnp.float32_t[:,:] aud_memview = self.audio_frame
 
-        vid_result = vid_send_status is not NULL
-        aud_result = aud_send_status is not NULL
+        vid_result = vid_item is not NULL
+        aud_result = aud_item is not NULL
         if not vid_result or not aud_result:
             raise_exception('send_status is NULL')
 
+
         with nogil:
-            self.audio_frame._set_shape_from_memview(aud_send_status, audio_data)
-            aud_memview[:aud_send_status.shape[0],:aud_send_status.shape[1]] = audio_data
-            self.audio_frame._set_buffer_write_complete(aud_send_status)
-
+            self.audio_frame._set_shape_from_memview(aud_item, audio_data)
+            aud_memview[...] = audio_data
+            self.audio_frame._set_buffer_write_complete(aud_item)
             vid_memview[...] = video_data
-            self.video_frame._set_buffer_write_complete(vid_send_status)
+            self.video_frame._set_buffer_write_complete(vid_item)
 
-            vid_ptr = vid_send_status.frame_ptr[0]
-            aud_ptr = aud_send_status.frame_ptr[0]
-
-            NDIlib_send_send_audio_v3(self.ptr, aud_ptr)
+            audio_frame_copy(aud_item.frame_ptr, &aud_send_frame)
+            aud_send_frame.p_data = <uint8_t*>aud_item.frame_ptr.p_data
+            NDIlib_send_send_audio_v3(self.ptr, &aud_send_frame)
             self._clear_async_video_status()
-            self.audio_frame._on_sender_write(aud_send_status)
+            self.audio_frame._on_sender_write(aud_item)
+
+            vid_ptr.p_data = vid_item.frame_ptr.p_data
             NDIlib_send_send_video_async_v2(self.ptr, vid_ptr)
-            self._set_async_video_sender(vid_send_status)
+            self._set_async_video_sender(vid_item)
 
         return vid_result and aud_result
 
@@ -274,18 +277,17 @@ cdef class Sender:
     cdef bint _write_video(self, cnp.uint8_t[:] data) except *:
         if not self._check_running():
             return False
-        cdef VideoSendFrame_status* send_status = self.video_frame._get_next_write_frame()
-        if send_status is NULL:
+        cdef VideoSendFrame_item_s* item = self.video_frame._prepare_buffer_write()
+        if item is NULL:
             raise_exception('send_status is NULL')
-        cdef NDIlib_video_frame_v2_t* vid_ptr = send_status.frame_ptr[0]
         cdef cnp.uint8_t[:] vid_memview = self.video_frame
 
         with nogil:
             vid_memview[...] = data
-            self.video_frame._set_buffer_write_complete(send_status)
-            NDIlib_send_send_video_v2(self.ptr, vid_ptr)
+            self.video_frame._set_buffer_write_complete(item)
+            NDIlib_send_send_video_v2(self.ptr, item.frame_ptr)
             self._clear_async_video_status()
-            self.video_frame._on_sender_write(send_status)
+            self.video_frame._on_sender_write(item)
         return True
 
     def write_video_async(self, cnp.uint8_t[:] data):
@@ -308,17 +310,16 @@ cdef class Sender:
     cdef bint _write_video_async(self, cnp.uint8_t[:] data) except *:
         if not self._check_running():
             return False
-        cdef VideoSendFrame_status* send_status = self.video_frame._get_next_write_frame()
-        if send_status is NULL:
+        cdef VideoSendFrame_item_s* item = self.video_frame._prepare_buffer_write()
+        if item is NULL:
             raise_exception('send_status is NULL')
-        cdef NDIlib_video_frame_v2_t* vid_ptr = send_status.frame_ptr[0]
         cdef cnp.uint8_t[:] vid_memview = self.video_frame
 
         with nogil:
             vid_memview[...] = data
-            self.video_frame._set_buffer_write_complete(send_status)
-            NDIlib_send_send_video_async_v2(self.ptr, vid_ptr)
-            self._set_async_video_sender(send_status)
+            self.video_frame._set_buffer_write_complete(item)
+            NDIlib_send_send_video_async_v2(self.ptr, item.frame_ptr)
+            self._set_async_video_sender(item)
         return True
 
     def send_video(self):
@@ -332,11 +333,12 @@ cdef class Sender:
             return False
         if not self.video_frame._send_frame_available():
             return False
-        cdef VideoSendFrame_status* send_status = self.video_frame._get_send_frame()
-        cdef NDIlib_video_frame_v2_t* vid_ptr = send_status.frame_ptr[0]
-        NDIlib_send_send_video_v2(self.ptr, vid_ptr)
+        cdef VideoSendFrame_item_s* item = self.video_frame._get_send_frame()
+        if item is NULL:
+            raise_exception('no send pointer')
+        NDIlib_send_send_video_v2(self.ptr, item.frame_ptr)
         self._clear_async_video_status()
-        self.video_frame._on_sender_write(send_status)
+        self.video_frame._on_sender_write(item)
         return True
 
     cdef bint _send_video_async(self) except *:
@@ -344,10 +346,11 @@ cdef class Sender:
             return False
         if not self.video_frame._send_frame_available():
             return False
-        cdef VideoSendFrame_status* send_status = self.video_frame._get_send_frame()
-        cdef NDIlib_video_frame_v2_t* vid_ptr = send_status.frame_ptr[0]
-        NDIlib_send_send_video_async_v2(self.ptr, vid_ptr)
-        self._set_async_video_sender(send_status)
+        cdef VideoSendFrame_item_s* item = self.video_frame._get_send_frame()
+        if item is NULL:
+            raise_exception('no send pointer')
+        NDIlib_send_send_video_async_v2(self.ptr, item.frame_ptr)
+        self._set_async_video_sender(item)
         return True
 
     def write_audio(self, cnp.float32_t[:,:] data):
@@ -362,19 +365,21 @@ cdef class Sender:
     cdef bint _write_audio(self, cnp.float32_t[:,:] data) except *:
         if not self._check_running():
             return False
-        cdef NDIlib_audio_frame_v3_t* aud_ptr
-        cdef AudioSendFrame_status* send_status = self.audio_frame._get_next_write_frame()
+        cdef AudioSendFrame_item_s* item = self.audio_frame._prepare_buffer_write()
+        if item is NULL:
+            raise_exception(b'send_status is NULL')
         cdef cnp.float32_t[:,:] aud_memview = self.audio_frame
-        if send_status is NULL:
-            raise_exception('send_status is NULL')
+        cdef NDIlib_audio_frame_v3_t send_frame
 
         with nogil:
-            self.audio_frame._set_shape_from_memview(send_status, data)
-            aud_memview[:send_status.shape[0],:send_status.shape[1]] = data
-            aud_ptr = send_status.frame_ptr[0]
-            NDIlib_send_send_audio_v3(self.ptr, aud_ptr)
+            audio_frame_copy(item.frame_ptr, &send_frame)
+            self.audio_frame._set_shape_from_memview(item, data)
+            aud_memview[...] = data
+            self.audio_frame._set_buffer_write_complete(item)
+            send_frame.p_data = <uint8_t*>item.frame_ptr.p_data
+            NDIlib_send_send_audio_v3(self.ptr, &send_frame)
             self._clear_async_video_status()
-            self.audio_frame._on_sender_write(send_status)
+            self.audio_frame._on_sender_write(item)
         return True
 
     def send_audio(self):
@@ -385,15 +390,12 @@ cdef class Sender:
             return False
         if not self.audio_frame._send_frame_available():
             return False
-        cdef AudioSendFrame_status* send_status = self.audio_frame._get_send_frame()
-        if send_status is NULL:
+        cdef AudioSendFrame_item_s* item = self.audio_frame._get_send_frame()
+        if item is NULL:
             raise_exception('no send pointer')
-        assert send_status.id == send_status.next_send_id
-
-        cdef NDIlib_audio_frame_v3_t* aud_ptr = send_status.frame_ptr[0]
-        NDIlib_send_send_audio_v3(self.ptr, aud_ptr)
+        NDIlib_send_send_audio_v3(self.ptr, item.frame_ptr)
         self._clear_async_video_status()
-        self.audio_frame._on_sender_write(send_status)
+        self.audio_frame._on_sender_write(item)
         return True
 
     def send_metadata(self, str tag, dict attrs):

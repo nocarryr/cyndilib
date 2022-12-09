@@ -2,16 +2,23 @@ import pytest
 import threading
 import time
 from fractions import Fraction
+from functools import partial
 import numpy as np
 
 from cyndilib.wrapper.ndi_structs import FourCC
 from cyndilib.sender import Sender
 from cyndilib.video_frame import VideoSendFrame
 from cyndilib.audio_frame import AudioSendFrame
+from cyndilib.locks import RLock, Condition
 
 from conftest import AudioParams, VideoParams
 
 import _test_sender
+import _test_audio_frame
+import _test_send_frame_status
+
+NULL_INDEX = _test_send_frame_status.get_null_idx()
+MAX_FRAME_BUFFERS = _test_send_frame_status.get_max_frame_buffers()
 
 
 def test_send_video(fake_video_frames):
@@ -33,12 +40,13 @@ def test_send_video(fake_video_frames):
     print('opening sender')
     with sender:
         pass
-
+    time.sleep(.2)
+    print('opening again')
     with sender:
         iter_start_ts = time.time()
         for i in range(num_frames):
             start_ts = time.time()
-            # print(f'send frame {i}')
+            print(f'send frame {i}')
             r = sender.write_video_async(fake_frames[i])
             assert r is True
             elapsed = time.time() - start_ts
@@ -46,7 +54,7 @@ def test_send_video(fake_video_frames):
                 sleep_time = wait_time - elapsed - .0005
                 if sleep_time < 0:
                     continue
-                # print(f'{sleep_time=}')
+                print(f'{sleep_time=}')
                 time.sleep(sleep_time)
         iter_end_ts = time.time()
 
@@ -66,7 +74,7 @@ def setup_sender(
     # name = 'test_send_video'
     name = request.node.nodeid.split('::')[-1]
     print(f'{name=}')
-    sender = Sender(name)
+    sender = Sender(name, clock_video=True, clock_audio=True)
     vf = VideoSendFrame()
     vf.set_fourcc(FourCC.RGBA)
     assert vf.get_fourcc() == FourCC.RGBA
@@ -74,6 +82,9 @@ def setup_sender(
 
     vf.set_frame_rate(video_data.frame_rate)
     vf.set_resolution(video_data.width, video_data.height)
+    assert vf.get_frame_rate() == video_data.frame_rate
+    assert vf.xres == video_data.width
+    assert vf.yres == video_data.height
     sender.set_video_frame(vf)
 
     af = AudioSendFrame()
@@ -96,7 +107,7 @@ def test_send_video_and_audio_cy(request, fake_av_frames):
     start_ts = time.time()
     frame_times = _test_sender.test_send_video_and_audio(
         sender, video_data.frames, audio_data.samples_3d, video_data.frame_rate,
-        num_frame_repeats, num_full_repeats,
+        num_frame_repeats, num_full_repeats, send_audio=True,
     )
     end_ts = time.time()
 
@@ -128,6 +139,9 @@ def test_send_video_and_audio_py(request, fake_av_frames):
     cur_iteration = 0
     while cur_iteration < num_full_repeats:
         j = 0
+        vid_write_index, aud_write_index = 0, 0
+        vid_read_index, aud_read_index = NULL_INDEX, NULL_INDEX
+
         with sender:
             # time.sleep(.5)
             assert sender._running is True
@@ -139,8 +153,33 @@ def test_send_video_and_audio_py(request, fake_av_frames):
                 for i in range(video_data.num_frames):
                     # print(f'send frame {i}')
                     start_ts = time.time()
+                    vid_read_index = NULL_INDEX
 
-                    r = sender.write_video_and_audio(video_data.frames[i], audio_data.samples_3d[i])
+                    send_separately = i % 4 == 0
+                    send_sync = i % 8 == 0
+
+                    if send_separately:
+                        r = sender.write_audio(audio_data.samples_3d[i])
+                        assert r is True
+                        if send_sync:
+                            r = sender.write_video(video_data.frames[i])
+                        else:
+                            r = sender.write_video_async(video_data.frames[i])
+                        assert r is True
+                    else:
+                        r = sender.write_video_and_audio(video_data.frames[i], audio_data.samples_3d[i])
+                        assert r is True
+
+                    aud_write_index = (aud_write_index + 1) % MAX_FRAME_BUFFERS
+                    vid_send_ready = not send_sync or not send_separately
+                    if vid_send_ready:
+                        vid_read_index = vid_write_index
+                    else:
+                        vid_read_index = NULL_INDEX
+                    vid_write_index = (vid_write_index + 1) % MAX_FRAME_BUFFERS
+
+                    _test_send_frame_status.check_audio_send_frame(af, aud_write_index, aud_read_index)
+                    _test_send_frame_status.check_video_send_frame(vf, vid_write_index, vid_read_index)
 
                     elapsed = time.time() - start_ts
                     frame_times[cur_iteration, j] = elapsed
@@ -158,6 +197,10 @@ def test_send_video_and_audio_py(request, fake_av_frames):
     print(f'{fps_arr.mean()=}, {frame_times.mean()=}, {fps_arr.min()=}, {fps_arr.max()=}')
 
     print('sender closed')
+    del vf
+    del af
+    del sender
+    time.sleep(1)
 
 class SenderThread(threading.Thread):
     def __init__(
@@ -167,6 +210,7 @@ class SenderThread(threading.Thread):
         wait_time: float,
         num_frame_repeats: int,
         go_cond: threading.Condition,
+        sync_rlock: RLock
     ):
         super().__init__()
         self.sender = sender
@@ -178,12 +222,38 @@ class SenderThread(threading.Thread):
         self.running = False
         self.ready = threading.Event()
         self.go = go_cond
+        self.sync_rlock = sync_rlock
+        self.sync_cond = Condition(sync_rlock)
+        self.current_frame_count = 0
+        self.dependent_cond = None
+        self.dependent_thread = None
         self.stopped = threading.Event()
         self.exc = None
 
     @property
     def num_frames(self) -> int:
         return self.get_num_frames()
+
+    def set_dependent_thread(self, oth_thread: 'SenderThread'):
+        if oth_thread is None:
+            self.dependent_thread = None
+        else:
+            self.dependent_thread = oth_thread
+
+    def wait_for_dependent(self):
+        oth_thread = self.dependent_thread
+        if oth_thread is None:
+            return
+        cond = oth_thread.sync_cond
+        def predicate(oth_thread, i):
+            if oth_thread.exc is not None:
+                return True
+            return oth_thread.current_frame_count >= i
+        with cond:
+            if self.current_frame_count > oth_thread.current_frame_count:
+                return
+            p = partial(predicate, oth_thread, self.current_frame_count + 1)
+            cond.wait_for(p)
 
     def run(self):
         try:
@@ -200,19 +270,23 @@ class SenderThread(threading.Thread):
             for x in range(self.num_frame_repeats):
                 for i in range(num_frames):
                     # print(f'{self} send_frame {i}')
+                    self.wait_for_dependent()
                     start_ts = time.time()
                     self.send(i)
 
                     elapsed = time.time() - start_ts
                     self.frame_times[j] = elapsed
                     j += 1
+                    with self.sync_cond:
+                        self.current_frame_count += 1
+                        self.sync_cond.notify_all()
             iter_end_ts = time.time()
             self.duration = iter_end_ts - iter_start_ts
-            fps_arr = 1 / self.frame_times[1:]
-            # print(f'{self}: {fps_arr=}')
-            print(f'{self}: {fps_arr.mean()=}, {self.frame_times.mean()=}, {fps_arr.min()=}, {fps_arr.max()=}')
+            self.fps_arr = 1 / self.frame_times[1:]
         except Exception as exc:
-            self.exc = exc
+            with self.sync_cond:
+                self.exc = exc
+                self.sync_cond.notify_all()
             import traceback
             traceback.print_exc()
             raise
@@ -231,7 +305,10 @@ class VideoSenderThread(SenderThread):
 
     def send(self, i: int):
         data = self.data.frames[i]
-        self.sender.write_video(data)
+        if i % 4 == 0:
+            self.sender.write_video(data)
+        else:
+            self.sender.write_video_async(data)
 
 class AudioSenderThread(SenderThread):
     def get_num_frames(self) -> int:
@@ -261,23 +338,28 @@ def test_send_video_and_audio_threaded(request, fake_av_frames):
     cur_iteration = 0
     while cur_iteration < num_full_repeats:
         with sender:
-            vid_thread = VideoSenderThread(sender, video_data, wait_time, num_frame_repeats, go_cond)
-            aud_thread = AudioSenderThread(sender, audio_data, wait_time, num_frame_repeats, go_cond)
+            sync_rlock = RLock()
+            vid_thread = VideoSenderThread(sender, video_data, wait_time, num_frame_repeats, go_cond, sync_rlock)
+            aud_thread = AudioSenderThread(sender, audio_data, wait_time, num_frame_repeats, go_cond, sync_rlock)
+            aud_thread.set_dependent_thread(vid_thread)
             vid_thread.start()
             aud_thread.start()
             vid_thread.ready.wait()
             aud_thread.ready.wait()
-            # time.sleep(.1)
+
             with go_cond:
                 print('notify_all')
                 go_cond.notify_all()
                 time.sleep(.5)
-            # vid_thread.stopped.wait()
-            # aud_thread.stopped.wait()
+
             vid_thread.join()
             aud_thread.join()
             assert vid_thread.exc is None
             assert aud_thread.exc is None
+            fps_arr, frame_times = vid_thread.fps_arr, vid_thread.frame_times
+            print(f'vid_thread: {fps_arr.mean()=}, {frame_times.mean()=}, {fps_arr.min()=}, {fps_arr.max()=}')
+            fps_arr, frame_times = aud_thread.fps_arr, aud_thread.frame_times
+            print(f'aud_thread: {fps_arr.mean()=}, {frame_times.mean()=}, {fps_arr.min()=}, {fps_arr.max()=}')
 
         expected_dur = one_frame * video_data.num_frames * num_frame_repeats
         print(f'{vid_thread.duration=}, {aud_thread.duration=}, {float(expected_dur)=}')

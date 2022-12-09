@@ -8,13 +8,21 @@ import pytest
 
 import numpy as np
 
-from conftest import AudioParams
+from conftest import AudioParams, write_audio
 
 from cyndilib.locks import RLock, Condition
-from cyndilib.audio_frame import AudioRecvFrame, AudioFrameSync
+from cyndilib.audio_frame import AudioRecvFrame, AudioFrameSync, AudioSendFrame
 
-from _test_audio_frame import fill_audio_frame, fill_audio_frame_sync, audio_frame_process_events
+from _test_audio_frame import (
+    fill_audio_frame, fill_audio_frame_sync, audio_frame_process_events,
+)
+from _test_send_frame_status import (
+    set_send_frame_sender_status, set_send_frame_send_complete,
+    check_audio_send_frame, get_max_frame_buffers, get_null_idx,
+)
 
+NULL_INDEX = get_null_idx()
+MAX_FRAME_BUFFERS = get_max_frame_buffers()
 
 class State:
     def __init__(self, group: 'StateGroup', name: str, index_: int):
@@ -646,3 +654,60 @@ def test_frame_sync(fake_audio_data_longer):
 
     results = np.concatenate(results, axis=1)
     assert np.array_equal(samples_flat, results)
+
+def test_audio_send_frame(fake_audio_data):
+    fs = fake_audio_data.sample_rate
+    N = fake_audio_data.num_samples
+    num_channels = fake_audio_data.num_channels
+    num_segments = fake_audio_data.num_segments
+    s_perseg = fake_audio_data.s_perseg
+
+    samples = fake_audio_data.samples_3d
+    samples_flat = fake_audio_data.samples_2d
+
+    af = AudioSendFrame()
+    af.sample_rate = fs
+    af.num_channels = num_channels
+    af.set_max_num_samples(s_perseg)
+
+    expected_write_idx = 0
+    expected_read_idx = NULL_INDEX
+
+
+    assert af.write_index == expected_write_idx
+    assert af.read_index == expected_read_idx
+
+
+    set_send_frame_sender_status(af, True)
+    assert af.ndim == 2
+    assert af.shape == (num_channels, s_perseg)
+    assert af.strides == (s_perseg*4, 4)
+    assert af.write_index == expected_write_idx
+    assert af.read_index == expected_read_idx
+    check_audio_send_frame(af)
+
+    for i in range(num_segments):
+        print(f'{i=}')
+        assert af.write_index == expected_write_idx
+        assert af.read_index == expected_read_idx
+
+        af.write_data(samples[i])
+
+        expected_read_idx = expected_write_idx
+        expected_write_idx = (expected_write_idx + 1) % MAX_FRAME_BUFFERS
+        assert af.write_index == expected_write_idx
+        assert af.read_index == expected_read_idx
+        check_audio_send_frame(af)
+
+        set_send_frame_send_complete(af)
+
+        expected_read_idx = NULL_INDEX
+        assert af.write_index == expected_write_idx
+        assert af.read_index == expected_read_idx
+        check_audio_send_frame(af)
+
+    set_send_frame_sender_status(af, False)
+
+    af.destroy()
+    assert af.write_index == 0
+    assert af.read_index == NULL_INDEX

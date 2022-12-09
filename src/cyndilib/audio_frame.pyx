@@ -613,214 +613,178 @@ cdef class AudioSendFrame(AudioFrame):
     Attributes:
         max_num_samples (int, readonly): The maximum :attr:`~AudioFrame.num_samples`
             to be used.
-        max_shape(tuple[int, int], readonly):
 
     """
     def __cinit__(self, *args, **kwargs):
-        self.send_status.id = NULL_ID
-        self.send_status.next_send_id = NULL_ID
-        self.send_status.last_send_id = NULL_ID
-        self.send_status.write_available = True
-        self.send_status.send_ready = False
-        self.send_status.attached_to_sender = False
-        self.send_status.next = NULL
-        self.send_status.prev = NULL
-        self.send_status.frame_ptr = &(self.ptr)
         self.max_num_samples = 1602
-        self.max_shape[0] = 2
-        self.max_shape[1] = 0
-        self.shape[0] = self.send_status.shape[0] = 2
-        self.shape[1] = self.send_status.shape[0] = 0
-        self.strides[0] = self.send_status.strides[0] = 0
-        self.strides[1] = self.send_status.strides[1] = sizeof(float32_t)
+        frame_status_init(&(self.send_status))
+        self.send_status.ndim = 2
+        self.send_status.strides[0] = 0
+        self.send_status.strides[1] = sizeof(float32_t)
+        self.buffer_write_item = NULL
 
-    def __init__(self, AudioSendFrame parent_frame=None, *args, **kwargs):
-        cdef void* self_ptr = <void*>self
-        self.send_status.id = <Py_intptr_t>self_ptr
-        self.parent_frame = parent_frame
-        self.has_parent = parent_frame is not None
-        if self.has_parent:
-            self.max_num_samples = parent_frame.max_num_samples
-            self.send_status.prev = &(parent_frame.send_status)
-            audio_frame_copy(parent_frame.ptr, self.ptr)
+    def __init__(self, size_t max_num_samples=1602, *args, **kwargs):
+        self.max_num_samples = max_num_samples
+        self.ptr.no_samples = max_num_samples
         super().__init__(*args, **kwargs)
-        self.view = None
-        self.child_count = 0
-        self.child_frame = None
-        self.has_child = False
 
     def __dealloc__(self):
-        self.send_status.prev = NULL
-        self.send_status.next = NULL
-        self.send_status.frame_ptr = NULL
-        self.child_frame = None
-        self.parent_frame = None
-
-    @property
-    def id(self):
-        return self.send_status.id
+        self.buffer_write_item = NULL
+        frame_status_free(&(self.send_status))
 
     @property
     def attached_to_sender(self):
         return self.send_status.attached_to_sender
 
+    @property
+    def write_index(self):
+        return self.send_status.write_index
+
+    @property
+    def read_index(self):
+        return self.send_status.read_index
+
+    @property
+    def shape(self):
+        cdef AudioSendFrame_status_s* ptr = &(self.send_status)
+        cdef list l = ptr.shape
+        return tuple(l[:ptr.ndim])
+
+    @property
+    def strides(self):
+        cdef AudioSendFrame_status_s* ptr = &(self.send_status)
+        cdef list l = ptr.strides
+        return tuple(l[:ptr.ndim])
+
+    @property
+    def ndim(self):
+        return self.send_status.ndim
+
     cpdef set_max_num_samples(self, size_t n):
         assert not self.attached_to_sender
         self.max_num_samples = n
+        self.ptr.no_samples = n
 
     def __getbuffer__(self, Py_buffer *buffer, int flags):
-        cdef AudioSendFrame_status* send_status = self._get_next_write_frame()
-        if send_status is NULL:
-            raise_exception('no send pointer')
-        cdef NDIlib_audio_frame_v3_t* ptr = send_status.frame_ptr[0]
-        cdef PyObject* obj_ptr = <PyObject*>send_status.id
-        buffer.buf = ptr.p_data
+        cdef AudioSendFrame_item_s* item = self.buffer_write_item
+        cdef AudioSendFrame_status_s* s_ptr = &(self.send_status)
+        if item is NULL:
+            item = self._prepare_buffer_write()
+        assert item is not NULL
+        item.view_count += 1
+        buffer.buf = <char *>item.frame_ptr.p_data
         buffer.format = 'f'
-        buffer.internal = NULL
         buffer.itemsize = sizeof(float32_t)
-        buffer.len = self.shape[0] * self.shape[1] * sizeof(float32_t)
-        buffer.ndim = 2
-        buffer.obj = <object>obj_ptr
+        buffer.len = sizeof(float32_t) * s_ptr.shape[0] * s_ptr.shape[1]
+        buffer.ndim = self.send_status.ndim
+        buffer.obj = self
         buffer.readonly = 0
-        buffer.shape = self.shape
-        buffer.strides = self.strides
+        buffer.shape = s_ptr.shape
+        buffer.strides = s_ptr.strides
         buffer.suboffsets = NULL
+        buffer.internal = <void*>item
 
     def __releasebuffer__(self, Py_buffer *buffer):
-        pass
+        cdef AudioSendFrame_item_s* item
+        if buffer.internal is not NULL:
+            item = <AudioSendFrame_item_s*>buffer.internal
+            assert item.view_count > 0
+            item.view_count -= 1
 
     def destroy(self):
         self._destroy()
 
     cdef void _destroy(self) except *:
-        self.send_status.next = NULL
-        self.send_status.prev = NULL
-        if self.has_child:
-            self.child_frame.has_parent = False
-            self.child_frame._destroy()
-            self.has_child = False
-            self.child_frame = None
-        if self.has_parent:
-            self.parent_frame.has_child = False
-            self.parent_frame._destroy()
-            self.has_parent = False
-            self.parent_frame = None
-        self.child_count = 0
+        self.buffer_write_item = NULL
+        frame_status_free(&(self.send_status))
 
     def get_write_available(self):
         return self._write_available()
 
     cdef bint _write_available(self) nogil except *:
-        return self.send_status.next_send_id == NULL_ID
+        cdef Py_ssize_t idx = frame_status_get_next_write_index(&(self.send_status))
+        return idx != NULL_INDEX
 
     cdef void _set_shape_from_memview(
         self,
-        AudioSendFrame_status* send_status,
+        AudioSendFrame_item_s* item,
         cnp.float32_t[:,:] data,
     ) nogil except *:
-        cdef NDIlib_audio_frame_v3_t* ptr = send_status.frame_ptr[0]
-        cdef size_t nrows = data.shape[0], ncols = data.shape[1]
-        ptr.no_channels = send_status.shape[0] = nrows
-        ptr.no_samples = send_status.shape[1] = ncols
-        ptr.channel_stride_in_bytes = nrows * send_status.strides[1]
+        pass
 
-    def __enter__(self):
-        cdef AudioSendFrame obj = self._prepare_buffer_write()
-        return obj
+    cdef AudioSendFrame_item_s* _prepare_buffer_write(self) nogil except *:
+        if self.buffer_write_item is not NULL:
+            raise_withgil(PyExc_RuntimeError, 'buffer_write_item is not null')
+        cdef AudioSendFrame_item_s* item = self._get_next_write_frame()
+        if item.view_count != 0:
+            raise_withgil(PyExc_RuntimeError, 'buffer item view count nonzero')
+        self.buffer_write_item = item
+        return item
 
-    def __exit__(self, exc_type, exc, tb):
-        if exc_type is None:
-            self._set_buffer_write_complete(&(self.send_status))
+    cdef void _set_buffer_write_complete(self, AudioSendFrame_item_s* item) nogil except *:
+        cdef AudioSendFrame_item_s* cur_item = self.buffer_write_item
+        if cur_item is not NULL and cur_item.idx == item.idx:
+            self.buffer_write_item = NULL
+        self.send_status.read_index = item.idx
+        frame_status_set_send_ready(&(self.send_status))
 
-    cdef AudioSendFrame _prepare_buffer_write(self):
-        cdef AudioSendFrame_status* send_status = self._get_next_write_frame()
-        cdef PyObject* obj_ptr = <PyObject*>send_status.id
-        cdef AudioSendFrame obj = <object>obj_ptr
-        return obj
+    def write_data(self, cnp.float32_t[:,:] data):
+        cdef AudioSendFrame_item_s* item = self._prepare_memview_write()
+        cdef cnp.float32_t[:,:] view = self
 
-    cdef void _set_buffer_write_complete(self, AudioSendFrame_status* send_status) nogil except *:
-        frame_status_set_send_id(send_status, send_status.id)
+        self._write_data_to_memview(data, view, item)
 
-    cdef AudioSendFrame _prepare_memview_write(self):
-        cdef AudioSendFrame obj = self._prepare_buffer_write()
-        obj.view.data = <char *>obj.ptr.p_data
-        return obj
+    cdef AudioSendFrame_item_s* _prepare_memview_write(self) nogil except *:
+        return self._prepare_buffer_write()
 
     cdef void _write_data_to_memview(
         self,
         cnp.float32_t[:,:] data,
         cnp.float32_t[:,:] view,
-        AudioSendFrame_status* send_status
+        AudioSendFrame_item_s* item
     ) nogil except *:
-        self._set_shape_from_memview(send_status, data)
-        cdef size_t nrows = send_status.shape[0], ncols = send_status.shape[1]
-        view[:nrows, :ncols] = data
-        self.view.data = NULL
-        self._set_buffer_write_complete(send_status)
+        self._set_shape_from_memview(item, data)
+        cdef size_t nrows = item.shape[0], ncols = item.shape[1]
+        view[...] = data
+        self._set_buffer_write_complete(item)
 
-    cdef AudioSendFrame_status* _get_next_write_frame(self) nogil except *:
-        return frame_status_get_writer(&(self.send_status))
+    cdef AudioSendFrame_item_s* _get_next_write_frame(self) nogil except *:
+        cdef Py_ssize_t idx = frame_status_get_next_write_index(&(self.send_status))
+        if idx == NULL_INDEX:
+            raise_withgil(PyExc_RuntimeError, 'no write frame available')
+        self.send_status.write_index = idx
+        return &(self.send_status.items[idx])
 
     cdef bint _send_frame_available(self) nogil except *:
-        return self.send_status.next_send_id != NULL_ID
+        return self._get_send_frame() != NULL
 
-    cdef AudioSendFrame_status* _get_send_frame(self) nogil except *:
-        cdef AudioSendFrame_status* r = frame_status_get_sender(&(self.send_status))
-        return r
+    cdef AudioSendFrame_item_s* _get_send_frame(self) nogil except *:
+        cdef Py_ssize_t idx = frame_status_get_next_read_index(&(self.send_status))
+        if idx == NULL_INDEX:
+            return NULL
+        return &(self.send_status.items[idx])
 
-    cdef void _on_sender_write(self, AudioSendFrame_status* s_ptr) nogil except *:
-        frame_status_clear_write(s_ptr, s_ptr.id)
+    cdef void _on_sender_write(self, AudioSendFrame_item_s* s_ptr) nogil except *:
+        frame_status_set_send_complete(&(self.send_status), s_ptr.idx)
 
-    cdef void _set_sender_status(self, bint attached) except *:
+    cdef void _set_sender_status(self, bint attached) nogil except *:
         if attached:
             self._rebuild_array()
         self.send_status.attached_to_sender = attached
-        if self.has_child:
-            self.child_frame._set_sender_status(attached)
 
-    cdef void _create_child_frames(self, size_t count) except *:
-        if count > 0:
-            self._create_child_frame()
-            self.child_frame._create_child_frames(count - 1)
-
-    cdef void _create_child_frame(self) except *:
-        assert not self.has_child
-        self.child_frame = AudioSendFrame(self)
-        self.send_status.next = &(self.child_frame.send_status)
-        self._on_child_created()
-
-    cdef void _on_child_created(self) nogil except *:
-        self.child_count += 1
-        self.has_child = True
-        if self.has_parent:
-            self.parent_frame._on_child_created()
-
-    cdef void _rebuild_array(self) except *:
-        assert not self.attached_to_sender
+    cdef void _rebuild_array(self) nogil except *:
         cdef size_t nrows = self.ptr.no_channels, ncols = self.max_num_samples
-        if self.max_shape[0] == nrows and self.max_shape[1] == ncols:
-            return
         cdef size_t total_size = sizeof(float32_t) * nrows * ncols
-        cdef uint8_t* p_data = self.ptr.p_data
-        if p_data is not NULL:
-            self.ptr.p_data = NULL
-            mem_free(p_data)
-            p_data = NULL
-        self.ptr.p_data = <uint8_t*>mem_alloc(total_size)
-        if self.ptr.p_data is NULL:
-            raise_mem_err()
-        self.max_shape[0] = nrows
-        self.max_shape[1] = ncols
-        self.shape[0] = self.send_status.shape[0] = nrows
-        self.shape[1] = self.send_status.shape[1] = ncols
-        self.strides[0] = self.send_status.strides[0] = sizeof(float32_t) * ncols
-        self.strides[1] = self.send_status.strides[1] = sizeof(float32_t)
-        self.view = view.array(
-            shape=(nrows,ncols),
-            itemsize=sizeof(float32_t),
-            format='f',
-            allocate_buffer=False,
-        )
+        cdef AudioSendFrame_status_s* s_ptr = &(self.send_status)
+        s_ptr.shape[0] = nrows
+        s_ptr.shape[1] = ncols
+        s_ptr.strides[0] = sizeof(float32_t) * ncols
+        s_ptr.strides[1] = sizeof(float32_t)
+        self.ptr.no_channels = nrows
+        self.ptr.no_samples = ncols
+        self.ptr.channel_stride_in_bytes = s_ptr.strides[0]
+        frame_status_copy_frame_ptr(s_ptr, self.ptr)
+        frame_status_alloc_p_data(s_ptr)
 
 
 

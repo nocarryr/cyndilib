@@ -6,6 +6,9 @@ from libc.stdlib cimport malloc, free
 cdef extern from 'Python.h':
     ctypedef struct PyObject
     PyObject *PyExc_Exception
+    PyObject *PyExc_RuntimeError
+    PyObject *PyExc_KeyError
+    PyObject *PyExc_IndexError
     PyObject *PyExc_ValueError
     PyObject *PyExc_TypeError
     PyObject *PyExc_MemoryError
@@ -19,7 +22,7 @@ cdef inline int raise_exception(char *msg) nogil except -1:
     raise_withgil(PyExc_Exception, msg)
 
 cdef inline int raise_mem_err() nogil except -1:
-    raise_withgil(PyExc_MemoryError, '')
+    raise_withgil(PyExc_MemoryError, b'')
 
 
 cdef inline void* mem_alloc(size_t c) nogil:

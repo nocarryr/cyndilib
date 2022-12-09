@@ -263,6 +263,13 @@ cdef extern from "Processing.NDI.structs.h" nogil:
         # // Is this currently on preview output.
         bint on_preview
 
+
+ctypedef fused NDIlib_frame_type_ft:
+    NDIlib_video_frame_v2_t
+    NDIlib_audio_frame_v3_t
+    NDIlib_metadata_frame_t
+
+
 cdef double ndi_time_to_posix(int64_t ndi_ts) nogil except *
 cdef int64_t posix_time_to_ndi(double ts) nogil except *
 
@@ -301,12 +308,14 @@ cdef struct FourCCPackInfo:
     size_t xres
     size_t yres
     FourCC fourcc
+    size_t bytes_per_pixel
     size_t num_planes
     size_t total_size
     size_t[4] line_strides
     size_t[4] stride_offsets
 
 cdef FourCCPackInfo* fourcc_pack_info_create() nogil except *
+cdef void fourcc_pack_info_init(FourCCPackInfo* fourcc) nogil except *
 cdef void fourcc_pack_info_destroy(FourCCPackInfo* p) nogil except *
 cdef FourCCPackInfo* get_fourcc_pack_info(FourCC fourcc, size_t xres, size_t yres) nogil except *
 cdef void calc_fourcc_pack_info(FourCCPackInfo* p) nogil except *

@@ -1,10 +1,18 @@
 import time
 import numpy as np
-from cyndilib.video_frame import VideoRecvFrame
+from cyndilib.video_frame import VideoRecvFrame, VideoSendFrame
+from cyndilib.wrapper import FourCC
 from _test_video_frame import (
     build_test_frame, build_test_frames,
     buffer_into_video_frame, video_frame_process_events,
 )
+from _test_send_frame_status import (
+    set_send_frame_sender_status, set_send_frame_send_complete,
+    check_video_send_frame, get_null_idx, get_max_frame_buffers,
+)
+
+MAX_FRAME_BUFFERS = get_max_frame_buffers()
+NULL_INDEX = get_null_idx()
 
 def test():
     width, height = 1920, 1080
@@ -47,3 +55,52 @@ def test_frame_builder():
         f = build_test_frame(width, height, False, False, False, x_offset)
         assert a[i].tobytes() == f.tobytes()
         assert a[i].tobytes() == b[i].tobytes() == c[i].tobytes() == d[i].tobytes()
+
+
+def test_video_send_frame(fake_video_frames):
+    width, height, fr, num_frames, fake_frames = fake_video_frames
+
+    vf = VideoSendFrame()
+    vf.set_fourcc(FourCC.RGBA)
+    vf.set_frame_rate(fr)
+    vf.set_resolution(width, height)
+
+    expected_write_idx = 0
+    expected_read_idx = NULL_INDEX
+
+    assert vf.ndim == 1
+    assert vf.shape == (0,)
+    assert vf.write_index == expected_write_idx
+    assert vf.read_index == expected_read_idx
+
+
+    set_send_frame_sender_status(vf, True)
+    assert vf.write_index == expected_write_idx
+    assert vf.read_index == expected_read_idx
+    check_video_send_frame(vf)
+
+    for i in range(num_frames):
+        print(f'{i=}')
+        assert vf.write_index == expected_write_idx
+        assert vf.read_index == expected_read_idx
+
+        vf.write_data(fake_frames[i])
+
+        expected_read_idx = expected_write_idx
+        expected_write_idx = (expected_write_idx + 1) % MAX_FRAME_BUFFERS
+        assert vf.write_index == expected_write_idx
+        assert vf.read_index == expected_read_idx
+        check_video_send_frame(vf)
+
+        set_send_frame_send_complete(vf)
+
+        expected_read_idx = NULL_INDEX
+        assert vf.write_index == expected_write_idx
+        assert vf.read_index == expected_read_idx
+        check_video_send_frame(vf)
+
+    set_send_frame_sender_status(vf, False)
+
+    vf.destroy()
+    assert vf.write_index == 0
+    assert vf.read_index == NULL_INDEX

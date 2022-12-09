@@ -20,7 +20,7 @@ cdef class VideoFrame:
 
     cpdef str get_format_string(self)
     cdef (int, int) _get_resolution(self) nogil except *
-    cdef void _set_resolution(self, int xres, int yres) nogil
+    cdef void _set_resolution(self, int xres, int yres) nogil except *
     cdef int _get_xres(self) nogil
     cdef void _set_xres(self, int value) nogil except *
     cdef int _get_yres(self) nogil
@@ -84,32 +84,23 @@ cdef class VideoFrameSync(VideoFrame):
 
 
 cdef class VideoSendFrame(VideoFrame):
-    cdef VideoSendFrame_status send_status
-    cdef readonly VideoSendFrame parent_frame
-    cdef readonly VideoSendFrame child_frame
-    cdef view.array view
-    cdef readonly bint has_child, has_parent
-    cdef readonly size_t child_count
-    cdef Py_ssize_t[1] shape
-    cdef Py_ssize_t[1] strides
+    cdef VideoSendFrame_status_s send_status
+    cdef VideoSendFrame_item_s* buffer_write_item
 
     cdef void _destroy(self) except *
     cdef bint _write_available(self) nogil except *
-    cdef VideoSendFrame _prepare_buffer_write(self)
-    cdef void _set_buffer_write_complete(self, VideoSendFrame_status* send_status) nogil except *
-    cdef VideoSendFrame _prepare_memview_write(self)
+    cdef VideoSendFrame_item_s* _prepare_buffer_write(self) nogil except *
+    cdef void _set_buffer_write_complete(self, VideoSendFrame_item_s* item) nogil except *
+    cdef VideoSendFrame_item_s* _prepare_memview_write(self) nogil except *
     cdef void _write_data_to_memview(
         self,
         cnp.uint8_t[:] data,
         cnp.uint8_t[:] view,
-        VideoSendFrame_status* send_status
+        VideoSendFrame_item_s* item,
     ) nogil except *
-    cdef VideoSendFrame_status* _get_next_write_frame(self) nogil except *
+    cdef VideoSendFrame_item_s* _get_next_write_frame(self) nogil except *
     cdef bint _send_frame_available(self) nogil except *
-    cdef VideoSendFrame_status* _get_send_frame(self) nogil except *
-    cdef void _on_sender_write(self, VideoSendFrame_status* s_ptr) nogil except *
-    cdef void _set_sender_status(self, bint attached) except *
-    cdef void _create_child_frames(self, size_t count) except *
-    cdef void _create_child_frame(self) except *
-    cdef void _on_child_created(self) nogil except *
-    cdef void _rebuild_array(self) except *
+    cdef VideoSendFrame_item_s* _get_send_frame(self) nogil except *
+    cdef void _on_sender_write(self, VideoSendFrame_item_s* s_ptr) nogil except *
+    cdef void _set_sender_status(self, bint attached) nogil except *
+    cdef void _rebuild_array(self) nogil except *

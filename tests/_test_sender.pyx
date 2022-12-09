@@ -18,32 +18,7 @@ from cyndilib.wrapper cimport *
 from cyndilib.audio_frame cimport AudioSendFrame
 from cyndilib.video_frame cimport VideoSendFrame
 from cyndilib.sender cimport Sender
-
-cdef extern from * nogil:
-    """
-    #include <chrono>
-    #include <thread>
-    #include <stdint.h>
-
-    void sleep_for(double seconds){
-        int64_t i = (int64_t)seconds * 1000000;
-        int64_t j = (seconds - (int64_t)seconds) * 1000000;
-        i += j;
-        auto microseconds = std::chrono::microseconds(i);
-        std::this_thread::sleep_for(microseconds);
-    }
-
-    double get_cpp_time(){
-        using namespace std::chrono;
-        auto tsNow = high_resolution_clock::now();
-        auto msD = duration_cast<microseconds>(tsNow.time_since_epoch());
-        double result = msD.count();
-        result *= 0.000001;
-        return result;
-    }
-    """
-    cdef double get_cpp_time()
-    cdef void sleep_for(double seconds)
+from cyndilib.clock cimport time
 
 
 @cython.boundscheck(False)
@@ -55,6 +30,7 @@ def test_send_video_and_audio(
     object frame_rate,
     size_t num_frame_repeats = 10,
     size_t num_full_repeats = 1,
+    bint send_audio = True
 ):
     cdef size_t num_frames = fake_frames.shape[0]
 
@@ -70,26 +46,24 @@ def test_send_video_and_audio(
     cdef cnp.float64_t[:,:] frame_time_view = frame_times
 
     cdef size_t i, j = 0, x, cur_iteration = 0
+    cdef bint r
     cdef double start_ts, elapsed
     while cur_iteration < num_full_repeats:
         j = 0
         with sender:
-            # sleep_for(.5)
             assert sender._running is True
             print('loop_start')
-            # sleep_for(.5)
-            # while True:
             for x in range(num_frame_repeats):
                 for i in range(num_frames):
                     # print(f'send frame {i}')
-                    start_ts = get_cpp_time()
+                    start_ts = time()
 
-                    sender._write_video_and_audio(fake_frames[i], audio_samples[i])
-                    # sender._write_audio(audio_samples[i])
-                    # # sender._write_video(fake_frames[i])
-                    # sender._write_video_async(fake_frames[i])
-
-                    elapsed = get_cpp_time() - start_ts
+                    if send_audio:
+                        r = sender._write_video_and_audio(fake_frames[i], audio_samples[i])
+                    else:
+                        r = sender._write_video_async(fake_frames[i])
+                    assert r is True
+                    elapsed = time() - start_ts
                     frame_time_view[cur_iteration, j] = elapsed
                     j += 1
 
