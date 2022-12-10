@@ -28,6 +28,7 @@ CYTHONIZE_CMD = 'cythonize {opts} {pyx_file}'
 
 COMPILER_DIRECTIVES = {
     'linetrace':True,
+    'embedsignature':True,
 }
 
 run_distutils = Cythonize.run_distutils
