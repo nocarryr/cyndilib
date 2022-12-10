@@ -2,6 +2,7 @@ import pytest
 from collections import namedtuple
 from fractions import Fraction
 import numpy as np
+import psutil
 
 from _test_video_frame import build_test_frames
 
@@ -67,10 +68,66 @@ def video_frame_rate(request):
     else:
         return Fraction(int(round(request.param)) * 1000, 1001)
 
+def get_available_mem():
+    return psutil.virtual_memory().available
+
+ONE_KB = 2 ** (10)
+ONE_MB = 2 ** (20)
+
+def humanize_bytes(nbytes: int) -> str:
+    if nbytes <= ONE_MB * 2:
+        kb = nbytes / ONE_KB
+        kb_i = int(kb)
+        kb_f = int((kb % 1) * 100)
+        return f'{kb_i:,}.{kb_f} KB'
+    mb = nbytes / ONE_MB
+    mb_i = int(mb)
+    mb_f = int((mb % 1) * 100)
+    return f'{mb_i:,}.{mb_f} MB'
+
+def calc_mem_required(
+    video_params: VideoParams,
+    audio_params: AudioParams|None = None,
+) -> int:
+
+    vid_dt = np.dtype(np.uint8)
+    aud_dt = np.dtype(np.float32)
+    vid_mem = video_params.width * video_params.height * 4 * vid_dt.itemsize
+    vid_mem *= video_params.num_frames
+    aud_mem = 0
+    if audio_params is not None:
+        samples_per_frame = audio_params.sample_rate / video_params.frame_rate
+        s_perseg = int(samples_per_frame)
+        if samples_per_frame.denominator != 1:
+            s_perseg += 1
+        aud_mem = s_perseg * audio_params.num_channels * aud_dt.itemsize
+        aud_mem *= video_params.num_frames
+    return vid_mem + aud_mem
+
+def check_mem_available(
+    video_params: VideoParams,
+    audio_params: AudioParams|None = None,
+) -> tuple[bool, int, int]:
+
+    mem_padding = 200 * ONE_MB
+    mem_req = calc_mem_required(video_params, audio_params)
+    mem_avail = get_available_mem()
+    r = mem_avail >= mem_req + mem_padding
+    return r, mem_req, mem_avail
+
+
 @pytest.fixture
 def fake_video_frames(video_resolution, video_frame_rate, fake_video_builder):
     w, h = video_resolution
     num_frames = 160
+    video_params = VideoParams(w, h, video_frame_rate, num_frames, None)
+    mem_ok, mem_req, mem_avail = check_mem_available(video_params)
+    while not mem_ok:
+        num_frames //= 2
+        if num_frames < 40:
+            pytest.skip(f'not enough memory. requires {humanize_bytes(mem_req)}, only {humanize_bytes(mem_avail)} available')
+        video_params = video_params._replace(num_frames=num_frames)
+        mem_ok, mem_req, mem_avail = check_mem_available(video_params)
     frames = fake_video_builder(w, h, num_frames, False, True)
     return VideoParams(w, h, video_frame_rate, num_frames, frames)
 
