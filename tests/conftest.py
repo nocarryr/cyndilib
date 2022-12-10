@@ -1,3 +1,4 @@
+from __future__ import annotations
 import pytest
 from collections import namedtuple
 from fractions import Fraction
