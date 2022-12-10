@@ -113,7 +113,7 @@ def check_mem_available(
     mem_padding = 200 * ONE_MB
     mem_req = calc_mem_required(video_params, audio_params)
     mem_avail = get_available_mem()
-    r = mem_avail >= mem_req + mem_padding
+    r = mem_avail >= (mem_req*2) + mem_padding
     return r, mem_req, mem_avail
 
 
