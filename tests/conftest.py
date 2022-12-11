@@ -129,7 +129,11 @@ def fake_video_frames(video_resolution, video_frame_rate, fake_video_builder):
             pytest.skip(f'not enough memory. requires {humanize_bytes(mem_req)}, only {humanize_bytes(mem_avail)} available')
         video_params = video_params._replace(num_frames=num_frames)
         mem_ok, mem_req, mem_avail = check_mem_available(video_params)
-    frames = fake_video_builder(w, h, num_frames, False, True)
+    try:
+        frames = fake_video_builder(w, h, num_frames, False, True)
+    except MemoryError:
+        print(f'{psutil.virtual_memory()=}')
+        raise
     return VideoParams(w, h, video_frame_rate, num_frames, frames)
 
 
