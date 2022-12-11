@@ -7,7 +7,7 @@ cdef extern from *:
     """
     #define MAX_FRAME_BUFFERS 3
     #define NULL_ID 0
-    #define NULL_INDEX 0x7fffffff
+    #define NULL_INDEX 0x7fff
     """
     cdef const size_t MAX_FRAME_BUFFERS
     cdef const Py_intptr_t NULL_ID
