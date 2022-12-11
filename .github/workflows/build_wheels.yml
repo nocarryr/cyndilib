@@ -55,18 +55,6 @@ jobs:
         - os: ubuntu-latest
           arch: aarch64
           python-version: "cp310"
-        - os: ubuntu-latest
-          arch: i686
-          python-version: "cp37"
-        - os: ubuntu-latest
-          arch: i686
-          python-version: "cp38"
-        - os: ubuntu-latest
-          arch: i686
-          python-version: "cp39"
-        - os: ubuntu-latest
-          arch: i686
-          python-version: "cp310"
 
     steps:
       - uses: actions/checkout@v3
