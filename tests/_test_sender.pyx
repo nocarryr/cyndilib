@@ -1,10 +1,9 @@
 # cython: language_level=3
 # cython: linetrace=True
-# cython: profile=True
+# cython: profile=False
 # distutils: language = c++
 # distutils: include_dirs=DISTUTILS_INCLUDE_DIRS
 # distutils: extra_compile_args=DISTUTILS_EXTRA_COMPILE_ARGS
-# distutils: define_macros=CYTHON_TRACE_NOGIL=1
 
 cimport cython
 from libc.stdint cimport *
