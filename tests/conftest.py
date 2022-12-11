@@ -1,4 +1,5 @@
 from __future__ import annotations
+import os
 import pytest
 from collections import namedtuple
 from fractions import Fraction
@@ -6,6 +7,8 @@ import numpy as np
 import psutil
 
 from _test_video_frame import build_test_frames
+
+IS_CI_BUILD = os.environ.get('CI') == 'true'
 
 AudioParams = namedtuple('AudioParams', [
     'sample_rate', 'num_channels', 'num_samples', 'num_segments', 's_perseg',
