@@ -12,7 +12,7 @@ test-requires = [
 ]
 test-command = [
     "python {project}/build_tests.py",
-    "py.test {project}/tests/ --ignore {project}/tests/test_sender.py",
+    "py.test {project}/tests/
 ]
 test-skip = "cp37-*"
 
