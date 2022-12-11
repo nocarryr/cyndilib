@@ -26,8 +26,6 @@ def test_indexing():
 def test_video(fake_video_frames):
     width, height, fr, num_frames, fake_frames = fake_video_frames
 
-    assert NULL_INDEX == (1 << 31) - 1
-
     vf = VideoSendFrame()
     vf.set_fourcc(FourCC.RGBA)
     vf.set_frame_rate(fr)
