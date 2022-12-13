@@ -48,7 +48,7 @@ cdef class VideoFrame:
     def get_resolution(self):
         """Get the video resolution as a tuple of ``(width, height)``
         """
-        return self._get_resolution
+        return self._get_resolution()
     def set_resolution(self, int xres, int yres):
         """Set the video resolution
         """
