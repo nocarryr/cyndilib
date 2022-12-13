@@ -17,8 +17,6 @@ cdef class Sender:
         video_frame (VideoSendFrame):
         audio_frame (AudioSendFrame):
         metadata_frame (MetadataSendFrame):
-        num_video_buffers (int): Number of video frames to allocate as buffers
-        num_audio_buffers (int): Number of audio frames to allocate as buffers
         clock_video (bool): True if the video frames should clock themselves.
             If False, no rate limiting will be applied to keep within the
             desired frame rate
@@ -44,11 +42,7 @@ cdef class Sender:
         str ndi_groups='',
         bint clock_video=True,
         bint clock_audio=True,
-        size_t num_video_buffers=2,
-        size_t num_audio_buffers=2,
     ):
-        self.num_video_buffers = num_video_buffers
-        self.num_audio_buffers = num_audio_buffers
         self.ndi_name = ndi_name
         self.ndi_groups = ndi_groups
         self._b_ndi_name = ndi_name.encode()

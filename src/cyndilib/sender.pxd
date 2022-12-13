@@ -28,7 +28,6 @@ cdef class Sender:
     cdef MetadataSendFrame metadata_frame
     cdef readonly bint has_video_frame, has_audio_frame
     cdef readonly bint _running
-    cdef readonly size_t num_video_buffers, num_audio_buffers
     cdef VideoSendFrame_item_s* last_async_sender
 
     cdef void _open(self) except *
