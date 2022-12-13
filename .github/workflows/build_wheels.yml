@@ -55,7 +55,6 @@ jobs:
         run: py.test
 
   build_wheels:
-    needs: test_inplace
     name: Build wheels on ${{ matrix.os }}_${{ matrix.python-version }}-${{ matrix.arch }}
     runs-on: ${{ matrix.os }}
     strategy:
