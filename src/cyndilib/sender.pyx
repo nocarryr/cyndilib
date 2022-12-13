@@ -162,7 +162,6 @@ cdef class Sender:
         self.ptr = NULL
         if ptr is not NULL:
             NDIlib_send_send_video_async_v2(ptr, NULL)
-            NDIlib_send_send_audio_v3(ptr, NULL)
             self._clear_async_video_status()
             NDIlib_send_destroy(ptr)
         if self.has_video_frame:
