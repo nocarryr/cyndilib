@@ -34,7 +34,7 @@ jobs:
       fail-fast: false
       matrix:
         os: [ubuntu-latest, macos-latest, windows-latest]
-        python-version: ["3.8", "3.9", "3.10"]
+        python-version: ["3.8", "3.9", "3.10", "3.11"]
     steps:
       - uses: actions/checkout@v3
       - name: Set up Python ${{ matrix.python-version }}
@@ -63,13 +63,13 @@ jobs:
         include:
         - os: macos-latest
           arch: auto
-          python-version: "cp3{7,8,9,10}"
+          python-version: "cp3{7,8,9,10,11}"
         - os: ubuntu-latest
           arch: x86_64
-          python-version: "cp3{7,8,9,10}"
+          python-version: "cp3{7,8,9,10,11}"
         - os: windows-latest
           arch: AMD64
-          python-version: "cp3{7,8,9,10}"
+          python-version: "cp3{7,8,9,10,11}"
         - os: ubuntu-latest
           arch: aarch64
           python-version: "cp37"
@@ -82,6 +82,9 @@ jobs:
         - os: ubuntu-latest
           arch: aarch64
           python-version: "cp310"
+        - os: ubuntu-latest
+          arch: aarch64
+          python-version: "cp311"
 
     steps:
       - uses: actions/checkout@v3
