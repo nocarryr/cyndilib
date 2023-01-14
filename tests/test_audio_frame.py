@@ -8,7 +8,7 @@ import pytest
 
 import numpy as np
 
-from conftest import AudioParams
+from conftest import AudioParams, IS_CI_BUILD
 
 from cyndilib.locks import RLock, Condition
 from cyndilib.audio_frame import AudioRecvFrame, AudioFrameSync, AudioSendFrame
@@ -329,7 +329,7 @@ class StateThread(threading.Thread):
         # print(f'<{self.__class__.__name__}.handle_state({state!r})>')
 
 
-@pytest.fixture(params=[2, 8, 16, 32])
+@pytest.fixture(params=[2, 8] if IS_CI_BUILD else [2, 8, 16, 32])
 def num_seconds(request):
     return request.param
 

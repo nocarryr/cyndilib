@@ -123,7 +123,7 @@ def check_mem_available(
 @pytest.fixture
 def fake_video_frames(video_resolution, video_frame_rate, fake_video_builder):
     w, h = video_resolution
-    num_frames = 160
+    num_frames = 40 if IS_CI_BUILD else 160
     video_params = VideoParams(w, h, video_frame_rate, num_frames, None)
     mem_ok, mem_req, mem_avail = check_mem_available(video_params)
     while not mem_ok:

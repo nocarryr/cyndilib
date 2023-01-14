@@ -6,14 +6,14 @@ from cyndilib.audio_frame import AudioSendFrame
 from cyndilib.video_frame import VideoSendFrame
 
 import _test_send_frame_status
-from conftest import AudioParams
+from conftest import AudioParams, IS_CI_BUILD
 
 NULL_INDEX = _test_send_frame_status.get_null_idx()
 MAX_FRAME_BUFFERS = _test_send_frame_status.get_max_frame_buffers()
 
 @pytest.fixture
 def fake_audio_data(fake_audio_builder):
-    num_seconds = 32
+    num_seconds = 8 if IS_CI_BUILD else 32
     params = AudioParams()
     num_samples = params.sample_rate * num_seconds
     num_segments = num_samples // params.s_perseg
