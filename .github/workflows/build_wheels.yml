@@ -62,7 +62,7 @@ jobs:
       matrix:
         include:
         - os: macos-latest
-          arch: auto
+          arch: universal2
           python-version: "cp3{7,8,9,10,11}"
         - os: ubuntu-latest
           arch: x86_64
