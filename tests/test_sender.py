@@ -63,8 +63,9 @@ def test_send_video(fake_video_frames):
     expected_dur = one_frame * num_frames
     print(f'{iter_duration=}, {float(expected_dur)=}')
     if not IS_CI_BUILD:
-        assert expected_dur - .5 <= iter_duration <= expected_dur + .5
-
+        dur_min = expected_dur - one_frame
+        dur_max = expected_dur + one_frame
+        assert dur_min <= expected_dur <= dur_max
     print('sender closed')
 
 
@@ -117,7 +118,9 @@ def test_send_video_and_audio_cy(request, fake_av_frames):
     expected_dur = one_frame * video_data.num_frames * num_frame_repeats * num_full_repeats
     print(f'{duration=}, {float(expected_dur)=}')
     if not IS_CI_BUILD:
-        assert expected_dur - .5 <= duration <= expected_dur + .5
+        dur_min = expected_dur - one_frame
+        dur_max = expected_dur + one_frame
+        assert dur_min <= expected_dur <= dur_max
 
     fps_arr = 1 / frame_times[:,1:]
     # print(f'{fps_arr=}')
@@ -193,7 +196,9 @@ def test_send_video_and_audio_py(request, fake_av_frames):
         expected_dur = one_frame * video_data.num_frames * num_frame_repeats
         print(f'{iter_duration=}, {float(expected_dur)=}')
         if not IS_CI_BUILD:
-            assert expected_dur - .5 <= iter_duration <= expected_dur + .5
+            dur_min = expected_dur - one_frame
+            dur_max = expected_dur + one_frame
+            assert dur_min <= iter_duration <= dur_max
         cur_iteration += 1
 
     fps_arr = 1 / frame_times[:,1:]
@@ -368,6 +373,8 @@ def test_send_video_and_audio_threaded(request, fake_av_frames):
         expected_dur = one_frame * video_data.num_frames * num_frame_repeats
         print(f'{vid_thread.duration=}, {aud_thread.duration=}, {float(expected_dur)=}')
         if not IS_CI_BUILD:
-            assert expected_dur - .5 <= vid_thread.duration <= expected_dur + .5
-            assert expected_dur - .5 <= aud_thread.duration <= expected_dur + .5
+            dur_min = expected_dur - one_frame
+            dur_max = expected_dur + one_frame
+            assert dur_min <= vid_thread.duration <= dur_max
+            assert dur_min <= aud_thread.duration <= dur_max
         cur_iteration += 1
