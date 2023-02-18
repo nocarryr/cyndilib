@@ -13,7 +13,7 @@ DEFAULT_EXTS = ['c', 'cpp', 'html']
 if sys.platform == 'win32':
     DEFAULT_EXTS.append('pyd')
 elif sys.platform == 'darwin':
-    DEFAULT_EXTS.append('dylib')
+    DEFAULT_EXTS.extend(['dylib', 'so'])
 else:
     DEFAULT_EXTS.append('so')
 
