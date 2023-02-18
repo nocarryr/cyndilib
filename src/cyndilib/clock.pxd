@@ -33,4 +33,5 @@ cdef inline double time() nogil:
     return get_cpp_time()
 
 cdef inline void sleep(double seconds) nogil:
-    sleep_for(seconds)
+    with nogil:
+        sleep_for(seconds)
