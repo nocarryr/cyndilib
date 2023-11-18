@@ -175,13 +175,13 @@ cdef void calc_fourcc_pack_info(FourCCPackInfo* p) nogil except *:
 
     if p.fourcc == FourCC.UYVY:
         p.num_planes = 1
-        bytes_per_pixel = sizeof(uint8_t) * 4
+        bytes_per_pixel = sizeof(uint8_t) * 2
         p.line_strides[0] = bytes_per_pixel * xres
         p.total_size = bytes_per_pixel * xres * yres
     elif p.fourcc == FourCC.UYVA:
         p.num_planes = 2
-        bytes_per_pixel = sizeof(uint8_t) * 5           # YUVY + alpha plane
-        p.line_strides[0] = sizeof(uint8_t) * 4 * xres
+        bytes_per_pixel = sizeof(uint8_t) * 3           # YUVY + alpha plane
+        p.line_strides[0] = sizeof(uint8_t) * 2 * xres
         p.line_strides[1] = sizeof(uint8_t) * xres
         p.stride_offsets[1] = p.line_strides[0] * yres
         p.total_size = bytes_per_pixel * xres * yres
