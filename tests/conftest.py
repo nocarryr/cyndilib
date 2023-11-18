@@ -8,7 +8,7 @@ import psutil
 
 from _test_video_frame import build_test_frames
 
-IS_CI_BUILD = os.environ.get('CI') == 'true'
+IS_CI_BUILD = 'true' in [os.environ.get(key) for key in ['CI', 'CODESPACES']]
 
 AudioParams = namedtuple('AudioParams', [
     'sample_rate', 'num_channels', 'num_samples', 'num_segments', 's_perseg',
