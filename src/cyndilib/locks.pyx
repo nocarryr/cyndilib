@@ -21,13 +21,13 @@ __all__ = ('Lock', 'RLock', 'Condition', 'Event')
 
 
 cdef inline bint _lock_lock(LockStatus_s *lock, long current_thread,
-                            bint blocking, PY_TIMEOUT_T microseconds) nogil except -1:
+                            bint blocking, PY_TIMEOUT_T microseconds) except -1 nogil:
 
     return _acquire_lock(lock, current_thread, blocking, microseconds, False)
 
 
 cdef inline bint _lock_rlock(LockStatus_s *lock, long current_thread,
-                             bint blocking, PY_TIMEOUT_T microseconds) nogil except -1:
+                             bint blocking, PY_TIMEOUT_T microseconds) except -1 nogil:
     # Note that this function *must* hold the GIL when being called.
     # We just use 'nogil' in the signature to make sure that no Python
     # code execution slips in that might free the GIL
@@ -45,7 +45,7 @@ cdef inline bint _lock_rlock(LockStatus_s *lock, long current_thread,
     # need to get the real lock
     return _acquire_lock(lock, current_thread, blocking, microseconds, True)
 
-cdef inline void _unlock_lock(LockStatus_s *lock) nogil except *:
+cdef inline int _unlock_lock(LockStatus_s *lock) except -1 nogil:
     # Note that this function *must* hold the GIL when being called.
     # We just use 'nogil' in the signature to make sure that no Python
     # code execution slips in that might free the GIL
@@ -57,9 +57,10 @@ cdef inline void _unlock_lock(LockStatus_s *lock) nogil except *:
         if lock.is_locked:
             PyThread_release_lock(lock.lock)
         lock.is_locked = False
+    return 0
 
 cdef bint _acquire_lock(LockStatus_s *lock, long current_thread, bint blocking,
-                        PY_TIMEOUT_T microseconds, bint reentrant) nogil except -1:
+                        PY_TIMEOUT_T microseconds, bint reentrant) except -1 nogil:
     cdef int locked
     cdef PyLockStatus result
 
@@ -113,11 +114,12 @@ cdef LockStatus_s* LockStatus_create() except *:
         raise MemoryError()
     return lock
 
-cdef void LockStatus_destroy(LockStatus_s* lock) except *:
+cdef int LockStatus_destroy(LockStatus_s* lock) except -1:
     if lock.lock != NULL:
         PyThread_free_lock(lock.lock)
         lock.lock = NULL
     PyMem_Free(lock)
+    return 0
 
 cdef class Lock:
     """Implementation of :class:`threading.Lock`. A Primitive non-reentrant
@@ -154,22 +156,23 @@ cdef class Lock:
     cdef bint _do_acquire_timed(self, long owner, PY_TIMEOUT_T microseconds) except -1:
         return _lock_lock(self._lock, owner, True, microseconds)
 
-    cdef void _do_release(self) except *:
+    cdef int _do_release(self) except -1:
         _unlock_lock(self._lock)
+        return 0
 
-    cdef void _check_acquire(self) except *:
+    cdef int _check_acquire(self) except -1:
         # cdef long tid = PyThread_get_thread_ident()
         #
         # if self._lock.owner == tid:
         #     raise RuntimeError('lock already acquired')
-        pass
+        return 0
 
-    cdef void _check_release(self) except *:
+    cdef int _check_release(self) except -1:
         # cdef long tid = PyThread_get_thread_ident()
         #
         # if self._lock.owner != tid:
         #     raise RuntimeError('cannot release un-acquired lock')
-        pass
+        return 0
 
     cdef bint _acquire(self, bint block, double timeout) except -1:
         cdef double microseconds
@@ -257,14 +260,15 @@ cdef class RLock(Lock):
     cdef bint _do_acquire_timed(self, long owner, PY_TIMEOUT_T microseconds) except -1:
         return _lock_rlock(self._lock, owner, True, microseconds)
 
-    cdef void _check_acquire(self) except *:
-        pass
+    cdef int _check_acquire(self) except -1:
+        return 0
 
-    cdef void _check_release(self) except *:
+    cdef int _check_release(self) except -1:
         cdef long tid = PyThread_get_thread_ident()
 
         if self._lock.owner != tid:
             raise RuntimeError('cannot release un-owned lock')
+        return 0
 
     cdef bint _is_owned_c(self, long owner) except -1:
         return owner == self._lock.owner
@@ -273,12 +277,12 @@ cdef class RLock(Lock):
         cdef long tid = PyThread_get_thread_ident()
         return self._is_owned_c(tid)
 
-    cdef void _acquire_restore_c(self, long current_owner, int count, long owner) except *:
+    cdef int _acquire_restore_c(self, long current_owner, int count, long owner) except -1:
         self._do_acquire(current_owner)
         self._lock.acquire_count = count
         self._lock.owner = owner
 
-    cdef void _acquire_restore(self, (int, long) state) except *:
+    cdef int _acquire_restore(self, (int, long) state) except -1:
         cdef int count
         cdef long current_owner, owner
         current_owner = PyThread_get_thread_ident()
@@ -347,8 +351,9 @@ cdef class Condition:
     cdef bint _release(self) except -1:
         return self.rlock._release()
 
-    cdef void _acquire_restore(self, (int, long) state) except *:
+    cdef int _acquire_restore(self, (int, long) state) except -1:
         self.rlock._acquire_restore(state)
+        return 0
 
     cdef (int, long) _release_save(self) except *:
         return self.rlock._release_save()
@@ -357,9 +362,10 @@ cdef class Condition:
         cdef long tid = PyThread_get_thread_ident()
         return self.rlock._is_owned_c(tid)
 
-    cdef void _ensure_owned(self) except *:
+    cdef int _ensure_owned(self) except -1:
         if not self._is_owned():
             raise RuntimeError("cannot wait on un-acquired lock")
+        return 0
 
     def __repr__(self):
         return "<Condition(%s, %d)>" % (self._lock, self._waiters.size())
@@ -396,7 +402,7 @@ cdef class Condition:
             _timeout = <double> timeout
         return self._wait(block, _timeout)
 
-    cdef bint _wait(self, bint block, double timeout=-1) except *:
+    cdef bint _wait(self, bint block, double timeout=-1) except -1:
         cdef Lock waiter
         cdef bint gotit = False
 
@@ -495,7 +501,7 @@ cdef class Condition:
         """
         self._notify(n)
 
-    cdef void _notify(self, Py_ssize_t n=1) except *:
+    cdef int _notify(self, Py_ssize_t n=1) except -1:
         cdef Lock waiter
 
         self._ensure_owned()
@@ -527,6 +533,7 @@ cdef class Condition:
         #         all_waiters.remove(waiter)
         #     except ValueError:
         #         pass
+        return 0
 
     def notify_all(self):
         """Like :meth:`notify`, but wakes all waiting threads
@@ -537,8 +544,9 @@ cdef class Condition:
         """
         self._notify(self._waiters.size())
 
-    cdef void _notify_all(self) except *:
+    cdef int _notify_all(self) except -1:
         self._notify(self._waiters.size())
+        return 0
 
 cdef class Event:
     """Implementation of :class:`threading.Event`. A simple flag-based thread

@@ -50,15 +50,15 @@ ctypedef fused av_frame_bfr_ft:
     video_bfr_p
     metadata_bfr_p
 
-cdef audio_bfr_p audio_frame_bfr_create() nogil except *
-cdef video_bfr_p video_frame_bfr_create() nogil except *
-cdef av_frame_bfr_ft av_frame_bfr_create(av_frame_bfr_ft parent) nogil except *
+cdef audio_bfr_p audio_frame_bfr_create() except * nogil
+cdef video_bfr_p video_frame_bfr_create() except * nogil
+cdef av_frame_bfr_ft av_frame_bfr_create(av_frame_bfr_ft parent) except * nogil
 cdef void av_frame_bfr_init(av_frame_bfr_ft bfr) nogil
 cdef void av_frame_bfr_copy(av_frame_bfr_ft src, av_frame_bfr_ft dst) nogil
 cdef size_t av_frame_bfr_count(av_frame_bfr_ft bfr) nogil
 cdef av_frame_bfr_ft av_frame_bfr_get_head(av_frame_bfr_ft bfr) nogil
 cdef av_frame_bfr_ft av_frame_bfr_get_tail(av_frame_bfr_ft bfr) nogil
-cdef void av_frame_bfr_destroy(av_frame_bfr_ft bfr) nogil except *
-cdef av_frame_bfr_ft av_frame_bfr_remove(av_frame_bfr_ft bfr) nogil except *
-cdef void av_frame_bfr_free_parent(av_frame_bfr_ft bfr, bint single_step=*) nogil except *
-cdef void av_frame_bfr_free_child(av_frame_bfr_ft bfr, bint single_step=*) nogil except *
+cdef int av_frame_bfr_destroy(av_frame_bfr_ft bfr) except -1 nogil
+cdef av_frame_bfr_ft av_frame_bfr_remove(av_frame_bfr_ft bfr) noexcept nogil
+cdef int av_frame_bfr_free_parent(av_frame_bfr_ft bfr, bint single_step=*) except -1 nogil
+cdef int av_frame_bfr_free_child(av_frame_bfr_ft bfr, bint single_step=*) except -1 nogil

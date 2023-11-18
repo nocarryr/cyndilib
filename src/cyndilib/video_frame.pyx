@@ -53,14 +53,15 @@ cdef class VideoFrame:
         """Set the video resolution
         """
         self._set_resolution(xres, yres)
-    cdef (int, int) _get_resolution(self) nogil except *:
+    cdef (int, int) _get_resolution(self) noexcept nogil:
         return (self.ptr.xres, self.ptr.yres)
-    cdef void _set_resolution(self, int xres, int yres) nogil except *:
+    cdef int _set_resolution(self, int xres, int yres) except -1 nogil:
         self.ptr.xres = xres
         self.ptr.yres = yres
         self._recalc_pack_info()
         if self.ptr.yres > 0:
             self._set_aspect(self.ptr.xres / <double>(self.ptr.yres))
+        return 0
 
     @property
     def xres(self):
@@ -76,19 +77,21 @@ cdef class VideoFrame:
 
     cdef int _get_xres(self) nogil:
         return self.ptr.xres
-    cdef void _set_xres(self, int value) nogil except *:
+    cdef int _set_xres(self, int value) except -1 nogil:
         self.ptr.xres = value
         self._recalc_pack_info()
         if self.ptr.yres > 0:
             self._set_aspect(self.ptr.xres / <double>(self.ptr.yres))
+        return 0
 
     cdef int _get_yres(self) nogil:
         return self.ptr.yres
-    cdef void _set_yres(self, int value) nogil except *:
+    cdef int _set_yres(self, int value) except -1 nogil:
         self.ptr.yres = value
         self._recalc_pack_info()
         if self.ptr.yres > 0:
             self._set_aspect(self.ptr.xres / <double>(self.ptr.yres))
+        return 0
 
     @property
     def fourcc(self):
@@ -104,11 +107,12 @@ cdef class VideoFrame:
         """Set the :class:`~.wrapper.ndi_structs.FourCC` format type
         """
         self._set_fourcc(value)
-    cdef FourCC _get_fourcc(self) nogil except *:
+    cdef FourCC _get_fourcc(self) noexcept nogil:
         return fourcc_type_uncast(self.ptr.FourCC)
-    cdef void _set_fourcc(self, FourCC value) nogil except *:
+    cdef int _set_fourcc(self, FourCC value) except -1 nogil:
         self.ptr.FourCC = fourcc_type_cast(value)
         self._recalc_pack_info()
+        return 0
 
     def get_frame_rate(self) -> Fraction:
         """Get the video frame rate
@@ -120,12 +124,12 @@ cdef class VideoFrame:
         cdef int[2] fr = [value.numerator, value.denominator]
         self._set_frame_rate(fr)
 
-    cdef frame_rate_t* _get_frame_rate(self) nogil except *:
+    cdef frame_rate_t* _get_frame_rate(self) noexcept nogil:
         self.frame_rate.numerator = self.ptr.frame_rate_N
         self.frame_rate.denominator = self.ptr.frame_rate_D
         return &self.frame_rate
 
-    cdef void _set_frame_rate(self, frame_rate_ft fr) nogil except *:
+    cdef int _set_frame_rate(self, frame_rate_ft fr) except -1 nogil:
         if frame_rate_ft is frame_rate_t:
             self.ptr.frame_rate_N = fr.numerator
             self.ptr.frame_rate_D = fr.denominator
@@ -134,15 +138,16 @@ cdef class VideoFrame:
             self.ptr.frame_rate_D = fr[1]
         self.frame_rate.numerator = self.ptr.frame_rate_N
         self.frame_rate.denominator = self.ptr.frame_rate_D
+        return 0
 
     cdef float _get_aspect(self) nogil:
         return self.ptr.picture_aspect_ratio
-    cdef void _set_aspect(self, float value) nogil:
+    cdef void _set_aspect(self, float value) noexcept nogil:
         self.ptr.picture_aspect_ratio = value
 
-    cdef FrameFormat _get_frame_format(self) nogil except *:
+    cdef FrameFormat _get_frame_format(self) noexcept nogil:
         return frame_format_uncast(self.ptr.frame_format_type)
-    cdef void _set_frame_format(self, FrameFormat fmt) nogil except *:
+    cdef void _set_frame_format(self, FrameFormat fmt) noexcept nogil:
         self.ptr.frame_format_type = frame_format_cast(fmt)
 
     cdef int64_t _get_timecode(self) nogil:
@@ -161,7 +166,7 @@ cdef class VideoFrame:
     def get_buffer_size(self):
         return self._get_buffer_size()
 
-    cdef size_t _get_buffer_size(self) nogil except *:
+    cdef size_t _get_buffer_size(self) except? -1 nogil:
         return self.pack_info.total_size
 
     cdef uint8_t* _get_data(self) nogil:
@@ -169,7 +174,7 @@ cdef class VideoFrame:
     cdef void _set_data(self, uint8_t* data) nogil:
         self.ptr.p_data = data
 
-    cdef const char* _get_metadata(self) nogil except *:
+    cdef const char* _get_metadata(self) noexcept nogil:
         return self.ptr.p_metadata
 
     cdef bytes _get_metadata_bytes(self):
@@ -203,7 +208,7 @@ cdef class VideoFrame:
     cpdef size_t get_data_size(self):
         return self._get_data_size()
 
-    cdef void _recalc_pack_info(self) nogil except *:
+    cdef int _recalc_pack_info(self) except -1 nogil:
         cdef FourCC fcc = self._get_fourcc()
         cdef bint changed = False
         if self.pack_info.fourcc != fcc:
@@ -214,10 +219,11 @@ cdef class VideoFrame:
             self.pack_info.yres = self.ptr.yres
             changed = True
         if self.pack_info.xres == 0 or self.pack_info.yres == 0:
-            return
+            return 0
         if changed:
             calc_fourcc_pack_info(&(self.pack_info))
             self.ptr.line_stride_in_bytes = self.pack_info.bytes_per_pixel * self.ptr.xres
+        return 0
 
 
 cdef class VideoRecvFrame(VideoFrame):
@@ -304,17 +310,18 @@ cdef class VideoRecvFrame(VideoFrame):
 
     @cython.boundscheck(False)
     @cython.wraparound(False)
-    cdef void _check_read_array_size(self) except *:
+    cdef int _check_read_array_size(self) except -1:
         cdef cnp.uint8_t[:,:] all_frame_data = self.all_frame_data
         cdef cnp.uint8_t[:] read_data = self.current_frame_data
         cdef size_t ncols = all_frame_data.shape[1]
         if read_data.shape[0] != ncols:
             with self.read_lock:
                 self.current_frame_data = np.zeros(ncols, dtype=np.uint8)
+        return 0
 
     @cython.boundscheck(False)
     @cython.wraparound(False)
-    cdef void _fill_read_data(self, bint advance) nogil except *:
+    cdef int _fill_read_data(self, bint advance) except -1 nogil:
         cdef cnp.uint8_t[:,:] all_frame_data = self.all_frame_data
         cdef cnp.uint8_t[:] arr = self.current_frame_data
         cdef size_t bfr_idx = self.read_indices.front()
@@ -324,13 +331,14 @@ cdef class VideoRecvFrame(VideoFrame):
                 self.read_indices_set.erase(bfr_idx)
 
             arr[...] = all_frame_data[bfr_idx,...]
+        return 0
 
     def get_buffer_depth(self) -> int:
         """Get the number of buffered frames
         """
         return self.read_indices.size()
 
-    def buffer_full(self) -> bint:
+    def buffer_full(self) -> bool:
         """Returns True if the buffers are all in use
         """
         return self.read_indices.size() >= self.max_buffers
@@ -400,7 +408,7 @@ cdef class VideoRecvFrame(VideoFrame):
                 self.view_count -= 1
             return valid
 
-    cdef size_t _get_next_write_index(self) nogil except *:
+    cdef size_t _get_next_write_index(self) except? -1 nogil:
         cdef size_t idx, niter, result, bfr_len = self.read_indices.size()
 
         if bfr_len > 0:
@@ -419,23 +427,24 @@ cdef class VideoRecvFrame(VideoFrame):
                 raise_withgil(PyExc_ValueError, 'could not get write index')
         return result
 
-    cdef bint can_receive(self) nogil except *:
+    cdef bint can_receive(self) except -1 nogil:
         return self.read_indices.size() < self.max_buffers
 
-    cdef void _check_write_array_size(self) except *:
+    cdef int _check_write_array_size(self) except -1:
         cdef cnp.uint8_t[:,:] arr = self.all_frame_data
         cdef size_t ncols = self._get_buffer_size()
 
         if arr.shape[1] == ncols:
-            return
+            return 0
         with self.read_lock:
             self.all_frame_data = np.zeros((self.max_buffers, ncols), dtype=np.uint8)
             self.read_indices.clear()
             self.read_indices_set.clear()
             if self.view_count == 0:
                 self.current_frame_data = np.zeros(ncols, dtype=np.uint8)
+        return 0
 
-    cdef void _prepare_incoming(self, NDIlib_recv_instance_t recv_ptr) except *:
+    cdef int _prepare_incoming(self, NDIlib_recv_instance_t recv_ptr) except -1:
         cdef size_t bfr_idx
         self._recalc_pack_info()
         self._check_write_array_size()
@@ -445,8 +454,9 @@ cdef class VideoRecvFrame(VideoFrame):
                     bfr_idx = self.read_indices.front()
                     self.read_indices.pop_front()
                     self.read_indices_set.erase(bfr_idx)
+        return 0
 
-    cdef void _process_incoming(self, NDIlib_recv_instance_t recv_ptr) except *:
+    cdef int _process_incoming(self, NDIlib_recv_instance_t recv_ptr) except -1:
         cdef video_bfr_p write_bfr = self.write_bfr
         cdef video_bfr_p read_bfr = self.read_bfr
         cdef NDIlib_video_frame_v2_t* p = self.ptr
@@ -478,6 +488,7 @@ cdef class VideoRecvFrame(VideoFrame):
 
             if recv_ptr is not NULL:
                 NDIlib_recv_free_video_v2(recv_ptr, self.ptr)
+        return 0
 
 cdef class VideoFrameSync(VideoFrame):
     """Video frame for use with :class:`.framesync.FrameSync`
@@ -536,7 +547,7 @@ cdef class VideoFrameSync(VideoFrame):
                 self.fs_ptr = NULL
                 NDIlib_framesync_free_video(fs_ptr, self.ptr)
 
-    cdef void _process_incoming(self, NDIlib_framesync_instance_t fs_ptr) nogil except *:
+    cdef int _process_incoming(self, NDIlib_framesync_instance_t fs_ptr) except -1 nogil:
         if self.view_count > 0:
             raise_withgil(PyExc_ValueError, 'cannot write with view active')
 
@@ -546,6 +557,7 @@ cdef class VideoFrameSync(VideoFrame):
         self.shape[0] = size_in_bytes
         self.strides[0] = sizeof(uint8_t)
         self.fs_ptr = fs_ptr
+        return 0
 
 
 cdef class VideoSendFrame(VideoFrame):
@@ -598,9 +610,10 @@ cdef class VideoSendFrame(VideoFrame):
     def destroy(self):
         self._destroy()
 
-    cdef void _destroy(self) except *:
+    cdef int _destroy(self) except -1:
         self.buffer_write_item = NULL
         frame_status_free(&(self.send_status))
+        return 0
 
     def __getbuffer__(self, Py_buffer *buffer, int flags):
         cdef VideoSendFrame_item_s* item = self.buffer_write_item
@@ -629,11 +642,11 @@ cdef class VideoSendFrame(VideoFrame):
     def get_write_available(self):
         return self._write_available()
 
-    cdef bint _write_available(self) nogil except *:
+    cdef bint _write_available(self) except -1 nogil:
         cdef Py_ssize_t idx = frame_status_get_next_write_index(&(self.send_status))
         return idx != NULL_INDEX
 
-    cdef VideoSendFrame_item_s* _prepare_buffer_write(self) nogil except *:
+    cdef VideoSendFrame_item_s* _prepare_buffer_write(self) except * nogil:
         if self.buffer_write_item is not NULL:
             raise_withgil(PyExc_RuntimeError, 'buffer_write_item is not null')
         cdef VideoSendFrame_item_s* item = self._get_next_write_frame()
@@ -642,12 +655,13 @@ cdef class VideoSendFrame(VideoFrame):
         self.buffer_write_item = item
         return item
 
-    cdef void _set_buffer_write_complete(self, VideoSendFrame_item_s* item) nogil except *:
+    cdef int _set_buffer_write_complete(self, VideoSendFrame_item_s* item) except -1 nogil:
         cdef VideoSendFrame_item_s* cur_item = self.buffer_write_item
         if cur_item is not NULL and cur_item.idx == item.idx:
             self.buffer_write_item = NULL
         self.send_status.read_index = item.idx
         frame_status_set_send_ready(&(self.send_status))
+        return 0
 
     def write_data(self, cnp.uint8_t[:] data):
         cdef VideoSendFrame_item_s* item = self._prepare_memview_write()
@@ -656,79 +670,84 @@ cdef class VideoSendFrame(VideoFrame):
         assert data.shape[0] == view.shape[0]
         self._write_data_to_memview(data, view, item)
 
-    cdef VideoSendFrame_item_s* _prepare_memview_write(self) nogil except *:
+    cdef VideoSendFrame_item_s* _prepare_memview_write(self) except * nogil:
         return self._prepare_buffer_write()
 
-    cdef void _write_data_to_memview(
+    cdef int _write_data_to_memview(
         self,
         cnp.uint8_t[:] data,
         cnp.uint8_t[:] view,
         VideoSendFrame_item_s* item,
-    ) nogil except *:
+    ) except -1 nogil:
         view[:] = data
         self._set_buffer_write_complete(item)
+        return 0
 
-    cdef VideoSendFrame_item_s* _get_next_write_frame(self) nogil except *:
+    cdef VideoSendFrame_item_s* _get_next_write_frame(self) except * nogil:
         cdef Py_ssize_t idx = frame_status_get_next_write_index(&(self.send_status))
         if idx == NULL_INDEX:
             raise_withgil(PyExc_RuntimeError, 'no write frame available')
         self.send_status.write_index = idx
         return &(self.send_status.items[idx])
 
-    cdef bint _send_frame_available(self) nogil except *:
+    cdef bint _send_frame_available(self) except -1 nogil:
         return self._get_send_frame() != NULL
 
-    cdef VideoSendFrame_item_s* _get_send_frame(self) nogil except *:
+    cdef VideoSendFrame_item_s* _get_send_frame(self) except * nogil:
         cdef Py_ssize_t idx = frame_status_get_next_read_index(&(self.send_status))
         if idx == NULL_INDEX:
             return NULL
         return &(self.send_status.items[idx])
 
-    cdef void _on_sender_write(self, VideoSendFrame_item_s* s_ptr) nogil except *:
+    cdef int _on_sender_write(self, VideoSendFrame_item_s* s_ptr) except -1 nogil:
         frame_status_set_send_complete(&(self.send_status), s_ptr.idx)
+        return 0
 
-    cdef void _set_sender_status(self, bint attached) nogil except *:
+    cdef int _set_sender_status(self, bint attached) except -1 nogil:
         if attached:
             self._recalc_pack_info()
             self._rebuild_array()
         self.send_status.attached_to_sender = attached
+        return 0
 
-    cdef void _set_xres(self, int value) nogil except *:
+    cdef int _set_xres(self, int value) except -1 nogil:
         if self.send_status.attached_to_sender:
             raise_exception('Cannot alter frame')
-        VideoFrame._set_xres(self, value)
+        return VideoFrame._set_xres(self, value)
 
-    cdef void _set_yres(self, int value) nogil except *:
+    cdef int _set_yres(self, int value) except -1 nogil:
         if self.send_status.attached_to_sender:
             raise_exception('Cannot alter frame')
-        VideoFrame._set_yres(self, value)
+        return VideoFrame._set_yres(self, value)
 
-    cdef void _set_resolution(self, int xres, int yres) nogil except *:
+    cdef int _set_resolution(self, int xres, int yres) except -1 nogil:
         if self.send_status.attached_to_sender:
             raise_exception('Cannot alter frame')
-        VideoFrame._set_resolution(self, xres, yres)
+        return VideoFrame._set_resolution(self, xres, yres)
 
-    cdef void _set_fourcc(self, FourCC value) nogil except *:
+    cdef int _set_fourcc(self, FourCC value) except -1 nogil:
         if self.send_status.attached_to_sender:
             raise_exception('Cannot alter frame')
-        VideoFrame._set_fourcc(self, value)
+        return VideoFrame._set_fourcc(self, value)
 
-    cdef void _rebuild_array(self) nogil except *:
+    cdef int _rebuild_array(self) except -1 nogil:
         cdef VideoSendFrame_status_s* s_ptr = &(self.send_status)
         frame_status_copy_frame_ptr(s_ptr, self.ptr)
         s_ptr.shape[0] = self.pack_info.total_size
         s_ptr.strides[0] = sizeof(uint8_t)
         frame_status_alloc_p_data(s_ptr)
+        return 0
 
 
 @cython.boundscheck(False)
 @cython.wraparound(False)
-cdef void uint8_ptr_to_memview_1d(uint8_t* p, cnp.uint8_t[:] dest) nogil except *:
+cdef int uint8_ptr_to_memview_1d(uint8_t* p, cnp.uint8_t[:] dest) except -1 nogil:
     cdef size_t ncols = dest.shape[0]
     cdef size_t i
 
     for i in range(ncols):
         dest[i] = p[i]
+    return 0
 
 
 

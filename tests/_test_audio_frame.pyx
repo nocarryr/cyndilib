@@ -19,7 +19,7 @@ from cyndilib.audio_frame cimport AudioRecvFrame, AudioFrameSync
 
 
 
-cdef void print_audio_frame_data(NDIlib_audio_frame_v3_t* p) nogil except *:
+cdef int print_audio_frame_data(NDIlib_audio_frame_v3_t* p) except -1 nogil:
     with gil:
         print(f'''\
             timecode={p.timecode}
@@ -29,6 +29,7 @@ cdef void print_audio_frame_data(NDIlib_audio_frame_v3_t* p) nogil except *:
             no_samples={p.no_samples}
             stride={p.channel_stride_in_bytes}
         ''')
+    return 0
 
 
 def audio_frame_process_events(AudioRecvFrame audio_frame):
@@ -37,12 +38,12 @@ def audio_frame_process_events(AudioRecvFrame audio_frame):
     audio_frame._prepare_incoming(recv_ptr)
     audio_frame._process_incoming(recv_ptr)
 
-cdef void fill_audio_frame_struct(
+cdef int fill_audio_frame_struct(
     NDIlib_audio_frame_v3_t* frame,
     cnp.float32_t[:,:] samples,
     size_t sample_rate,
     double timestamp,
-) except *:
+) except -1:
     cdef int32_t ndi_ts = posix_time_to_ndi(timestamp)
     cdef size_t nrows = samples.shape[0], ncols = samples.shape[1]
 
@@ -62,6 +63,7 @@ cdef void fill_audio_frame_struct(
         for j in range(ncols):
             float_data[k] = samples[i,j]
             k += 1
+    return 0
 
 
 def fill_audio_frame(

@@ -93,27 +93,30 @@ cdef class FrameSync:
         """
         return self._audio_samples_available()
 
-    cdef void _set_video_frame(self, VideoFrameSync video_frame) except *:
+    cdef int _set_video_frame(self, VideoFrameSync video_frame) except -1:
         self.video_frame = video_frame
+        return 0
 
-    cdef void _set_audio_frame(self, AudioFrameSync audio_frame) except *:
+    cdef int _set_audio_frame(self, AudioFrameSync audio_frame) except -1:
         self.audio_frame = audio_frame
+        return 0
 
-    cdef int _audio_samples_available(self) nogil except *:
+    cdef int _audio_samples_available(self) except? -1 nogil:
         return NDIlib_framesync_audio_queue_depth(self.ptr)
 
-    cdef void _capture_video(self, FrameFormat fmt = FrameFormat.progressive) except *:
+    cdef int _capture_video(self, FrameFormat fmt = FrameFormat.progressive) except -1:
         cdef NDIlib_video_frame_v2_t* video_ptr = self.video_frame.ptr
         self._do_capture_video(video_ptr, fmt)
         self.video_frame._process_incoming(self.ptr)
+        return 0
 
-    cdef size_t _capture_available_audio(self) except *:
+    cdef size_t _capture_available_audio(self) except? -1:
         cdef size_t no_samples = self._audio_samples_available()
         if no_samples == 0:
             return 0
         return self._capture_audio(no_samples, False)
 
-    cdef size_t _capture_audio(self, size_t no_samples, bint limit=True, bint truncate=True) except *:
+    cdef size_t _capture_audio(self, size_t no_samples, bint limit=True, bint truncate=True) except? -1:
         cdef NDIlib_audio_frame_v3_t* audio_ptr = self.audio_frame.ptr
         cdef size_t num_available
         if limit:
@@ -128,28 +131,30 @@ cdef class FrameSync:
         self.audio_frame._process_incoming(self.ptr)
         return no_samples
 
-    cdef void _do_capture_video(
+    cdef int _do_capture_video(
         self,
         NDIlib_video_frame_v2_t* video_ptr,
         FrameFormat fmt = FrameFormat.progressive,
-    ) nogil except *:
+    ) except -1 nogil:
         cdef NDIlib_frame_format_type_e _fmt = frame_format_cast(fmt)
         NDIlib_framesync_capture_video(self.ptr, video_ptr, _fmt)
+        return 0
 
-    cdef void _do_capture_audio(
+    cdef int _do_capture_audio(
         self,
         NDIlib_audio_frame_v3_t* audio_ptr,
         size_t no_samples,
-    ) nogil except *:
+    ) except -1 nogil:
         NDIlib_framesync_capture_audio_v2(
             self.ptr, audio_ptr,
             audio_ptr.sample_rate, audio_ptr.no_channels, no_samples,
         )
+        return 0
 
-    cdef void _free_video(self, NDIlib_video_frame_v2_t* video_ptr) nogil except *:
+    cdef void _free_video(self, NDIlib_video_frame_v2_t* video_ptr) noexcept nogil:
         NDIlib_framesync_free_video(self.ptr, video_ptr)
 
-    cdef void _free_audio(self, NDIlib_audio_frame_v3_t* audio_ptr) nogil except *:
+    cdef void _free_audio(self, NDIlib_audio_frame_v3_t* audio_ptr) noexcept nogil:
         NDIlib_framesync_free_audio_v2(self.ptr, audio_ptr)
 
 
@@ -220,42 +225,46 @@ cdef class FrameSyncWorker():
                 traceback.print_exc()
                 break
 
-    cdef void trigger_callback(self) except *:
+    cdef int trigger_callback(self) except -1:
         """Trigger the :attr:`callback` if set
         """
         if self.callback.has_callback:
             self.callback.trigger_callback()
+        return 0
 
-    cdef void time_sleep(self, double timeout) except *:
+    cdef int time_sleep(self, double timeout) except -1:
         sleep(timeout)
+        return 0
 
-    cdef double now(self) except *:
+    cdef double now(self) except? -1:
         return time()
 
-    cdef void wait_for_evt(self, double timeout) except *:
+    cdef int wait_for_evt(self, double timeout) except -1:
         self.wait_event.wait(timeout)
         self.wait_event.clear()
+        return 0
 
-    cdef bint has_frame(self) except *:
+    cdef bint has_frame(self) except -1:
         return False
 
-    cdef bint can_capture(self) except *:
+    cdef bint can_capture(self) except -1:
         return False
 
-    cdef bint do_capture(self) except *:
-        pass
+    cdef bint do_capture(self) except -1:
+        return 0
 
-    cdef void update_fps(self) except *:
-        pass
+    cdef int update_fps(self) except -1:
+        return 0
 
-    cdef double calc_next_ts(self, double now) except *:
+    cdef double calc_next_ts(self, double now) except? -1:
         if self.target_fps == 9:
             self.update_fps()
         return now + self.target_interval
 
-    cdef void stop(self) except *:
+    cdef int stop(self) except -1:
         self.wait_event.set()
         self.running = False
+        return 0
 
 
 cdef class VideoWorker(FrameSyncWorker):
@@ -263,14 +272,14 @@ cdef class VideoWorker(FrameSyncWorker):
     """
     cdef VideoFrameSync video_frame
 
-    cdef bint can_capture(self) except *:
+    cdef bint can_capture(self) except -1:
         return True
 
-    cdef bint do_capture(self) except *:
+    cdef bint do_capture(self) except -1:
         self.frame_sync._capture_video()
         return True
 
-    cdef bint has_frame(self) except *:
+    cdef bint has_frame(self) except -1:
         if self.video_frame is not None:
             return True
         if self.frame_sync.video_frame is not None:
@@ -279,7 +288,7 @@ cdef class VideoWorker(FrameSyncWorker):
         return False
 
     @cython.cdivision(True)
-    cdef void update_fps(self) except *:
+    cdef int update_fps(self) except -1:
         cdef frame_rate_t* fr = self.video_frame._get_frame_rate()
         self.frame_rate.numerator = fr.numerator
         self.frame_rate.denominator = fr.denominator
@@ -289,6 +298,7 @@ cdef class VideoWorker(FrameSyncWorker):
         else:
             self.target_fps = fr.numerator / <double>fr.denominator
             self.target_interval = 1 / self.target_fps
+        return 0
 
 cdef class AudioWorker(FrameSyncWorker):
     """Worker used by :class:`FrameSyncThread` for audio frames
@@ -299,15 +309,15 @@ cdef class AudioWorker(FrameSyncWorker):
     def __cinit__(self, *args, **kwargs):
         self.target_nsamples = 800
 
-    cdef bint can_capture(self) except *:
+    cdef bint can_capture(self) except -1:
         return self.frame_sync._audio_samples_available() >= self.target_nsamples
 
-    cdef bint do_capture(self) except *:
+    cdef bint do_capture(self) except -1:
         cdef size_t nsamp
         nsamp = self.frame_sync._capture_audio(self.target_nsamples, limit=True, truncate=False)
         return nsamp > 0
 
-    cdef bint has_frame(self) except *:
+    cdef bint has_frame(self) except -1:
         if self.audio_frame is not None:
             return True
         if self.frame_sync.audio_frame is not None:
@@ -316,7 +326,7 @@ cdef class AudioWorker(FrameSyncWorker):
         return False
 
     @cython.cdivision(True)
-    cdef void update_fps(self) except *:
+    cdef int update_fps(self) except -1:
         cdef VideoFrameSync video_frame = self.frame_sync.video_frame
         cdef frame_rate_t* fr
         cdef double fps
@@ -342,6 +352,7 @@ cdef class AudioWorker(FrameSyncWorker):
         self.target_nsamples = nsamp
         self.target_fps = fps
         self.target_interval = 1.0 / fps
+        return 0
 
 
 class FrameSyncThread(threading.Thread):

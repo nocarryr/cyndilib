@@ -29,9 +29,10 @@ cdef extern from * nogil:
     cdef void sleep_for(double seconds)
 
 
-cdef inline double time() nogil:
+cdef inline double time() except? -1 nogil:
     return get_cpp_time()
 
-cdef inline void sleep(double seconds) nogil:
+cdef inline int sleep(double seconds) except -1 nogil:
     with nogil:
         sleep_for(seconds)
+    return 0

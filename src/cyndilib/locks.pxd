@@ -65,9 +65,9 @@ cdef class Lock:
     cdef bint _is_locked(self)
     cdef bint _do_acquire(self, long owner) except -1
     cdef bint _do_acquire_timed(self, long owner, PY_TIMEOUT_T microseconds) except -1
-    cdef void _do_release(self) except *
-    cdef void _check_acquire(self) except *
-    cdef void _check_release(self) except *
+    cdef int _do_release(self) except -1
+    cdef int _check_acquire(self) except -1
+    cdef int _check_release(self) except -1
     cdef bint _acquire(self, bint block, double timeout) except -1
     cdef bint _release(self) except -1
     cpdef bint acquire(self, bint block=*, double timeout=*) except -1
@@ -77,8 +77,8 @@ cdef class RLock(Lock):
 
     cdef bint _is_owned_c(self, long owner) except -1
     cpdef bint _is_owned(self) except -1
-    cdef void _acquire_restore_c(self, long current_owner, int count, long owner) except *
-    cdef void _acquire_restore(self, (int, long) state) except *
+    cdef int _acquire_restore_c(self, long current_owner, int count, long owner) except -1
+    cdef int _acquire_restore(self, (int, long) state) except -1
     cdef (int, long) _release_save_c(self) except *
     cdef (int, long) _release_save(self) except *
 
@@ -92,15 +92,15 @@ cdef class Condition:
     cpdef bint release(self) except -1
     cdef bint _release(self) except -1
     # cpdef _acquire_restore(self, state)
-    cdef void _acquire_restore(self, (int, long) state) except *
+    cdef int _acquire_restore(self, (int, long) state) except -1
     cdef (int, long) _release_save(self) except *
     cpdef bint _is_owned(self) except -1
-    cdef void _ensure_owned(self) except *
+    cdef int _ensure_owned(self) except -1
     cpdef bint wait(self, object timeout=*)
-    cdef bint _wait(self, bint block, double timeout=*) except *
+    cdef bint _wait(self, bint block, double timeout=*) except -1
     cpdef bint wait_for(self, object predicate, object timeout=*) except -1
-    cdef void _notify(self, Py_ssize_t n=*) except *
-    cdef void _notify_all(self) except *
+    cdef int _notify(self, Py_ssize_t n=*) except -1
+    cdef int _notify_all(self) except -1
 
 
 cdef class Event:

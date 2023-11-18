@@ -28,7 +28,7 @@ cdef class AudioFrame:
     cdef void _set_channel_stride(self, int value) nogil
     cdef uint8_t* _get_data(self) nogil
     cdef void _set_data(self, uint8_t* data) nogil
-    cdef const char* _get_metadata(self) nogil except *
+    cdef const char* _get_metadata(self) noexcept nogil
     cdef bytes _get_metadata_bytes(self)
     cdef int64_t _get_timestamp(self) nogil
     cdef void _set_timestamp(self, int64_t value) nogil
@@ -65,22 +65,22 @@ cdef class AudioRecvFrame(AudioFrame):
         cnp.float32_t[:,:] result,
         cnp.int64_t[:] timestamps,
         size_t bfr_len,
-    ) nogil except *
+    ) noexcept nogil
 
     cpdef get_read_data(self)
-    cdef bint _check_read_array_size(self) except *
+    cdef bint _check_read_array_size(self) except -1
     cdef int64_t _fill_read_data(
         self,
         cnp.float32_t[:,:,:] all_frame_data,
         cnp.float32_t[:,:] dest,
         size_t bfr_idx,
         bint advance
-    ) nogil except *
-    cdef size_t _get_next_write_index(self) nogil except *
-    cdef bint can_receive(self) nogil except *
-    cdef void _check_write_array_size(self) except *
-    cdef void _prepare_incoming(self, NDIlib_recv_instance_t recv_ptr) except *
-    cdef void _process_incoming(self, NDIlib_recv_instance_t recv_ptr) except *
+    ) except? -1 nogil
+    cdef size_t _get_next_write_index(self) except? -1 nogil
+    cdef bint can_receive(self) except -1 nogil
+    cdef int _check_write_array_size(self) except -1
+    cdef int _prepare_incoming(self, NDIlib_recv_instance_t recv_ptr) except -1
+    cdef int _process_incoming(self, NDIlib_recv_instance_t recv_ptr) except -1
 
 
 cdef class AudioFrameSync(AudioFrame):
@@ -89,7 +89,7 @@ cdef class AudioFrameSync(AudioFrame):
     cdef readonly Py_ssize_t[2] strides
     cdef size_t view_count
 
-    cdef void _process_incoming(self, NDIlib_framesync_instance_t fs_ptr) nogil except *
+    cdef int _process_incoming(self, NDIlib_framesync_instance_t fs_ptr) except -1 nogil
 
 
 cdef class AudioSendFrame(AudioFrame):
@@ -98,25 +98,25 @@ cdef class AudioSendFrame(AudioFrame):
     cdef readonly size_t max_num_samples
 
     cpdef set_max_num_samples(self, size_t n)
-    cdef void _destroy(self) except *
-    cdef bint _write_available(self) nogil except *
-    cdef void _set_shape_from_memview(
+    cdef int _destroy(self) except -1
+    cdef bint _write_available(self) except -1 nogil
+    cdef int _set_shape_from_memview(
         self,
         AudioSendFrame_item_s* item,
         cnp.float32_t[:,:] data,
-    ) nogil except *
-    cdef AudioSendFrame_item_s* _prepare_buffer_write(self) nogil except *
-    cdef void _set_buffer_write_complete(self, AudioSendFrame_item_s* item) nogil except *
-    cdef AudioSendFrame_item_s* _prepare_memview_write(self) nogil except *
-    cdef void _write_data_to_memview(
+    ) except -1 nogil
+    cdef AudioSendFrame_item_s* _prepare_buffer_write(self) except * nogil
+    cdef int _set_buffer_write_complete(self, AudioSendFrame_item_s* item) except -1 nogil
+    cdef AudioSendFrame_item_s* _prepare_memview_write(self) except * nogil
+    cdef int _write_data_to_memview(
         self,
         cnp.float32_t[:,:] data,
         cnp.float32_t[:,:] view,
         AudioSendFrame_item_s* item,
-    ) nogil except *
-    cdef AudioSendFrame_item_s* _get_next_write_frame(self) nogil except *
-    cdef bint _send_frame_available(self) nogil except *
-    cdef AudioSendFrame_item_s* _get_send_frame(self) nogil except *
-    cdef void _on_sender_write(self, AudioSendFrame_item_s* s_ptr) nogil except *
-    cdef void _set_sender_status(self, bint attached) nogil except *
-    cdef void _rebuild_array(self) nogil except *
+    ) except -1 nogil
+    cdef AudioSendFrame_item_s* _get_next_write_frame(self) except * nogil
+    cdef bint _send_frame_available(self) except -1 nogil
+    cdef AudioSendFrame_item_s* _get_send_frame(self) except * nogil
+    cdef int _on_sender_write(self, AudioSendFrame_item_s* s_ptr) except -1 nogil
+    cdef int _set_sender_status(self, bint attached) except -1 nogil
+    cdef int _rebuild_array(self) except -1 nogil

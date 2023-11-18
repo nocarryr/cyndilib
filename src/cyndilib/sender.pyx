@@ -111,9 +111,9 @@ cdef class Sender:
     def __exit__(self, *args):
         self._close()
 
-    cdef void _open(self) except *:
+    cdef int _open(self) except -1:
         if self._running:
-            return
+            return 0
         if not self.has_video_frame and not self.has_audio_frame:
             raise_exception('Cannot start sender. No frame objects')
         self._running = True
@@ -147,10 +147,11 @@ cdef class Sender:
             self.audio_frame._destroy()
             self.audio_frame._set_sender_status(False)
             raise
+        return 0
 
-    cdef void _close(self) except *:
+    cdef int _close(self) except -1:
         if not self._running:
-            return
+            return 0
         self._running = False
         cdef NDIlib_send_instance_t ptr = self.ptr
         self.ptr = NULL
@@ -164,6 +165,7 @@ cdef class Sender:
         if self.has_audio_frame:
             self.audio_frame._destroy()
             self.audio_frame._set_sender_status(False)
+        return 0
 
     cpdef set_video_frame(self, VideoSendFrame vf):
         """Set the :attr:`video_frame`
@@ -181,23 +183,25 @@ cdef class Sender:
         self.audio_frame = af
         self.has_audio_frame = af is not None
 
-    cdef bint _check_running(self) nogil except *:
+    cdef bint _check_running(self) except -1 nogil:
         if not self._running:
             return False
         if self.ptr is NULL:
             raise_exception('ptr is NULL')
         return True
 
-    cdef void _set_async_video_sender(self, VideoSendFrame_item_s* item) nogil except *:
+    cdef int _set_async_video_sender(self, VideoSendFrame_item_s* item) except -1 nogil:
         self._clear_async_video_status()
         self.last_async_sender = item
+        return 0
 
-    cdef void _clear_async_video_status(self) nogil except *:
+    cdef int _clear_async_video_status(self) except -1 nogil:
         cdef VideoSendFrame_item_s* item = self.last_async_sender
         if item is NULL:
-            return
+            return 0
         self.last_async_sender = NULL
         self.video_frame._on_sender_write(item)
+        return 0
 
     def write_video_and_audio(self, cnp.uint8_t[:] video_data, cnp.float32_t[:,:] audio_data):
         """Write and send the given video and audio data
@@ -218,7 +222,7 @@ cdef class Sender:
         self,
         cnp.uint8_t[:] video_data,
         cnp.float32_t[:,:] audio_data,
-    ) except *:
+    ) except -1:
         if not self._check_running():
             return False
         cdef VideoSendFrame_item_s* vid_item
@@ -267,7 +271,7 @@ cdef class Sender:
         """
         return self._write_video(data)
 
-    cdef bint _write_video(self, cnp.uint8_t[:] data) except *:
+    cdef bint _write_video(self, cnp.uint8_t[:] data) except -1:
         if not self._check_running():
             return False
         cdef VideoSendFrame_item_s* item = self.video_frame._prepare_buffer_write()
@@ -300,7 +304,7 @@ cdef class Sender:
         """
         return self._write_video_async(data)
 
-    cdef bint _write_video_async(self, cnp.uint8_t[:] data) except *:
+    cdef bint _write_video_async(self, cnp.uint8_t[:] data) except -1:
         if not self._check_running():
             return False
         cdef VideoSendFrame_item_s* item = self.video_frame._prepare_buffer_write()
@@ -321,7 +325,7 @@ cdef class Sender:
     def send_video_async(self):
         return self._send_video_async()
 
-    cdef bint _send_video(self) except *:
+    cdef bint _send_video(self) except -1:
         if not self._check_running():
             return False
         if not self.video_frame._send_frame_available():
@@ -334,7 +338,7 @@ cdef class Sender:
         self.video_frame._on_sender_write(item)
         return True
 
-    cdef bint _send_video_async(self) except *:
+    cdef bint _send_video_async(self) except -1:
         if not self._check_running():
             return False
         if not self.video_frame._send_frame_available():
@@ -355,7 +359,7 @@ cdef class Sender:
         """
         return self._write_audio(data)
 
-    cdef bint _write_audio(self, cnp.float32_t[:,:] data) except *:
+    cdef bint _write_audio(self, cnp.float32_t[:,:] data) except -1:
         if not self._check_running():
             return False
         cdef AudioSendFrame_item_s* item = self.audio_frame._prepare_buffer_write()
@@ -378,7 +382,7 @@ cdef class Sender:
     def send_audio(self):
         return self._send_audio()
 
-    cdef bint _send_audio(self) except *:
+    cdef bint _send_audio(self) except -1:
         if not self._check_running():
             return False
         if not self.audio_frame._send_frame_available():
@@ -394,7 +398,7 @@ cdef class Sender:
     def send_metadata(self, str tag, dict attrs):
         return self._send_metadata(tag, attrs)
 
-    cdef bint _send_metadata(self, str tag, dict attrs) except *:
+    cdef bint _send_metadata(self, str tag, dict attrs) except -1:
         self.metadata_frame._clear()
         self.metadata_frame.tag = tag
         self.metadata_frame.attrs.update(attrs)
@@ -403,7 +407,7 @@ cdef class Sender:
     def send_metadata_frame(self, MetadataSendFrame mf):
         return self._send_metadata_frame(mf)
 
-    cdef bint _send_metadata_frame(self, MetadataSendFrame mf) except *:
+    cdef bint _send_metadata_frame(self, MetadataSendFrame mf) except -1:
         if not self._check_running():
             return False
         if not mf._serialize():
@@ -416,14 +420,14 @@ cdef class Sender:
         cdef uint32_t timeout_ms = lround(timeout)
         return self._get_num_connections(timeout_ms)
 
-    cdef int _get_num_connections(self, uint32_t timeout_ms) nogil except *:
+    cdef int _get_num_connections(self, uint32_t timeout_ms) except? -1 nogil:
         return NDIlib_send_get_no_connections(self.ptr, timeout_ms)
 
     def update_tally(self, double timeout):
         cdef uint32_t timeout_ms = lround(timeout)
         return self._update_tally(timeout_ms)
 
-    cdef bint _update_tally(self, uint32_t timeout_ms) nogil except *:
+    cdef bint _update_tally(self, uint32_t timeout_ms) except -1 nogil:
         if not self._check_running():
             self.source.tally.on_program = False
             self.source.tally.on_preview = False
