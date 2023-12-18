@@ -17,11 +17,11 @@ cdef class MetadataFrame:
     cdef void _set_timecode(self, int64_t value) nogil
 
 cdef class MetadataRecvFrame(MetadataFrame):
-    cdef bint can_receive(self) nogil except *
-    cdef void _prepare_incoming(self, NDIlib_recv_instance_t recv_ptr) except *
-    cdef void _process_incoming(self, NDIlib_recv_instance_t recv_ptr) except *
+    cdef bint can_receive(self) except -1 nogil
+    cdef int _prepare_incoming(self, NDIlib_recv_instance_t recv_ptr) except -1
+    cdef int _process_incoming(self, NDIlib_recv_instance_t recv_ptr) except -1
 
 cdef class MetadataSendFrame(MetadataFrame):
-    cdef bint _serialize(self) except *
-    cdef void _update(self, dict other) except *
-    cdef void _clear(self) except *
+    cdef bint _serialize(self) except -1
+    cdef int _update(self, dict other) except -1
+    cdef int _clear(self) except -1

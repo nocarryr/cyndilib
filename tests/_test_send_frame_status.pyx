@@ -259,7 +259,7 @@ cdef _check_send_frame_item(
 
 @cython.boundscheck(False)
 @cython.wraparound(False)
-cdef void unpack_audio(float32_t** src, cnp.float32_t[:,:] dst) except *:
+cdef int unpack_audio(float32_t** src, cnp.float32_t[:,:] dst) except -1:
     cdef size_t nrows = dst.shape[0], ncols = dst.shape[1], i, j, k=0
     cdef float32_t* src_p = src[0]
 
@@ -267,14 +267,16 @@ cdef void unpack_audio(float32_t** src, cnp.float32_t[:,:] dst) except *:
         for j in range(ncols):
             dst[i,j] = src_p[k]
             k += 1
+    return 0
 
 
 @cython.boundscheck(False)
 @cython.wraparound(False)
-cdef void unpack_video(uint8_t** src, cnp.uint8_t[:] dst) except *:
+cdef int unpack_video(uint8_t** src, cnp.uint8_t[:] dst) except -1:
     # cdef size_t nrows = dst.shape[0], ncols = dst.shape[1], i, j, k=0
     cdef size_t i
     cdef uint8_t* src_p = src[0]
 
     for i in range(dst.shape[0]):
         dst[i] = src_p[i]
+    return 0

@@ -1,20 +1,20 @@
 from libc.string cimport memcpy
 
-cdef audio_bfr_p audio_frame_bfr_create() nogil except *:
+cdef audio_bfr_p audio_frame_bfr_create() except * nogil:
     cdef audio_bfr_p bfr = <audio_bfr_p>mem_alloc(sizeof(audio_bfr_t))
     if bfr is NULL:
         raise_mem_err()
     av_frame_bfr_init(bfr)
     return bfr
 
-cdef video_bfr_p video_frame_bfr_create() nogil except *:
+cdef video_bfr_p video_frame_bfr_create() except * nogil:
     cdef video_bfr_p bfr = <video_bfr_p>mem_alloc(sizeof(video_bfr_t))
     if bfr is NULL:
         raise_mem_err()
     av_frame_bfr_init(bfr)
     return bfr
 
-cdef av_frame_bfr_ft av_frame_bfr_create(av_frame_bfr_ft parent) nogil except *:
+cdef av_frame_bfr_ft av_frame_bfr_create(av_frame_bfr_ft parent) except * nogil:
     if parent is not NULL and parent.next is not NULL:
         raise_withgil(PyExc_ValueError, 'next pointer already exists')
 
@@ -113,14 +113,15 @@ cdef av_frame_bfr_ft av_frame_bfr_get_tail(av_frame_bfr_ft bfr) nogil:
         result = result.next
     return result
 
-cdef void av_frame_bfr_destroy(av_frame_bfr_ft bfr) nogil except *:
+cdef int av_frame_bfr_destroy(av_frame_bfr_ft bfr) except -1 nogil:
     if bfr.prev is not NULL:
         av_frame_bfr_free_parent(bfr, False)
     if bfr.next is not NULL:
         av_frame_bfr_free_child(bfr, False)
     av_frame_bfr_free_single(bfr)
+    return 0
 
-cdef av_frame_bfr_ft av_frame_bfr_remove(av_frame_bfr_ft bfr) nogil except *:
+cdef av_frame_bfr_ft av_frame_bfr_remove(av_frame_bfr_ft bfr) noexcept nogil:
     cdef av_frame_bfr_ft parent = bfr.prev
     cdef av_frame_bfr_ft child = bfr.next
     bfr.prev = NULL
@@ -135,7 +136,7 @@ cdef av_frame_bfr_ft av_frame_bfr_remove(av_frame_bfr_ft bfr) nogil except *:
         return child
     return NULL
 
-cdef void av_frame_bfr_free_single(av_frame_bfr_ft bfr) nogil except *:
+cdef void av_frame_bfr_free_single(av_frame_bfr_ft bfr) noexcept nogil:
     cdef size_t data_size
     if bfr.p_data is not NULL:
         # if av_frame_bfr_ft is audio_bfr_p:
@@ -149,7 +150,7 @@ cdef void av_frame_bfr_free_single(av_frame_bfr_ft bfr) nogil except *:
         #     data_size = sizeof(char) * bfr.length
     mem_free(bfr)
 
-cdef void av_frame_bfr_free_parent(av_frame_bfr_ft bfr, bint single_step=True) nogil except *:
+cdef int av_frame_bfr_free_parent(av_frame_bfr_ft bfr, bint single_step=True) except -1 nogil:
     if bfr.prev is NULL:
         raise_withgil(PyExc_ValueError, 'no parent bfr')
     cdef av_frame_bfr_ft parent = bfr.prev
@@ -165,8 +166,9 @@ cdef void av_frame_bfr_free_parent(av_frame_bfr_ft bfr, bint single_step=True) n
             parent.next = NULL
     bfr.prev = NULL
     av_frame_bfr_free_single(parent)
+    return 0
 
-cdef void av_frame_bfr_free_child(av_frame_bfr_ft bfr, bint single_step=True) nogil except *:
+cdef int av_frame_bfr_free_child(av_frame_bfr_ft bfr, bint single_step=True) except -1 nogil:
     if bfr.next is NULL:
         raise_withgil(PyExc_ValueError, 'no child bfr')
     cdef av_frame_bfr_ft child = bfr.next
@@ -182,6 +184,7 @@ cdef void av_frame_bfr_free_child(av_frame_bfr_ft bfr, bint single_step=True) no
             child.prev = NULL
     bfr.next = NULL
     av_frame_bfr_free_single(child)
+    return 0
 
 
 

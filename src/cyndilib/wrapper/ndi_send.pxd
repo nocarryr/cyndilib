@@ -121,12 +121,12 @@ cdef extern from "Processing.NDI.Send.h" nogil:
 cdef NDIlib_send_create_t* send_t_create(
     const char* ndi_name,
     const char* groups
-) nogil except *
+) except * nogil
 
 cdef void send_t_initialize(
     NDIlib_send_create_t* p,
     const char* ndi_name,
     const char* groups,
-) nogil except *
+) noexcept nogil
 
-cdef void send_t_destroy(NDIlib_send_create_t* p) nogil except *
+cdef void send_t_destroy(NDIlib_send_create_t* p) noexcept nogil

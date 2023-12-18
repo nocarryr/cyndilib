@@ -119,12 +119,13 @@ cdef class MetadataFrame:
 cdef class MetadataRecvFrame(MetadataFrame):
     """A MetadataFrame used in :class:`.receiver.Receiver`
     """
-    cdef bint can_receive(self) nogil except *:
+    cdef bint can_receive(self) except -1 nogil:
         return True
-    cdef void _prepare_incoming(self, NDIlib_recv_instance_t recv_ptr) except *:
+    cdef int _prepare_incoming(self, NDIlib_recv_instance_t recv_ptr) except -1:
         self.tag = None
         self.attrs.clear()
-    cdef void _process_incoming(self, NDIlib_recv_instance_t recv_ptr) except *:
+        return 0
+    cdef int _process_incoming(self, NDIlib_recv_instance_t recv_ptr) except -1:
         self.xml_bytes = self.ptr.p_data
         cdef str data_str = self.xml_bytes.decode('UTF-8')
         if len(data_str):
@@ -134,6 +135,7 @@ cdef class MetadataRecvFrame(MetadataFrame):
                 self.attrs = attrs
 
         NDIlib_recv_free_metadata(recv_ptr, self.ptr)
+        return 0
 
 
 cdef class MetadataSendFrame(MetadataFrame):
@@ -165,19 +167,21 @@ cdef class MetadataSendFrame(MetadataFrame):
     def update(self, dict other):
         self._update(other)
 
-    cdef void _update(self, dict other) except *:
+    cdef int _update(self, dict other) except -1:
         self.attrs.update(other)
         self._serialize()
+        return 0
 
     def clear(self):
         self._clear()
 
-    cdef void _clear(self) except *:
+    cdef int _clear(self) except -1:
         self.tag = ''
         self.attrs.clear()
         self._serialize()
+        return 0
 
-    cdef bint _serialize(self) except *:
+    cdef bint _serialize(self) except -1:
         cdef bint has_attrs = len(self.attrs) > 0, has_tag = len(self.tag) > 0
         cdef str key, val, result_str = ''
 

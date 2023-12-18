@@ -19,34 +19,34 @@ cdef class VideoFrame:
     cdef frame_rate_t frame_rate
 
     cpdef str get_format_string(self)
-    cdef (int, int) _get_resolution(self) nogil except *
-    cdef void _set_resolution(self, int xres, int yres) nogil except *
+    cdef (int, int) _get_resolution(self) noexcept nogil
+    cdef int _set_resolution(self, int xres, int yres) except -1 nogil
     cdef int _get_xres(self) nogil
-    cdef void _set_xres(self, int value) nogil except *
+    cdef int _set_xres(self, int value) except -1 nogil
     cdef int _get_yres(self) nogil
-    cdef void _set_yres(self, int value) nogil except *
-    cdef FourCC _get_fourcc(self) nogil except *
-    cdef void _set_fourcc(self, FourCC value) nogil except *
-    cdef frame_rate_t* _get_frame_rate(self) nogil except *
-    cdef void _set_frame_rate(self, frame_rate_ft fr) nogil except *
+    cdef int _set_yres(self, int value) except -1 nogil
+    cdef FourCC _get_fourcc(self) noexcept nogil
+    cdef int _set_fourcc(self, FourCC value) except -1 nogil
+    cdef frame_rate_t* _get_frame_rate(self) noexcept nogil
+    cdef int _set_frame_rate(self, frame_rate_ft fr) except -1 nogil
     cdef float _get_aspect(self) nogil
-    cdef void _set_aspect(self, float value) nogil
-    cdef FrameFormat _get_frame_format(self) nogil except *
-    cdef void _set_frame_format(self, FrameFormat fmt) nogil except *
+    cdef void _set_aspect(self, float value) noexcept nogil
+    cdef FrameFormat _get_frame_format(self) noexcept nogil
+    cdef void _set_frame_format(self, FrameFormat fmt) noexcept nogil
     cdef int64_t _get_timecode(self) nogil
     cdef int64_t _set_timecode(self, int64_t value) nogil
     cdef int _get_line_stride(self) nogil
     cdef void _set_line_stride(self, int value) nogil
-    cdef size_t _get_buffer_size(self) nogil except *
+    cdef size_t _get_buffer_size(self) except? -1 nogil
     cdef uint8_t* _get_data(self) nogil
     cdef void _set_data(self, uint8_t* data) nogil
-    cdef const char* _get_metadata(self) nogil except *
+    cdef const char* _get_metadata(self) noexcept nogil
     cdef bytes _get_metadata_bytes(self)
     cdef int64_t _get_timestamp(self) nogil
     cdef void _set_timestamp(self, int64_t value) nogil
     cdef size_t _get_data_size(self) nogil
     cpdef size_t get_data_size(self)
-    cdef void _recalc_pack_info(self) nogil except *
+    cdef int _recalc_pack_info(self) except -1 nogil
 
 cdef class VideoRecvFrame(VideoFrame):
     cdef readonly size_t max_buffers
@@ -65,13 +65,13 @@ cdef class VideoRecvFrame(VideoFrame):
     cdef Py_ssize_t[1] bfr_strides
     cdef size_t view_count
 
-    cdef void _check_read_array_size(self) except *
-    cdef void _fill_read_data(self, bint advance) nogil except *
-    cdef size_t _get_next_write_index(self) nogil except *
-    cdef bint can_receive(self) nogil except *
-    cdef void _check_write_array_size(self) except *
-    cdef void _prepare_incoming(self, NDIlib_recv_instance_t recv_ptr) except *
-    cdef void _process_incoming(self, NDIlib_recv_instance_t recv_ptr) except *
+    cdef int _check_read_array_size(self) except -1
+    cdef int _fill_read_data(self, bint advance) except -1 nogil
+    cdef size_t _get_next_write_index(self) except? -1 nogil
+    cdef bint can_receive(self) except -1 nogil
+    cdef int _check_write_array_size(self) except -1
+    cdef int _prepare_incoming(self, NDIlib_recv_instance_t recv_ptr) except -1
+    cdef int _process_incoming(self, NDIlib_recv_instance_t recv_ptr) except -1
 
 
 cdef class VideoFrameSync(VideoFrame):
@@ -80,27 +80,27 @@ cdef class VideoFrameSync(VideoFrame):
     cdef readonly Py_ssize_t[1] strides
     cdef size_t view_count
 
-    cdef void _process_incoming(self, NDIlib_framesync_instance_t fs_ptr) nogil except *
+    cdef int _process_incoming(self, NDIlib_framesync_instance_t fs_ptr) except -1 nogil
 
 
 cdef class VideoSendFrame(VideoFrame):
     cdef VideoSendFrame_status_s send_status
     cdef VideoSendFrame_item_s* buffer_write_item
 
-    cdef void _destroy(self) except *
-    cdef bint _write_available(self) nogil except *
-    cdef VideoSendFrame_item_s* _prepare_buffer_write(self) nogil except *
-    cdef void _set_buffer_write_complete(self, VideoSendFrame_item_s* item) nogil except *
-    cdef VideoSendFrame_item_s* _prepare_memview_write(self) nogil except *
-    cdef void _write_data_to_memview(
+    cdef int _destroy(self) except -1
+    cdef bint _write_available(self) except -1 nogil
+    cdef VideoSendFrame_item_s* _prepare_buffer_write(self) except * nogil
+    cdef int _set_buffer_write_complete(self, VideoSendFrame_item_s* item) except -1 nogil
+    cdef VideoSendFrame_item_s* _prepare_memview_write(self) except * nogil
+    cdef int _write_data_to_memview(
         self,
         cnp.uint8_t[:] data,
         cnp.uint8_t[:] view,
         VideoSendFrame_item_s* item,
-    ) nogil except *
-    cdef VideoSendFrame_item_s* _get_next_write_frame(self) nogil except *
-    cdef bint _send_frame_available(self) nogil except *
-    cdef VideoSendFrame_item_s* _get_send_frame(self) nogil except *
-    cdef void _on_sender_write(self, VideoSendFrame_item_s* s_ptr) nogil except *
-    cdef void _set_sender_status(self, bint attached) nogil except *
-    cdef void _rebuild_array(self) nogil except *
+    ) except -1 nogil
+    cdef VideoSendFrame_item_s* _get_next_write_frame(self) except * nogil
+    cdef bint _send_frame_available(self) except -1 nogil
+    cdef VideoSendFrame_item_s* _get_send_frame(self) except * nogil
+    cdef int _on_sender_write(self, VideoSendFrame_item_s* s_ptr) except -1 nogil
+    cdef int _set_sender_status(self, bint attached) except -1 nogil
+    cdef int _rebuild_array(self) except -1 nogil

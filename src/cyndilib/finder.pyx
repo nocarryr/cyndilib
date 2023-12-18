@@ -73,26 +73,30 @@ cdef class Source:
         """
         self.tally.on_preview = value
 
-    cdef void _set_tally(self, bint program, bint preview) nogil except *:
+    cdef int _set_tally(self, bint program, bint preview) except -1 nogil:
         self.tally.on_program = program
         self.tally.on_preview = preview
+        return 0
 
     cpdef bint update(self):
         self._check_ptr()
         return self.valid
 
-    cdef void _check_ptr(self) nogil except *:
+    cdef int _check_ptr(self) except -1 nogil:
         cdef NDIlib_source_t* ptr
         ptr = self.parent._get_source_ptr(self.cpp_name)
         if ptr != self.ptr:
             self._set_ptr(ptr)
+        return 0
 
-    cdef void _set_ptr(self, NDIlib_source_t* ptr) nogil except *:
+    cdef int _set_ptr(self, NDIlib_source_t* ptr) except -1 nogil:
         self.ptr = ptr
         self.valid = self.ptr is not NULL
+        return 0
 
-    cdef void _invalidate(self) nogil except *:
+    cdef int _invalidate(self) except -1 nogil:
         self._set_ptr(NULL)
+        return 0
 
     def __repr__(self):
         s = '' if self.valid else '(invalid)'
@@ -171,7 +175,7 @@ cdef class Finder:
         """
         return self.source_obj_map.get(name)
 
-    cdef NDIlib_source_t* _get_source_ptr(self, cpp_string name) nogil except *:
+    cdef NDIlib_source_t* _get_source_ptr(self, cpp_string name) except * nogil:
         cdef NDIlib_source_t* result
         if self.source_ptr_map.count(name) > 0:
             result = self.source_ptr_map[name]
@@ -187,11 +191,12 @@ cdef class Finder:
         """
         self.change_callback.set_callback(cb)
 
-    cdef void _trigger_callback(self) nogil except *:
+    cdef int _trigger_callback(self) except -1 nogil:
         if not self.change_callback.has_callback:
-            return
+            return 0
         with gil:
             self.change_callback.trigger_callback()
+        return 0
 
     def update_sources(self):
         """Manually update the current sources tracked by the |NDI| library
@@ -205,7 +210,7 @@ cdef class Finder:
             self._update_sources()
             return self.get_source_names()
 
-    cdef bint _update_sources(self) except *:
+    cdef bint _update_sources(self) except -1:
         self.__notify_acquire()
         # self._lock.lock()
         cdef bint changed = False
@@ -272,7 +277,7 @@ cdef class Finder:
             return True
         return self._wait_timed(timeout)
 
-    cdef void _wait(self) nogil except *:
+    cdef int _wait(self) except -1 nogil:
         with gil:
             with self.notify:
                 self.notify.wait()
@@ -280,8 +285,9 @@ cdef class Finder:
         # self.notify.wait(dereference(lk))
         # # lk.unlock()
         # del lk
+        return 0
 
-    cdef bint _wait_timed(self, float timeout) nogil except *:
+    cdef bint _wait_timed(self, float timeout) except -1 nogil:
         cdef bint notified
         with gil:
             with self.notify:
@@ -309,7 +315,7 @@ cdef class Finder:
         cdef uint32_t timeout_ms = int(timeout * 1000)
         return self._wait_for_sources(timeout_ms)
 
-    cdef bint _wait_for_sources(self, uint32_t timeout_ms) except *:
+    cdef bint _wait_for_sources(self, uint32_t timeout_ms) except -1:
         cdef bint changed
         # with gil:
         #     self.notify.acquire()
@@ -329,28 +335,33 @@ cdef class Finder:
         #     self.notify.notify_all()
         #     del lk
 
-    cdef void build_finder(self) except *:
+    cdef int build_finder(self) except -1:
         cdef NDIlib_find_create_t find_settings = [True, NULL, NULL]
         self.find_p = NDIlib_find_create_v2(&find_settings)
         if self.find_p == NULL:
             raise MemoryError()
+        return 0
 
-    cdef void __notify_acquire(self) nogil except *:
+    cdef int __notify_acquire(self) except -1 nogil:
         with gil:
             self.notify.acquire()
+        return 0
 
-    cdef void __notify_notify(self) nogil except *:
+    cdef int __notify_notify(self) except -1 nogil:
         with gil:
             self.notify.notify_all()
+        return 0
 
-    cdef void __notify_notify_and_release(self) nogil except *:
+    cdef int __notify_notify_and_release(self) except -1 nogil:
         with gil:
             self.notify.notify_all()
             self.notify.release()
+        return 0
 
-    cdef void __notify_release(self) nogil except *:
+    cdef int __notify_release(self) except -1 nogil:
         with gil:
             self.notify.release()
+        return 0
 
 
 
@@ -369,7 +380,7 @@ cdef class FinderThreadWorker:
         self.running = False
         # self.waiting = Event()
 
-    cdef void run(self) except *:
+    cdef int run(self) except -1:
         cdef bint first_loop = True
         cdef bint changed
         self.running = True
@@ -386,6 +397,7 @@ cdef class FinderThreadWorker:
             # self.waiting.clear()
         self.finder.finder_thread_running.clear()
         self.finder = None
+        return 0
 
     def stop(self):
         self.running = False

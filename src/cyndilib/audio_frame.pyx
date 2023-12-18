@@ -103,7 +103,7 @@ cdef class AudioFrame:
     cdef void _set_data(self, uint8_t* data) nogil:
         self.ptr.p_data = data
 
-    cdef const char* _get_metadata(self) nogil except *:
+    cdef const char* _get_metadata(self) noexcept nogil:
         return self.ptr.p_metadata
 
     cdef bytes _get_metadata_bytes(self):
@@ -257,7 +257,7 @@ cdef class AudioRecvFrame(AudioFrame):
         cnp.float32_t[:,:] result,
         cnp.int64_t[:] timestamps,
         size_t bfr_len,
-    ) nogil except *:
+    ) noexcept nogil:
         """Copy all available read data into the given *result* array limited by
         *bfr_len*.
 
@@ -368,7 +368,7 @@ cdef class AudioRecvFrame(AudioFrame):
 
     @cython.boundscheck(False)
     @cython.wraparound(False)
-    cdef bint _check_read_array_size(self) except *:
+    cdef bint _check_read_array_size(self) except -1:
         cdef cnp.float32_t[:,:,:] all_frame_data = self.all_frame_data
         cdef cnp.float32_t[:,:] read_data = self.current_frame_data
         cdef size_t nrows = all_frame_data.shape[1]
@@ -387,7 +387,7 @@ cdef class AudioRecvFrame(AudioFrame):
         cnp.float32_t[:,:] dest,
         size_t bfr_idx,
         bint advance
-    ) nogil except *:
+    ) except? -1 nogil:
         cdef int64_t ts
         ts = self.frame_timestamps.front()
         if advance:
@@ -447,7 +447,7 @@ cdef class AudioRecvFrame(AudioFrame):
         with self.read_lock:
             self.view_count -= 1
 
-    cdef size_t _get_next_write_index(self) nogil except *:
+    cdef size_t _get_next_write_index(self) except? -1 nogil:
         cdef size_t result, niter, bfr_len = self.read_indices.size()
 
         if bfr_len > 0:
@@ -466,16 +466,16 @@ cdef class AudioRecvFrame(AudioFrame):
                 raise_withgil(PyExc_ValueError, 'could not get write index')
         return result
 
-    cdef bint can_receive(self) nogil except *:
+    cdef bint can_receive(self) except -1 nogil:
         return self.read_indices.size() < self.max_buffers
 
-    cdef void _check_write_array_size(self) except *:
+    cdef int _check_write_array_size(self) except -1:
         cdef NDIlib_audio_frame_v3_t* p = self.ptr
         cdef cnp.float32_t[:,:,:] arr = self.all_frame_data
         cdef size_t nrows = self.ptr.no_channels, ncols = self.ptr.no_samples
 
         if arr.shape[1] == nrows and arr.shape[2] == ncols:
-            return
+            return 0
 
         with self.read_lock:
             self.all_frame_data = np.zeros((self.max_buffers, nrows, ncols), dtype=np.float32)
@@ -484,8 +484,9 @@ cdef class AudioRecvFrame(AudioFrame):
             self.frame_timestamps.clear()
             if self.view_count == 0:
                 self.current_frame_data = np.zeros((nrows, ncols), dtype=np.float32)
+        return 0
 
-    cdef void _prepare_incoming(self, NDIlib_recv_instance_t recv_ptr) except *:
+    cdef int _prepare_incoming(self, NDIlib_recv_instance_t recv_ptr) except -1:
         cdef size_t bfr_idx
         self._check_write_array_size()
         if self.read_indices.size() == self.max_buffers:
@@ -495,10 +496,11 @@ cdef class AudioRecvFrame(AudioFrame):
                     self.read_indices.pop_front()
                     self.read_indices_set.erase(bfr_idx)
                     self.frame_timestamps.pop_front()
+        return 0
 
     @cython.boundscheck(False)
     @cython.wraparound(False)
-    cdef void _process_incoming(self, NDIlib_recv_instance_t recv_ptr) except *:
+    cdef int _process_incoming(self, NDIlib_recv_instance_t recv_ptr) except -1:
         cdef audio_bfr_p write_bfr = self.write_bfr
         cdef NDIlib_audio_frame_v3_t* p = self.ptr
         cdef size_t buffer_index = self._get_next_write_index()
@@ -526,6 +528,7 @@ cdef class AudioRecvFrame(AudioFrame):
 
             if recv_ptr is not NULL:
                 NDIlib_recv_free_audio_v3(recv_ptr, self.ptr)
+        return 0
 
 
 cdef class AudioFrameSync(AudioFrame):
@@ -587,7 +590,7 @@ cdef class AudioFrameSync(AudioFrame):
                 self.fs_ptr = NULL
                 NDIlib_framesync_free_audio_v2(fs_ptr, self.ptr)
 
-    cdef void _process_incoming(self, NDIlib_framesync_instance_t fs_ptr) nogil except *:
+    cdef int _process_incoming(self, NDIlib_framesync_instance_t fs_ptr) except -1 nogil:
         if self.view_count > 0:
             raise_withgil(PyExc_ValueError, 'cannot write with view active')
 
@@ -598,6 +601,7 @@ cdef class AudioFrameSync(AudioFrame):
         self.strides[0] = ncols * sizeof(cnp.float32_t)
         self.strides[1] = sizeof(cnp.float32_t)
         self.fs_ptr = fs_ptr
+        return 0
 
 
 
@@ -694,25 +698,26 @@ cdef class AudioSendFrame(AudioFrame):
     def destroy(self):
         self._destroy()
 
-    cdef void _destroy(self) except *:
+    cdef int _destroy(self) except -1:
         self.buffer_write_item = NULL
         frame_status_free(&(self.send_status))
+        return 0
 
     def get_write_available(self):
         return self._write_available()
 
-    cdef bint _write_available(self) nogil except *:
+    cdef bint _write_available(self) except -1 nogil:
         cdef Py_ssize_t idx = frame_status_get_next_write_index(&(self.send_status))
         return idx != NULL_INDEX
 
-    cdef void _set_shape_from_memview(
+    cdef int _set_shape_from_memview(
         self,
         AudioSendFrame_item_s* item,
         cnp.float32_t[:,:] data,
-    ) nogil except *:
-        pass
+    ) except -1 nogil:
+        return 0
 
-    cdef AudioSendFrame_item_s* _prepare_buffer_write(self) nogil except *:
+    cdef AudioSendFrame_item_s* _prepare_buffer_write(self) except * nogil:
         if self.buffer_write_item is not NULL:
             raise_withgil(PyExc_RuntimeError, 'buffer_write_item is not null')
         cdef AudioSendFrame_item_s* item = self._get_next_write_frame()
@@ -721,12 +726,13 @@ cdef class AudioSendFrame(AudioFrame):
         self.buffer_write_item = item
         return item
 
-    cdef void _set_buffer_write_complete(self, AudioSendFrame_item_s* item) nogil except *:
+    cdef int _set_buffer_write_complete(self, AudioSendFrame_item_s* item) except -1 nogil:
         cdef AudioSendFrame_item_s* cur_item = self.buffer_write_item
         if cur_item is not NULL and cur_item.idx == item.idx:
             self.buffer_write_item = NULL
         self.send_status.read_index = item.idx
         frame_status_set_send_ready(&(self.send_status))
+        return 0
 
     def write_data(self, cnp.float32_t[:,:] data):
         cdef AudioSendFrame_item_s* item = self._prepare_memview_write()
@@ -734,45 +740,48 @@ cdef class AudioSendFrame(AudioFrame):
 
         self._write_data_to_memview(data, view, item)
 
-    cdef AudioSendFrame_item_s* _prepare_memview_write(self) nogil except *:
+    cdef AudioSendFrame_item_s* _prepare_memview_write(self) except * nogil:
         return self._prepare_buffer_write()
 
-    cdef void _write_data_to_memview(
+    cdef int _write_data_to_memview(
         self,
         cnp.float32_t[:,:] data,
         cnp.float32_t[:,:] view,
         AudioSendFrame_item_s* item
-    ) nogil except *:
+    ) except -1 nogil:
         self._set_shape_from_memview(item, data)
         cdef size_t nrows = item.shape[0], ncols = item.shape[1]
         view[...] = data
         self._set_buffer_write_complete(item)
+        return 0
 
-    cdef AudioSendFrame_item_s* _get_next_write_frame(self) nogil except *:
+    cdef AudioSendFrame_item_s* _get_next_write_frame(self) except * nogil:
         cdef Py_ssize_t idx = frame_status_get_next_write_index(&(self.send_status))
         if idx == NULL_INDEX:
             raise_withgil(PyExc_RuntimeError, 'no write frame available')
         self.send_status.write_index = idx
         return &(self.send_status.items[idx])
 
-    cdef bint _send_frame_available(self) nogil except *:
+    cdef bint _send_frame_available(self) except -1 nogil:
         return self._get_send_frame() != NULL
 
-    cdef AudioSendFrame_item_s* _get_send_frame(self) nogil except *:
+    cdef AudioSendFrame_item_s* _get_send_frame(self) except * nogil:
         cdef Py_ssize_t idx = frame_status_get_next_read_index(&(self.send_status))
         if idx == NULL_INDEX:
             return NULL
         return &(self.send_status.items[idx])
 
-    cdef void _on_sender_write(self, AudioSendFrame_item_s* s_ptr) nogil except *:
+    cdef int _on_sender_write(self, AudioSendFrame_item_s* s_ptr) except -1 nogil:
         frame_status_set_send_complete(&(self.send_status), s_ptr.idx)
+        return 0
 
-    cdef void _set_sender_status(self, bint attached) nogil except *:
+    cdef int _set_sender_status(self, bint attached) except -1 nogil:
         if attached:
             self._rebuild_array()
         self.send_status.attached_to_sender = attached
+        return 0
 
-    cdef void _rebuild_array(self) nogil except *:
+    cdef int _rebuild_array(self) except -1 nogil:
         cdef size_t nrows = self.ptr.no_channels, ncols = self.max_num_samples
         cdef size_t total_size = sizeof(float32_t) * nrows * ncols
         cdef AudioSendFrame_status_s* s_ptr = &(self.send_status)
@@ -785,12 +794,13 @@ cdef class AudioSendFrame(AudioFrame):
         self.ptr.channel_stride_in_bytes = s_ptr.strides[0]
         frame_status_copy_frame_ptr(s_ptr, self.ptr)
         frame_status_alloc_p_data(s_ptr)
+        return 0
 
 
 
 @cython.boundscheck(False)
 @cython.wraparound(False)
-cdef void float_ptr_to_memview_2d(float32_t* p, cnp.float32_t[:,:] dest) nogil except *:
+cdef int float_ptr_to_memview_2d(float32_t* p, cnp.float32_t[:,:] dest) except -1 nogil:
     cdef size_t ncols = dest.shape[1], nrows = dest.shape[0]
     # cdef float *float_p = <float*>bfr.p_data
     cdef size_t i, j, k = 0
@@ -799,10 +809,11 @@ cdef void float_ptr_to_memview_2d(float32_t* p, cnp.float32_t[:,:] dest) nogil e
         for j in range(ncols):
             dest[i,j] = p[k]
             k += 1
+    return 0
 
 
 
-cdef void audio_bfr_unpack_data(audio_bfr_p bfr, uint8_t* p_data) nogil except *:
+cdef int audio_bfr_unpack_data(audio_bfr_p bfr, uint8_t* p_data) except -1 nogil:
     if bfr.p_data is not NULL:
         raise_withgil(PyExc_ValueError, 'float buffer exists')
     cdef size_t size_in_samples = bfr.num_channels * bfr.num_samples
@@ -814,3 +825,4 @@ cdef void audio_bfr_unpack_data(audio_bfr_p bfr, uint8_t* p_data) nogil except *
     # g = (float)((data[0] << 24) | (data[1] << 16) | (data[2] << 8) | (data[3]) );
     # size_t ch_idx, samp_idx
     # for ch_idx in range(bfr.num_channels):
+    return 0

@@ -53,11 +53,11 @@ cdef class Source:
 
     cpdef set_program_tally(self, bint value)
     cpdef set_preview_tally(self, bint value)
-    cdef void _set_tally(self, bint program, bint preview) nogil except *
+    cdef int _set_tally(self, bint program, bint preview) except -1 nogil
     cpdef bint update(self)
-    cdef void _set_ptr(self, NDIlib_source_t* ptr) nogil except *
-    cdef void _check_ptr(self) nogil except *
-    cdef void _invalidate(self) nogil except *
+    cdef int _set_ptr(self, NDIlib_source_t* ptr) except -1 nogil
+    cdef int _check_ptr(self) except -1 nogil
+    cdef int _invalidate(self) except -1 nogil
 
 
 cdef class Finder:
@@ -79,14 +79,14 @@ cdef class Finder:
 
     cpdef get_source_names(self)
     cpdef Source get_source(self, str name)
-    cdef NDIlib_source_t* _get_source_ptr(self, cpp_string name) nogil except *
-    cdef void _trigger_callback(self) nogil except *
-    cdef bint _update_sources(self) except *
-    cdef void _wait(self) nogil except *
-    cdef bint _wait_timed(self, float timeout) nogil except *
-    cdef bint _wait_for_sources(self, uint32_t timeout_ms) except *
-    cdef void build_finder(self) except *
-    cdef void __notify_acquire(self) nogil except *
-    cdef void __notify_notify(self) nogil except *
-    cdef void __notify_notify_and_release(self) nogil except *
-    cdef void __notify_release(self) nogil except *
+    cdef NDIlib_source_t* _get_source_ptr(self, cpp_string name) except * nogil
+    cdef int _trigger_callback(self) except -1 nogil
+    cdef bint _update_sources(self) except -1
+    cdef int _wait(self) except -1 nogil
+    cdef bint _wait_timed(self, float timeout) except -1 nogil
+    cdef bint _wait_for_sources(self, uint32_t timeout_ms) except -1
+    cdef int build_finder(self) except -1
+    cdef int __notify_acquire(self) except -1 nogil
+    cdef int __notify_notify(self) except -1 nogil
+    cdef int __notify_notify_and_release(self) except -1 nogil
+    cdef int __notify_release(self) except -1 nogil

@@ -34,7 +34,7 @@ cdef RGBA_t GREY_s  = RGBA_t(0x80, 0x80, 0x80, 0xff)
 cdef RGBA_t[4] BARS_s = [RED_s, GREEN_s, BLUE_s, GREY_s]
 
 
-cdef void _rgba_copy(RGBA_t* src, RGBA_t* dst) nogil except *:
+cdef void _rgba_copy(RGBA_t* src, RGBA_t* dst) noexcept nogil:
     dst.r = src.r
     dst.g = src.g
     dst.b = src.b
@@ -115,45 +115,49 @@ def build_test_frames(
     return arr
 
 
-cdef void _build_test_frame_uint32_2d(
+cdef int _build_test_frame_uint32_2d(
     cnp.uint32_t[:,:] arr_view, size_t width, size_t height, size_t x_offset=0,
-) except *:
+) except -1:
     cdef RGBA_t[:] line_view = np.empty(width, dtype=RGBA_dtype)
     _build_test_data_struct(line_view, width, x_offset)
     _structured_to_uint32(line_view, arr_view[0], 1)
     arr_view[1:,...] = arr_view[0]
+    return 0
 
 
-cdef void _build_test_frame_uint32_1d(
+cdef int _build_test_frame_uint32_1d(
     cnp.uint32_t[:] arr_view, size_t width, size_t height, size_t x_offset=0,
-) except *:
+) except -1:
     cdef RGBA_t[:] line_view = np.empty(width, dtype=RGBA_dtype)
     _build_test_data_struct(line_view, width, x_offset)
     _structured_to_uint32(line_view, arr_view, height)
+    return 0
 
 
-cdef void _build_test_frame_uint8_2d(
+cdef int _build_test_frame_uint8_2d(
     cnp.uint8_t[:,:] arr_view, size_t width, size_t height, size_t x_offset=0,
-) except *:
+) except -1:
     cdef RGBA_t[:] line_view = np.empty(width, dtype=RGBA_dtype)
     _build_test_data_struct(line_view, width, x_offset)
     _structured_to_uint8(line_view, arr_view[0], 1)
     arr_view[1:,...] = arr_view[0]
+    return 0
 
 
-cdef void _build_test_frame_uint8_1d(
+cdef int _build_test_frame_uint8_1d(
     cnp.uint8_t[:] arr_view, size_t width, size_t height, size_t x_offset=0,
-) except *:
+) except -1:
     cdef RGBA_t[:] line_view = np.empty(width, dtype=RGBA_dtype)
     _build_test_data_struct(line_view, width, x_offset)
     _structured_to_uint8(line_view, arr_view, height)
+    return 0
 
 
 @cython.boundscheck(False)
 @cython.wraparound(False)
-cdef void _build_test_frame_uint8_3d(
+cdef int _build_test_frame_uint8_3d(
     cnp.uint8_t[:,:,:] arr_view, size_t width, size_t height, size_t x_offset=0,
-) except *:
+) except -1:
     cdef RGBA_t[:] line_view = np.empty(width, dtype=RGBA_dtype)
     cdef cnp.uint8_t[:,:] line_view_uint8 = np.empty((width, 4), dtype=np.uint8)
     cdef uint8_t* intptr = <uint8_t*>&line_view[0]
@@ -165,22 +169,24 @@ cdef void _build_test_frame_uint8_3d(
             line_view_uint8[i,j] = intptr[k]
             k += 1
     arr_view[...] = line_view_uint8
+    return 0
 
 
 @cython.boundscheck(False)
 @cython.wraparound(False)
-cdef void _build_test_frame_structured(
+cdef int _build_test_frame_structured(
     RGBA_t[:,:] arr_view, size_t width, size_t height, size_t x_offset=0,
-) except *:
+) except -1:
     cdef RGBA_t[:] line_view = np.empty(width, dtype=RGBA_dtype)
 
     _build_test_data_struct(line_view, width, x_offset)
     arr_view[...] = line_view
+    return 0
 
 
 @cython.boundscheck(False)
 @cython.wraparound(False)
-cdef void _build_test_data_struct(RGBA_t[:] arr, size_t width, size_t x_offset) except *:
+cdef int _build_test_data_struct(RGBA_t[:] arr, size_t width, size_t x_offset) except -1:
     cdef size_t i, j, k, start_idx, end_idx
     cdef size_t bar_width = width // 4
     cdef bint is_split
@@ -202,11 +208,12 @@ cdef void _build_test_data_struct(RGBA_t[:] arr, size_t width, size_t x_offset) 
         for j in range(start_idx, end_idx):
             arr_ptr = &(arr[j])
             _rgba_copy(color, arr_ptr)
+    return 0
 
 
 @cython.boundscheck(False)
 @cython.wraparound(False)
-cdef void _structured_to_uint8(RGBA_t[:] src, cnp.uint8_t[:] dest, size_t height) except *:
+cdef int _structured_to_uint8(RGBA_t[:] src, cnp.uint8_t[:] dest, size_t height) except -1:
     cdef size_t width = src.shape[0]
     cdef void* vptr
     cdef uint8_t* intptr
@@ -220,11 +227,12 @@ cdef void _structured_to_uint8(RGBA_t[:] src, cnp.uint8_t[:] dest, size_t height
                 dest[l] = intptr[0]
                 intptr += 1
                 l += 1
+    return 0
 
 
 @cython.boundscheck(False)
 @cython.wraparound(False)
-cdef void _structured_to_uint32(RGBA_t[:] src, cnp.uint32_t[:] dest, size_t height) nogil except *:
+cdef int _structured_to_uint32(RGBA_t[:] src, cnp.uint32_t[:] dest, size_t height) except -1 nogil:
     cdef size_t width = src.shape[0]
     cdef uint32_t* vptr
     cdef uint32_t v
@@ -236,6 +244,7 @@ cdef void _structured_to_uint32(RGBA_t[:] src, cnp.uint32_t[:] dest, size_t heig
         for j in range(height):
             dest[k] = v
             k += 1
+    return 0
 
 
 @cython.boundscheck(False)

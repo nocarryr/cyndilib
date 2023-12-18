@@ -8,7 +8,7 @@ from .clock cimport time, sleep
 __all__ = ('Receiver', 'RecvThreadWorker', 'RecvThread')
 
 
-cdef NDIlib_frame_type_e recv_frame_type_cast(ReceiveFrameType ft) nogil except *:
+cdef NDIlib_frame_type_e recv_frame_type_cast(ReceiveFrameType ft) noexcept nogil:
     if ft == ReceiveFrameType.recv_video:
         return NDIlib_frame_type_video
     elif ft == ReceiveFrameType.recv_audio:
@@ -23,7 +23,7 @@ cdef NDIlib_frame_type_e recv_frame_type_cast(ReceiveFrameType ft) nogil except 
         return NDIlib_frame_type_none
     # return NULL
 
-cdef ReceiveFrameType recv_frame_type_uncast(NDIlib_frame_type_e ft) nogil except *:
+cdef ReceiveFrameType recv_frame_type_uncast(NDIlib_frame_type_e ft) noexcept nogil:
     if ft == NDIlib_frame_type_video:
         return ReceiveFrameType.recv_video
     elif ft == NDIlib_frame_type_audio:
@@ -229,19 +229,20 @@ cdef class Receiver:
         """
         self.set_source(src)
 
-    cdef void _connect_to(self, NDIlib_source_t* src) except *:
+    cdef int _connect_to(self, NDIlib_source_t* src) except -1:
         self.source_name = src.p_ndi_name.decode('UTF-8')
         self.source_ptr = src
         NDIlib_recv_connect(self.ptr, src)
         self._probably_connected = True
         self._set_connected(True)
+        return 0
 
     def disconnect(self):
         """Disconnect from the :attr:`source` (if connected)
         """
         self.set_source(None)
 
-    cdef void _disconnect(self) nogil except *:
+    cdef int _disconnect(self) except -1 nogil:
         # if not self._is_connected():
         #     return
         self.source_ptr = NULL
@@ -249,36 +250,39 @@ cdef class Receiver:
         self._probably_connected = False
         self._num_empty_recv = 0
         self._set_connected(False)
+        return 0
 
     def reconnect(self):
         self._reconnect()
 
-    cdef void _reconnect(self) nogil except *:
+    cdef int _reconnect(self) except -1 nogil:
         if self._is_connected():
-            return
+            return 0
         NDIlib_recv_connect(self.ptr, self.source_ptr)
         self._is_connected()
+        return 0
 
     def is_connected(self):
         """Returns True if currently connected
         """
         return self._is_connected()
 
-    cdef bint _is_connected(self) nogil except *:
+    cdef bint _is_connected(self) except -1 nogil:
         cdef bint r = self._get_num_connections() > 0
         if r is not self._connected:
             self._set_connected(r)
         return r
 
-    cdef void _set_connected(self, bint value) nogil except *:
+    cdef int _set_connected(self, bint value) except -1 nogil:
         if value is self._connected:
-            return
+            return 0
         with gil:
             with self.connection_lock:
                 self._connected = value
                 self.connection_notify.notify_all()
+        return 0
 
-    cdef bint _wait_for_connect(self, float timeout) nogil except *:
+    cdef bint _wait_for_connect(self, float timeout) except -1 nogil:
         if self._connected:
             return True
         if self._is_connected():
@@ -293,7 +297,7 @@ cdef class Receiver:
     def get_num_connections(self):
         return self._get_num_connections()
 
-    cdef int _get_num_connections(self) nogil except *:
+    cdef int _get_num_connections(self) except? -1 nogil:
         cdef int r = NDIlib_recv_get_no_connections(self.ptr)
         return r
 
@@ -307,7 +311,7 @@ cdef class Receiver:
         return r
 
     @cython.cdivision(True)
-    cdef void _update_performance(self) nogil except *:
+    cdef int _update_performance(self) except -1 nogil:
         NDIlib_recv_get_performance(self.ptr, &(self.perf_total_s), &(self.perf_dropped_s))
 
         cdef RecvPerformance_t* vstats = &(self.video_stats)
@@ -339,6 +343,7 @@ cdef class Receiver:
             mstats.dropped_percent = pct
         else:
             mstats.dropped_percent = 0
+        return 0
 
     @property
     def program_tally(self):
@@ -372,21 +377,24 @@ cdef class Receiver:
         """
         self._set_source_tally(self.source_tally.on_program, value)
 
-    cdef void _set_source_tally(self, bint program, bint preview) nogil except *:
+    cdef int _set_source_tally(self, bint program, bint preview) except -1 nogil:
         self.source_tally.on_program = program
         self.source_tally.on_preview = preview
         self._send_source_tally()
+        return 0
 
-    cdef void _send_source_tally(self) nogil except *:
+    cdef int _send_source_tally(self) except -1 nogil:
         NDIlib_recv_set_tally(self.ptr, &(self.source_tally))
+        return 0
 
-    cdef void _handle_metadata_frame(self) except *:
+    cdef int _handle_metadata_frame(self) except -1:
         cdef MetadataRecvFrame mf = self.metadata_frame
         cdef bint pgm, pvw
         if mf.tag == 'ndi_tally_echo':
             pgm = mf.attrs.get('on_program') == 'true'
             pvw = mf.attrs.get('on_preview') == 'true'
             self.source._set_tally(pgm, pvw)
+        return 0
 
     cpdef ReceiveFrameType receive(self, ReceiveFrameType recv_type, uint32_t timeout_ms):
         """Receive frame data of the given type
@@ -496,7 +504,7 @@ cdef class Receiver:
         NDIlib_audio_frame_v3_t* audio_frame,
         NDIlib_metadata_frame_t* metadata_frame,
         uint32_t timeout_ms
-    ) nogil except *:
+    ) noexcept nogil:
         cdef NDIlib_frame_type_e r = NDIlib_recv_capture_v3(
             self.ptr, video_frame, audio_frame, metadata_frame, timeout_ms
         )
@@ -508,13 +516,13 @@ cdef class Receiver:
             self._num_empty_recv += 1
         return ft
 
-    cdef void free_video(self, NDIlib_video_frame_v2_t* p) nogil except *:
+    cdef void free_video(self, NDIlib_video_frame_v2_t* p) noexcept nogil:
         NDIlib_recv_free_video_v2(self.ptr, p)
 
-    cdef void free_audio(self, NDIlib_audio_frame_v3_t* p) nogil except *:
+    cdef void free_audio(self, NDIlib_audio_frame_v3_t* p) noexcept nogil:
         NDIlib_recv_free_audio_v3(self.ptr, p)
 
-    cdef void free_metadata(self, NDIlib_metadata_frame_t* p) nogil except *:
+    cdef void free_metadata(self, NDIlib_metadata_frame_t* p) noexcept nogil:
         NDIlib_recv_free_metadata(self.ptr, p)
 
 cdef class RecvThreadWorker:
@@ -541,7 +549,7 @@ cdef class RecvThreadWorker:
         self.wait_event = Event()
         self.wait_time = wait_time
 
-    cdef void run(self) except *:
+    cdef int run(self) except -1:
         cdef ReceiveFrameType ft
         self.running = True
         while self.running:
@@ -557,19 +565,23 @@ cdef class RecvThreadWorker:
                     self.wait_for_evt(self.wait_time)
             else:
                 self.wait_for_evt(.1)
+        return 0
 
-    cdef void time_sleep(self, double timeout) nogil except *:
+    cdef int time_sleep(self, double timeout) except -1 nogil:
         sleep(timeout)
+        return 0
 
-    cdef void wait_for_evt(self, double timeout) nogil except *:
+    cdef int wait_for_evt(self, double timeout) except -1 nogil:
         with gil:
             self.wait_event.wait(timeout)
             self.wait_event.clear()
+        return 0
 
 
-    cdef void stop(self) except *:
+    cdef int stop(self) except -1:
         self.wait_event.set()
         self.running = False
+        return 0
 
 class RecvThread(threading.Thread):
     """A thread designed for use with :class:`Receiver`

@@ -29,8 +29,8 @@ cdef struct RecvPerformance_t:
     int64_t frames_dropped
     double dropped_percent
 
-cdef NDIlib_frame_type_e recv_frame_type_cast(ReceiveFrameType ft) nogil except *
-cdef ReceiveFrameType recv_frame_type_uncast(NDIlib_frame_type_e ft) nogil except *
+cdef NDIlib_frame_type_e recv_frame_type_cast(ReceiveFrameType ft) noexcept nogil
+cdef ReceiveFrameType recv_frame_type_uncast(NDIlib_frame_type_e ft) noexcept nogil
 
 cdef class RecvCreate:
     cdef public str source_name
@@ -70,19 +70,19 @@ cdef class Receiver:
     cpdef set_metadata_frame(self, MetadataRecvFrame mf)
     cpdef set_source(self, Source src)
     cpdef connect_to(self, Source src)
-    cdef void _connect_to(self, NDIlib_source_t* src) except *
-    cdef void _disconnect(self) nogil except *
-    cdef void _reconnect(self) nogil except *
-    cdef bint _is_connected(self) nogil except *
-    cdef void _set_connected(self, bint value) nogil except *
-    cdef int _get_num_connections(self) nogil except *
-    cdef bint _wait_for_connect(self, float timeout) nogil except *
-    cdef void _update_performance(self) nogil except *
+    cdef int _connect_to(self, NDIlib_source_t* src) except -1
+    cdef int _disconnect(self) except -1 nogil
+    cdef int _reconnect(self) except -1 nogil
+    cdef bint _is_connected(self) except -1 nogil
+    cdef int _set_connected(self, bint value) except -1 nogil
+    cdef int _get_num_connections(self) except? -1 nogil
+    cdef bint _wait_for_connect(self, float timeout) except -1 nogil
+    cdef int _update_performance(self) except -1 nogil
     cpdef set_source_tally_program(self, bint value)
     cpdef set_source_tally_preview(self, bint value)
-    cdef void _set_source_tally(self, bint program, bint preview) nogil except *
-    cdef void _send_source_tally(self) nogil except *
-    cdef void _handle_metadata_frame(self) except *
+    cdef int _set_source_tally(self, bint program, bint preview) except -1 nogil
+    cdef int _send_source_tally(self) except -1 nogil
+    cdef int _handle_metadata_frame(self) except -1
     cpdef ReceiveFrameType receive(
         self, ReceiveFrameType recv_type, uint32_t timeout_ms
     )
@@ -96,8 +96,8 @@ cdef class Receiver:
         NDIlib_audio_frame_v3_t* audio_frame,
         NDIlib_metadata_frame_t* metadata_frame,
         uint32_t timeout_ms
-    ) nogil except *
+    ) noexcept nogil
 
-    cdef void free_video(self, NDIlib_video_frame_v2_t* p) nogil except *
-    cdef void free_audio(self, NDIlib_audio_frame_v3_t* p) nogil except *
-    cdef void free_metadata(self, NDIlib_metadata_frame_t* p) nogil except *
+    cdef void free_video(self, NDIlib_video_frame_v2_t* p) noexcept nogil
+    cdef void free_audio(self, NDIlib_audio_frame_v3_t* p) noexcept nogil
+    cdef void free_metadata(self, NDIlib_metadata_frame_t* p) noexcept nogil

@@ -270,8 +270,8 @@ ctypedef fused NDIlib_frame_type_ft:
     NDIlib_metadata_frame_t
 
 
-cdef double ndi_time_to_posix(int64_t ndi_ts) nogil except *
-cdef int64_t posix_time_to_ndi(double ts) nogil except *
+cdef double ndi_time_to_posix(int64_t ndi_ts) noexcept nogil
+cdef int64_t posix_time_to_ndi(double ts) noexcept nogil
 
 cpdef enum FrameType:
     unknown = NDIlib_frame_type_none
@@ -280,9 +280,9 @@ cpdef enum FrameType:
     metadata = NDIlib_frame_type_metadata
     error = NDIlib_frame_type_error
 
-cdef inline NDIlib_frame_type_e frame_type_cast(FrameType value) nogil except *:
+cdef inline NDIlib_frame_type_e frame_type_cast(FrameType value) noexcept nogil:
     return <NDIlib_frame_type_e>value
-cdef inline FrameType frame_type_uncast(NDIlib_frame_type_e value) nogil except *:
+cdef inline FrameType frame_type_uncast(NDIlib_frame_type_e value) noexcept nogil:
     return <FrameType>value
 
 
@@ -299,9 +299,9 @@ cpdef enum FourCC:
     RGBA = NDIlib_FourCC_video_type_RGBA
     RGBX = NDIlib_FourCC_video_type_RGBX
 
-cdef inline NDIlib_FourCC_video_type_e fourcc_type_cast(FourCC value) nogil except *:
+cdef inline NDIlib_FourCC_video_type_e fourcc_type_cast(FourCC value) noexcept nogil:
     return <NDIlib_FourCC_video_type_e>value
-cdef inline FourCC fourcc_type_uncast(NDIlib_FourCC_video_type_e value) nogil except *:
+cdef inline FourCC fourcc_type_uncast(NDIlib_FourCC_video_type_e value) noexcept nogil:
     return <FourCC>value
 
 cdef struct FourCCPackInfo:
@@ -314,11 +314,11 @@ cdef struct FourCCPackInfo:
     size_t[4] line_strides
     size_t[4] stride_offsets
 
-cdef FourCCPackInfo* fourcc_pack_info_create() nogil except *
-cdef void fourcc_pack_info_init(FourCCPackInfo* fourcc) nogil except *
-cdef void fourcc_pack_info_destroy(FourCCPackInfo* p) nogil except *
-cdef FourCCPackInfo* get_fourcc_pack_info(FourCC fourcc, size_t xres, size_t yres) nogil except *
-cdef void calc_fourcc_pack_info(FourCCPackInfo* p) nogil except *
+cdef FourCCPackInfo* fourcc_pack_info_create() except * nogil
+cdef void fourcc_pack_info_init(FourCCPackInfo* fourcc) noexcept nogil
+cdef int fourcc_pack_info_destroy(FourCCPackInfo* p) except -1 nogil
+cdef FourCCPackInfo* get_fourcc_pack_info(FourCC fourcc, size_t xres, size_t yres) except * nogil
+cdef int calc_fourcc_pack_info(FourCCPackInfo* p) except -1 nogil
 
 cpdef enum FrameFormat:
     progressive = NDIlib_frame_format_type_progressive
@@ -326,31 +326,31 @@ cpdef enum FrameFormat:
     field_0 = NDIlib_frame_format_type_field_0
     field_1 = NDIlib_frame_format_type_field_1
 
-cdef inline NDIlib_frame_format_type_e frame_format_cast(FrameFormat value) nogil except *:
+cdef inline NDIlib_frame_format_type_e frame_format_cast(FrameFormat value) noexcept nogil:
     return <NDIlib_frame_format_type_e>value
-cdef inline FrameFormat frame_format_uncast(NDIlib_frame_format_type_e value) nogil except *:
+cdef inline FrameFormat frame_format_uncast(NDIlib_frame_format_type_e value) noexcept nogil:
     return <FrameFormat>value
 
-cdef NDIlib_source_t* source_create() nogil except *
-cdef void source_destroy(NDIlib_source_t* p) nogil except *
+cdef NDIlib_source_t* source_create() except * nogil
+cdef void source_destroy(NDIlib_source_t* p) noexcept nogil
 
 
-cdef NDIlib_video_frame_v2_t* video_frame_create() nogil except *
-cdef NDIlib_video_frame_v2_t* video_frame_create_default() nogil except *
-cdef void video_frame_copy(
+cdef NDIlib_video_frame_v2_t* video_frame_create() except * nogil
+cdef NDIlib_video_frame_v2_t* video_frame_create_default() except * nogil
+cdef int video_frame_copy(
     NDIlib_video_frame_v2_t* src,
     NDIlib_video_frame_v2_t* dest
-) nogil except *
-cdef void video_frame_destroy(NDIlib_video_frame_v2_t* p) nogil except *
+) except -1 nogil
+cdef void video_frame_destroy(NDIlib_video_frame_v2_t* p) noexcept nogil
 
 
-cdef NDIlib_audio_frame_v3_t* audio_frame_create() nogil except *
-cdef NDIlib_audio_frame_v3_t* audio_frame_create_default() nogil except *
-cdef void audio_frame_copy(
+cdef NDIlib_audio_frame_v3_t* audio_frame_create() except * nogil
+cdef NDIlib_audio_frame_v3_t* audio_frame_create_default() except * nogil
+cdef int audio_frame_copy(
     NDIlib_audio_frame_v3_t* src,
     NDIlib_audio_frame_v3_t* dest
-) nogil except *
-cdef void audio_frame_destroy(NDIlib_audio_frame_v3_t* p) nogil except *
+) except -1 nogil
+cdef void audio_frame_destroy(NDIlib_audio_frame_v3_t* p) noexcept nogil
 
-cdef NDIlib_metadata_frame_t* metadata_frame_create() nogil except *
-cdef void metadata_frame_destroy(NDIlib_metadata_frame_t* p) nogil except *
+cdef NDIlib_metadata_frame_t* metadata_frame_create() except * nogil
+cdef void metadata_frame_destroy(NDIlib_metadata_frame_t* p) noexcept nogil

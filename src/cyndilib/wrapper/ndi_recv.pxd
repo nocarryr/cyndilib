@@ -240,9 +240,9 @@ cpdef enum RecvBandwidth:
     lowest = NDIlib_recv_bandwidth_lowest
     highest = NDIlib_recv_bandwidth_highest
 
-cdef inline NDIlib_recv_bandwidth_e recv_bandwidth_cast(RecvBandwidth value) nogil except *:
+cdef inline NDIlib_recv_bandwidth_e recv_bandwidth_cast(RecvBandwidth value) noexcept nogil:
     return <NDIlib_recv_bandwidth_e>value
-cdef inline RecvBandwidth recv_bandwidth_uncast(NDIlib_recv_bandwidth_e value) nogil except *:
+cdef inline RecvBandwidth recv_bandwidth_uncast(NDIlib_recv_bandwidth_e value) noexcept nogil:
     return <RecvBandwidth>value
 
 
@@ -254,12 +254,12 @@ cpdef enum RecvColorFormat:
     fastest = NDIlib_recv_color_format_fastest
     best = NDIlib_recv_color_format_best
 
-cdef inline NDIlib_recv_color_format_e recv_format_cast(RecvColorFormat value) nogil except *:
+cdef inline NDIlib_recv_color_format_e recv_format_cast(RecvColorFormat value) noexcept nogil:
     return <NDIlib_recv_color_format_e>value
-cdef inline RecvColorFormat recv_format_uncast(NDIlib_recv_color_format_e value) nogil except *:
+cdef inline RecvColorFormat recv_format_uncast(NDIlib_recv_color_format_e value) noexcept nogil:
     return <RecvColorFormat>value
 
-cdef NDIlib_recv_create_v3_t* recv_t_create() nogil except *
-cdef NDIlib_recv_create_v3_t* recv_t_create_default() nogil except *
-cdef void recv_t_copy(NDIlib_recv_create_v3_t* src, NDIlib_recv_create_v3_t* dest) nogil except *
-cdef void recv_t_destroy(NDIlib_recv_create_v3_t* p) nogil except *
+cdef NDIlib_recv_create_v3_t* recv_t_create() except * nogil
+cdef NDIlib_recv_create_v3_t* recv_t_create_default() except * nogil
+cdef int recv_t_copy(NDIlib_recv_create_v3_t* src, NDIlib_recv_create_v3_t* dest) except -1 nogil
+cdef void recv_t_destroy(NDIlib_recv_create_v3_t* p) noexcept nogil

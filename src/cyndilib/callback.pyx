@@ -14,7 +14,7 @@ cdef class Callback:
         self.cb = None
         self.weak_cb = None
 
-    cdef void set_callback(self, object cb) except *:
+    cdef int set_callback(self, object cb) except -1:
         assert not self.has_callback
         cdef bint is_weakref = False
         if PyMethod_Check(cb):
@@ -26,15 +26,17 @@ cdef class Callback:
             self.cb = cb
         self.is_weakref = is_weakref
         self.has_callback = True
+        return 0
 
-    cdef void remove_callback(self) except *:
+    cdef int remove_callback(self) except -1:
         self.has_callback = False
         self.cb = None
         self.weak_cb = None
+        return 0
 
-    cdef void trigger_callback(self) except *:
+    cdef int trigger_callback(self) except -1:
         if not self.has_callback:
-            return
+            return 0
 
         cdef object cb
         cdef bint is_alive
@@ -47,6 +49,7 @@ cdef class Callback:
         else:
             cb = self.cb
             cb()
+        return 0
 
 
 cdef class WeakMethod:
@@ -61,7 +64,7 @@ cdef class WeakMethod:
         self.meth_type = type(meth)
         self.alive = True
 
-    cdef bint trigger_callback(self) except *:
+    cdef bint trigger_callback(self) except -1:
         if not self.alive:
             return False
         cdef PyObject* obj_ptr = PyWeakref_GetObject(self.obj_ref)

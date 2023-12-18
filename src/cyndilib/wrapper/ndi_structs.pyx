@@ -7,15 +7,15 @@ def get_ndi_version():
     return NDIlib_version().decode('UTF-8')
 
 
-cdef double ndi_time_to_posix(int64_t ndi_ts) nogil except *:
+cdef double ndi_time_to_posix(int64_t ndi_ts) noexcept nogil:
     cdef float128_t result = <float128_t>ndi_ts * 1e-7
     return <double>result
 
-cdef int64_t posix_time_to_ndi(double ts) nogil except *:
+cdef int64_t posix_time_to_ndi(double ts) noexcept nogil:
     cdef long long result = llround(ts * 1e7)
     return result
 
-cdef NDIlib_source_t* source_create() nogil except *:
+cdef NDIlib_source_t* source_create() except * nogil:
     cdef NDIlib_source_t* p = <NDIlib_source_t*>mem_alloc(sizeof(NDIlib_source_t))
     if p is NULL:
         raise_mem_err()
@@ -23,17 +23,17 @@ cdef NDIlib_source_t* source_create() nogil except *:
     p.p_url_address = NULL
     return p
 
-cdef void source_destroy(NDIlib_source_t* p) nogil except *:
+cdef void source_destroy(NDIlib_source_t* p) noexcept nogil:
     if p is not NULL:
         mem_free(p)
 
-cdef NDIlib_video_frame_v2_t* video_frame_create() nogil except *:
+cdef NDIlib_video_frame_v2_t* video_frame_create() except * nogil:
     cdef NDIlib_video_frame_v2_t* p = <NDIlib_video_frame_v2_t*>mem_alloc(sizeof(NDIlib_video_frame_v2_t))
     if p is NULL:
         raise_mem_err()
     return p
 
-cdef NDIlib_video_frame_v2_t* video_frame_create_default() nogil except *:
+cdef NDIlib_video_frame_v2_t* video_frame_create_default() except * nogil:
     cdef NDIlib_video_frame_v2_t* p = video_frame_create()
     p.xres = 0
     p.yres = 0
@@ -49,10 +49,10 @@ cdef NDIlib_video_frame_v2_t* video_frame_create_default() nogil except *:
     p.timestamp = 0
     return p
 
-cdef void video_frame_copy(
+cdef int video_frame_copy(
     NDIlib_video_frame_v2_t* src,
     NDIlib_video_frame_v2_t* dest
-) nogil except *:
+) except -1 nogil:
     dest.xres = src.xres
     dest.yres = src.yres
     dest.FourCC = src.FourCC
@@ -63,9 +63,10 @@ cdef void video_frame_copy(
     dest.frame_format_type = src.frame_format_type
     dest.timecode = src.timecode
     dest.timestamp = src.timestamp
+    return 0
 
 
-cdef void video_frame_destroy(NDIlib_video_frame_v2_t* p) nogil except *:
+cdef void video_frame_destroy(NDIlib_video_frame_v2_t* p) noexcept nogil:
     pass
     # if p is not NULL:
     #     if p.p_data is not NULL:
@@ -77,13 +78,13 @@ cdef void video_frame_destroy(NDIlib_video_frame_v2_t* p) nogil except *:
     #     mem_free(p)
 
 
-cdef NDIlib_audio_frame_v3_t* audio_frame_create() nogil except *:
+cdef NDIlib_audio_frame_v3_t* audio_frame_create() except * nogil:
     cdef NDIlib_audio_frame_v3_t* p = <NDIlib_audio_frame_v3_t*>mem_alloc(sizeof(NDIlib_audio_frame_v3_t))
     if p is NULL:
         raise_mem_err()
     return p
 
-cdef NDIlib_audio_frame_v3_t* audio_frame_create_default() nogil except *:
+cdef NDIlib_audio_frame_v3_t* audio_frame_create_default() except * nogil:
     cdef NDIlib_audio_frame_v3_t* p = audio_frame_create()
     p.sample_rate = 48000
     p.no_channels = 2
@@ -95,10 +96,10 @@ cdef NDIlib_audio_frame_v3_t* audio_frame_create_default() nogil except *:
     p.p_data = NULL
     return p
 
-cdef void audio_frame_copy(
+cdef int audio_frame_copy(
     NDIlib_audio_frame_v3_t* src,
     NDIlib_audio_frame_v3_t* dest
-) nogil except *:
+) except -1 nogil:
     dest.sample_rate = src.sample_rate
     dest.no_channels = src.no_channels
     dest.no_samples = src.no_samples
@@ -106,9 +107,10 @@ cdef void audio_frame_copy(
     dest.FourCC = src.FourCC
     dest.channel_stride_in_bytes = src.channel_stride_in_bytes
     dest.timestamp = src.timestamp
+    return 0
 
 
-cdef void audio_frame_destroy(NDIlib_audio_frame_v3_t* p) nogil except *:
+cdef void audio_frame_destroy(NDIlib_audio_frame_v3_t* p) noexcept nogil:
     pass
     # if p is not NULL:
     #     if p.p_data is not NULL:
@@ -119,7 +121,7 @@ cdef void audio_frame_destroy(NDIlib_audio_frame_v3_t* p) nogil except *:
     #     #     # p.p_metadata = NULL
     #     mem_free(p)
 
-cdef NDIlib_metadata_frame_t* metadata_frame_create() nogil except *:
+cdef NDIlib_metadata_frame_t* metadata_frame_create() except * nogil:
     cdef NDIlib_metadata_frame_t* p = <NDIlib_metadata_frame_t*>mem_alloc(sizeof(NDIlib_metadata_frame_t))
     if p is NULL:
         raise_mem_err()
@@ -128,7 +130,7 @@ cdef NDIlib_metadata_frame_t* metadata_frame_create() nogil except *:
     p.p_data = NULL
     return p
 
-cdef void metadata_frame_destroy(NDIlib_metadata_frame_t* p) nogil except *:
+cdef void metadata_frame_destroy(NDIlib_metadata_frame_t* p) noexcept nogil:
     pass
     # if p is not NULL:
     #     if p.p_data is not NULL:
@@ -136,14 +138,14 @@ cdef void metadata_frame_destroy(NDIlib_metadata_frame_t* p) nogil except *:
     #         p.p_data = NULL
     #     mem_free(p)
 
-cdef FourCCPackInfo* fourcc_pack_info_create() nogil except *:
+cdef FourCCPackInfo* fourcc_pack_info_create() except * nogil:
     cdef FourCCPackInfo* p = <FourCCPackInfo*>mem_alloc(sizeof(FourCCPackInfo))
     if p is NULL:
         raise_mem_err()
     fourcc_pack_info_init(p)
     return p
 
-cdef void fourcc_pack_info_init(FourCCPackInfo* p) nogil except *:
+cdef void fourcc_pack_info_init(FourCCPackInfo* p) noexcept nogil:
     cdef size_t i
     p.fourcc = FourCC.UYVY
     p.xres = 0
@@ -155,12 +157,13 @@ cdef void fourcc_pack_info_init(FourCCPackInfo* p) nogil except *:
         p.line_strides[i] = 0
         p.stride_offsets[i] = 0
 
-cdef void fourcc_pack_info_destroy(FourCCPackInfo* p) nogil except *:
+cdef int fourcc_pack_info_destroy(FourCCPackInfo* p) except -1 nogil:
     if p is not NULL:
         mem_free(p)
+    return 0
 
 
-cdef FourCCPackInfo* get_fourcc_pack_info(FourCC fourcc, size_t xres, size_t yres) nogil except *:
+cdef FourCCPackInfo* get_fourcc_pack_info(FourCC fourcc, size_t xres, size_t yres) except * nogil:
     cdef FourCCPackInfo* p = fourcc_pack_info_create()
     p.fourcc = fourcc
     p.xres = xres
@@ -169,7 +172,7 @@ cdef FourCCPackInfo* get_fourcc_pack_info(FourCC fourcc, size_t xres, size_t yre
     return p
 
 
-cdef void calc_fourcc_pack_info(FourCCPackInfo* p) nogil except *:
+cdef int calc_fourcc_pack_info(FourCCPackInfo* p) except -1 nogil:
     cdef size_t xres = p.xres, yres = p.yres
     cdef size_t bytes_per_pixel
 
@@ -225,3 +228,4 @@ cdef void calc_fourcc_pack_info(FourCCPackInfo* p) nogil except *:
     else:
         raise_withgil(PyExc_ValueError, 'Unknown FourCC type')
     p.bytes_per_pixel = bytes_per_pixel
+    return 0
