@@ -1,14 +1,14 @@
 cyndilib
 ########
 
-A Python wrapper for `Newtek NDI®`_ written in `Cython`_
+A Python wrapper for `NDI®`_ written in `Cython`_
 
 
 Description
 ***********
 
 NDI® allows video and audio to be reliably sent and received over IP with
-minimal latency and very high quality. For more information see https://ndi.tv/.
+minimal latency and very high quality. For more information see https://ndi.video.
 
 This project aims to wrap most functionality of the `NDI® SDK`_ for use in
 Python. Due to the real-time nature of audio and video, nearly all of this
@@ -80,8 +80,8 @@ License
 
 cyndilib is licensed under the MIT license. See included `LICENSE`_ file.
 
-NDI® is a registered trademark of NewTek, Inc. Its associated license
-information can be found in `libndi_licenses.rst`_.
+NDI® is a registered trademark of Vizrt NDI AB. Its associated license
+information can be found in `libndi_licenses.txt`_.
 
 
 ⚠ Distribution Considerations ⚠
@@ -89,7 +89,7 @@ information can be found in `libndi_licenses.rst`_.
 
 Before distributing or including this in your own projects it is **important**
 that you have read and understand the "Licensing" section included in the
-`NDI® SDK`_ Documentation.
+`NDI® SDK Documentation_`.
 
 There are specific requirements listed for branding, trademark use and URLs to
 be displayed, etc. To the best of my knowledge this project is following the
@@ -99,9 +99,10 @@ Liability for derivative works, etc falls under the responsibility of their auth
 
 
 
-.. _Newtek NDI®: https://ndi.tv/
-.. _NDI® SDK: https://ndi.tv/sdk/
+.. _NDI®: https://ndi.video
+.. _NDI® SDK: https://ndi.video/for-developers/ndi-sdk/
+.. _NDI® SDK Documentation: https://docs.ndi.video/docs
 .. _Cython: https://cython.org
 .. _PyPI: https://pypi.org/
-.. _LICENSE: license.rst
-.. _libndi_licenses.rst: libndi_licenses.rst
+.. _LICENSE: LICENSE
+.. _libndi_licenses.txt: libndi_licenses.txt
