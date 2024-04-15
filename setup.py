@@ -5,6 +5,7 @@ import shutil
 import json
 from pathlib import Path
 from setuptools import setup, find_packages
+from setuptools.command.build_ext import build_ext
 from distutils.extension import Extension
 from distutils.sysconfig import get_python_inc
 from distutils.errors import CCompilerError
@@ -160,6 +161,24 @@ ext_modules = cythonize(
     compiler_directives=compiler_directives,
 )
 
+# From https://github.com/scikit-learn/scikit-learn/blob/3ee60a720aab3598668af3a3d7eb01d6958859be/setup.py#L106-L117
+class build_ext_subclass(build_ext):
+    def finalize_options(self):
+        build_ext.finalize_options(self)
+
+        if self.parallel is None:
+            # Do not override self.parallel if already defined by
+            # command-line flag (--parallel or -j)
+
+            parallel = os.environ.get("CYNDILIB_BUILD_PARALLEL")
+            if parallel == 'auto':
+                self.parallel = os.cpu_count()
+            elif parallel:
+                self.parallel = int(parallel)
+        if self.parallel:
+            print("setting parallel=%d " % self.parallel)
+
+
 def build_annotate_index(extensions):
     root = AnnotateIndex('', root_dir=PROJECT_PATH / 'src')
     for ext in extensions:
@@ -172,6 +191,9 @@ if ANNOTATE and AnnotateIndex is not None:
     build_annotate_index(ext_modules)
 
 setup(
+    cmdclass={
+        'build_ext':build_ext_subclass,
+    },
     ext_modules=ext_modules,
     include_package_data=True,
     package_data=PACKAGE_DATA,

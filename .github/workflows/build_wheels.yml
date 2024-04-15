@@ -47,6 +47,8 @@ jobs:
           pip install pytest psutil
       - name: Install Project
         run: pip install -e .
+        env:
+          CYNDILIB_BUILD_PARALLEL: auto
       - name: Compile tests
         run: |
           pip install cython>=0.29.32
