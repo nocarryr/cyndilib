@@ -47,6 +47,8 @@ jobs:
           pip install pytest psutil
       - name: Install Project
         run: pip install -e .
+        env:
+          CYNDILIB_BUILD_PARALLEL: auto
       - name: Compile tests
         run: |
           pip install cython>=0.29.32
@@ -61,8 +63,11 @@ jobs:
       fail-fast: false
       matrix:
         include:
-        - os: macos-latest
-          arch: universal2
+        - os: macos-13
+          arch: x86_64
+          python-version: "cp3{7,8,9,10,11}"
+        - os: macos-14
+          arch: arm64
           python-version: "cp3{7,8,9,10,11}"
         - os: ubuntu-latest
           arch: x86_64
@@ -112,7 +117,7 @@ jobs:
 
       - name: Build wheels
         id: build_wheel
-        uses: pypa/cibuildwheel@v2.11.2
+        uses: pypa/cibuildwheel@v2.17
         env:
           CIBW_BUILD: ${{ matrix.python-version }}-*
           CIBW_ARCHS: ${{ matrix.arch }}

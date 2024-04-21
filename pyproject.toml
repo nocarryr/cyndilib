@@ -15,7 +15,7 @@ test-command = [
     "py.test {project}/tests/",
 ]
 test-skip = "cp37-*"
-environment = {CI= "true"}
+environment = {CI= "true", CYNDILIB_BUILD_PARALLEL= "auto"}
 
 [tool.cibuildwheel.linux]
 before-all = "yum install -y avahi-libs"
