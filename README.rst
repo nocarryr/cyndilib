@@ -89,7 +89,7 @@ information can be found in `libndi_licenses.txt`_.
 
 Before distributing or including this in your own projects it is **important**
 that you have read and understand the "Licensing" section included in the
-`NDI® SDK Documentation_`.
+`NDI® SDK Documentation`_.
 
 There are specific requirements listed for branding, trademark use and URLs to
 be displayed, etc. To the best of my knowledge this project is following the
