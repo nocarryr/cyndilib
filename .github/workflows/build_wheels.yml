@@ -125,24 +125,15 @@ jobs:
           CIBW_ARCHS: ${{ matrix.arch }}
           CIBW_TEST_SKIP: ${{ steps.cibuildwheel_env.outputs.test_skip }}
           CIBW_REPAIR_WHEEL_COMMAND_MACOS: "delocate-listdeps {wheel} --all --depending && delocate-wheel --require-archs {delocate_archs} -w {dest_dir} -v {wheel}"
-        if: (${{ matrix.os }} != 'macos-13' && ${{ matrix.os }} != 'macos-14') && (${{ inputs.os_type }} != "" && (${{ inputs.os_type }} == matrix.os || ${{ inputs.os_type }} == "all"))
+        if: ${{ inputs.os_type }} != "" && (${{ inputs.os_type }} == matrix.os || ${{ inputs.os_type }} == "all")
         #    ...
         # with:
         #   package-dir: .
         #   output-dir: wheelhouse
         #   config-file: "{package}/pyproject.toml"
-      - name: Build macos wheels
-        id: build_wheel_macos
-        uses: pypa/cibuildwheel@v2.17
-        env:
-          CIBW_BUILD: ${{ matrix.python-version }}-*
-          CIBW_ARCHS: ${{ matrix.arch }}
-          CIBW_TEST_SKIP: ${{ steps.cibuildwheel_env.outputs.test_skip }}
-          CIBW_REPAIR_WHEEL_COMMAND_MACOS: "delocate-listdeps {wheel} --all --depending && delocate-wheel --require-archs {delocate_archs} -w {dest_dir} -v {wheel}"
-        if: (${{ matrix.os }} != 'macos-13' && ${{ matrix.os }} != 'macos-14') && (${{ inputs.os_type }} != "" && (${{ inputs.os_type }} == matrix.os || ${{ inputs.os_type }} == "all"))
 
       - uses: actions/upload-artifact@v3
-        if: ${{ steps.build_wheel.outcome }} == "success" || ${{ steps.build_wheel_macos.outcome }} == "success"
+        if: ${{ steps.build_wheel.outcome }} == "success"
         with:
           path: ./wheelhouse/*.whl
 
