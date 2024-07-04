@@ -23,3 +23,8 @@ before-all = "yum install -y avahi-libs"
 [[tool.cibuildwheel.overrides]]
 select = "*-musllinux*"
 before-all = "apk add avahi-libs"
+
+[[tool.cibuildwheel.overrides]]
+select = "cp38-macos-*"
+inherit.environment = "append"
+environment.MACOSX_DEPLOYMENT_TARGET = "11.2"
