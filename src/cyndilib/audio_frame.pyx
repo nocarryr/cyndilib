@@ -149,11 +149,11 @@ cdef class AudioRecvFrame(AudioFrame):
 
     """
     def __cinit__(self, *args, **kwargs):
-        self.audio_bfrs = av_frame_bfr_create(self.audio_bfrs)
+        self.audio_bfrs = audio_frame_bfr_create(self.audio_bfrs)
         if self.audio_bfrs is NULL:
             raise MemoryError()
-        self.read_bfr = av_frame_bfr_create(self.audio_bfrs)
-        self.write_bfr = av_frame_bfr_create(self.read_bfr)
+        self.read_bfr = audio_frame_bfr_create(self.audio_bfrs)
+        self.write_bfr = audio_frame_bfr_create(self.read_bfr)
         self.current_timecode = 0
         self.current_timestamp = 0
 

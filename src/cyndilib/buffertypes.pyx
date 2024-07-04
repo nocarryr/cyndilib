@@ -1,32 +1,24 @@
 
-cdef audio_bfr_p audio_frame_bfr_create() except * nogil:
+
+cdef audio_bfr_p audio_frame_bfr_create(audio_bfr_p parent) except NULL nogil:
+    if parent is not NULL and parent.next is not NULL:
+        raise_withgil(PyExc_ValueError, 'next pointer already exists')
+
     cdef audio_bfr_p bfr = <audio_bfr_p>mem_alloc(sizeof(audio_bfr_t))
     if bfr is NULL:
         raise_mem_err()
     av_frame_bfr_init(bfr)
+    if parent is not NULL:
+        bfr.prev = parent
+        parent.next = bfr
     return bfr
 
-cdef video_bfr_p video_frame_bfr_create() except * nogil:
-    cdef video_bfr_p bfr = <video_bfr_p>mem_alloc(sizeof(video_bfr_t))
-    if bfr is NULL:
-        raise_mem_err()
-    av_frame_bfr_init(bfr)
-    return bfr
 
-cdef av_frame_bfr_ft av_frame_bfr_create(av_frame_bfr_ft parent) except * nogil:
+cdef video_bfr_p video_frame_bfr_create(video_bfr_p parent) except NULL nogil:
     if parent is not NULL and parent.next is not NULL:
         raise_withgil(PyExc_ValueError, 'next pointer already exists')
 
-    cdef size_t itemsize
-    if av_frame_bfr_ft is audio_bfr_p:
-        itemsize = sizeof(audio_bfr_t)
-    elif av_frame_bfr_ft is video_bfr_p:
-        itemsize = sizeof(video_bfr_t)
-    elif av_frame_bfr_ft is metadata_bfr_p:
-        itemsize = sizeof(metadata_bfr_t)
-    else:
-        raise_exception('invalid type')
-    cdef av_frame_bfr_ft bfr = <av_frame_bfr_ft>mem_alloc(itemsize)
+    cdef video_bfr_p bfr = <video_bfr_p>mem_alloc(sizeof(video_bfr_t))
     if bfr is NULL:
         raise_mem_err()
 
@@ -39,7 +31,7 @@ cdef av_frame_bfr_ft av_frame_bfr_create(av_frame_bfr_ft parent) except * nogil:
     return bfr
 
 
-cdef void av_frame_bfr_init(av_frame_bfr_ft bfr) nogil:
+cdef int av_frame_bfr_init(av_frame_bfr_ft bfr) except -1 nogil:
     bfr.next = NULL
     bfr.prev = NULL
     bfr.timecode = 0
@@ -62,8 +54,9 @@ cdef void av_frame_bfr_init(av_frame_bfr_ft bfr) nogil:
         bfr.format = FrameFormat.progressive
     elif av_frame_bfr_ft is metadata_bfr_p:
         bfr.length = 0
+    return 0
 
-cdef void av_frame_bfr_copy(av_frame_bfr_ft src, av_frame_bfr_ft dst) nogil:
+cdef int av_frame_bfr_copy(av_frame_bfr_ft src, av_frame_bfr_ft dst) except -1 nogil:
     dst.timecode = src.timecode
     if av_frame_bfr_ft is audio_bfr_p:
         dst.timestamp = src.timestamp
@@ -82,8 +75,9 @@ cdef void av_frame_bfr_copy(av_frame_bfr_ft src, av_frame_bfr_ft dst) nogil:
         dst.format = src.format
     elif av_frame_bfr_ft is metadata_bfr_p:
         dst.length = src.length
+    return 0
 
-cdef size_t av_frame_bfr_count(av_frame_bfr_ft bfr) nogil:
+cdef size_t av_frame_bfr_count(av_frame_bfr_ft bfr) except -1 nogil:
     cdef size_t r = 1
     if bfr is NULL:
         return r
@@ -100,13 +94,13 @@ cdef size_t av_frame_bfr_count(av_frame_bfr_ft bfr) nogil:
     # while tmp.prev is
 
 
-cdef av_frame_bfr_ft av_frame_bfr_get_head(av_frame_bfr_ft bfr) nogil:
+cdef av_frame_bfr_ft av_frame_bfr_get_head(av_frame_bfr_ft bfr) noexcept nogil:
     cdef av_frame_bfr_ft result = bfr
     while result.prev is not NULL:
         result = result.prev
     return result
 
-cdef av_frame_bfr_ft av_frame_bfr_get_tail(av_frame_bfr_ft bfr) nogil:
+cdef av_frame_bfr_ft av_frame_bfr_get_tail(av_frame_bfr_ft bfr) noexcept nogil:
     cdef av_frame_bfr_ft result = bfr
     while result.next is not NULL:
         result = result.next

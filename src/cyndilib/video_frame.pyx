@@ -242,9 +242,9 @@ cdef class VideoRecvFrame(VideoFrame):
 
     """
     def __cinit__(self, *args, **kwargs):
-        self.video_bfrs = av_frame_bfr_create(self.video_bfrs)
-        self.read_bfr = av_frame_bfr_create(self.video_bfrs)
-        self.write_bfr = av_frame_bfr_create(self.read_bfr)
+        self.video_bfrs = video_frame_bfr_create(self.video_bfrs)
+        self.read_bfr = video_frame_bfr_create(self.video_bfrs)
+        self.write_bfr = video_frame_bfr_create(self.read_bfr)
 
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
