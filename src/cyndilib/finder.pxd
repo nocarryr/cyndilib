@@ -75,6 +75,7 @@ cdef class Finder:
     cdef bint _initial_source_get
     cdef readonly Event finder_thread_running
     cdef readonly object finder_thread
+    cdef readonly bint is_open
     cdef Callback change_callback
 
     cpdef get_source_names(self)

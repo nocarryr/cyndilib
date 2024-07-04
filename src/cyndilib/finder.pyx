@@ -109,6 +109,7 @@ cdef class Finder:
     """Discovers |NDI| sources available on the network
 
     Attributes:
+        is_open (bool): ``True`` if the finder is open
         notify (Condition): A :class:`~.locks.Condition` to notify listeners
             when sources are added or removed
         num_sources (int): The current number of sources found
@@ -125,6 +126,7 @@ cdef class Finder:
         self.num_sources = 0
         self._initial_source_get = True
         self.build_finder()
+        self.is_open = False
         self.finder_thread = None
         self.finder_thread_running = Event()
         self.change_callback = Callback()
@@ -138,19 +140,32 @@ cdef class Finder:
     def open(self):
         """Starts the :attr:`finder_thread` and begins searching for sources
         """
+        if self.is_open:
+            return
         assert self.finder_thread is None
         self.finder_thread = FinderThread(self)
+        self.is_open = True
         self.finder_thread.start()
         self.finder_thread_running.wait()
 
     def close(self):
         """Closes the :attr:`finder_thread`
         """
+        if not self.is_open:
+            return
         assert self.finder_thread is not None
         t = self.finder_thread
         self.finder_thread = None
+        self.is_open = False
         t.stop()
         t.join()
+
+    def __enter__(self):
+        self.open()
+        return self
+
+    def __exit__(self, *args):
+        self.close()
 
     cpdef get_source_names(self):
         """Get the discovered sources as a ``list[str]``
@@ -166,9 +181,20 @@ cdef class Finder:
 
     def iter_sources(self):
         """Iterate over the current sources as :class:`Source` objects
+
+        This can also be done by iterating of the finder instance itself:
+
+        >>> with Finder() as finder:
+        ...     for source in finder:
+        ...         ...
+
+
         """
         with self.notify:
             yield from self.source_obj_map.values()
+
+    def __iter__(self):
+        yield from self.iter_sources()
 
     cpdef Source get_source(self, str name):
         """Get a :class:`Source` by its :attr:`~Source.name`
@@ -340,7 +366,7 @@ cdef class Finder:
         cdef NDIlib_find_create_t find_settings = [True, NULL, NULL]
         self.find_p = NDIlib_find_create_v2(&find_settings)
         if self.find_p == NULL:
-            raise MemoryError()
+            raise_mem_err()
         return 0
 
     cdef int __notify_acquire(self) except -1 nogil:
