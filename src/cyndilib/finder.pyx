@@ -175,6 +175,7 @@ cdef class Finder:
         """
         return self.source_obj_map.get(name)
 
+    # TODO: find a way around `except *` for this
     cdef NDIlib_source_t* _get_source_ptr(self, cpp_string name) except * nogil:
         cdef NDIlib_source_t* result
         if self.source_ptr_map.count(name) > 0:

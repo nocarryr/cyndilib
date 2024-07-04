@@ -259,7 +259,7 @@ cdef inline NDIlib_recv_color_format_e recv_format_cast(RecvColorFormat value) n
 cdef inline RecvColorFormat recv_format_uncast(NDIlib_recv_color_format_e value) noexcept nogil:
     return <RecvColorFormat>value
 
-cdef NDIlib_recv_create_v3_t* recv_t_create() except * nogil
-cdef NDIlib_recv_create_v3_t* recv_t_create_default() except * nogil
+cdef NDIlib_recv_create_v3_t* recv_t_create() except NULL nogil
+cdef NDIlib_recv_create_v3_t* recv_t_create_default() except NULL nogil
 cdef int recv_t_copy(NDIlib_recv_create_v3_t* src, NDIlib_recv_create_v3_t* dest) except -1 nogil
 cdef void recv_t_destroy(NDIlib_recv_create_v3_t* p) noexcept nogil

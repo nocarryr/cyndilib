@@ -314,10 +314,10 @@ cdef struct FourCCPackInfo:
     size_t[4] line_strides
     size_t[4] stride_offsets
 
-cdef FourCCPackInfo* fourcc_pack_info_create() except * nogil
+cdef FourCCPackInfo* fourcc_pack_info_create() except NULL nogil
 cdef void fourcc_pack_info_init(FourCCPackInfo* fourcc) noexcept nogil
 cdef int fourcc_pack_info_destroy(FourCCPackInfo* p) except -1 nogil
-cdef FourCCPackInfo* get_fourcc_pack_info(FourCC fourcc, size_t xres, size_t yres) except * nogil
+cdef FourCCPackInfo* get_fourcc_pack_info(FourCC fourcc, size_t xres, size_t yres) except NULL nogil
 cdef int calc_fourcc_pack_info(FourCCPackInfo* p) except -1 nogil
 
 cpdef enum FrameFormat:
@@ -331,12 +331,12 @@ cdef inline NDIlib_frame_format_type_e frame_format_cast(FrameFormat value) noex
 cdef inline FrameFormat frame_format_uncast(NDIlib_frame_format_type_e value) noexcept nogil:
     return <FrameFormat>value
 
-cdef NDIlib_source_t* source_create() except * nogil
+cdef NDIlib_source_t* source_create() except NULL nogil
 cdef void source_destroy(NDIlib_source_t* p) noexcept nogil
 
 
-cdef NDIlib_video_frame_v2_t* video_frame_create() except * nogil
-cdef NDIlib_video_frame_v2_t* video_frame_create_default() except * nogil
+cdef NDIlib_video_frame_v2_t* video_frame_create() except NULL nogil
+cdef NDIlib_video_frame_v2_t* video_frame_create_default() except NULL nogil
 cdef int video_frame_copy(
     NDIlib_video_frame_v2_t* src,
     NDIlib_video_frame_v2_t* dest
@@ -344,13 +344,13 @@ cdef int video_frame_copy(
 cdef void video_frame_destroy(NDIlib_video_frame_v2_t* p) noexcept nogil
 
 
-cdef NDIlib_audio_frame_v3_t* audio_frame_create() except * nogil
-cdef NDIlib_audio_frame_v3_t* audio_frame_create_default() except * nogil
+cdef NDIlib_audio_frame_v3_t* audio_frame_create() except NULL nogil
+cdef NDIlib_audio_frame_v3_t* audio_frame_create_default() except NULL nogil
 cdef int audio_frame_copy(
     NDIlib_audio_frame_v3_t* src,
     NDIlib_audio_frame_v3_t* dest
 ) except -1 nogil
 cdef void audio_frame_destroy(NDIlib_audio_frame_v3_t* p) noexcept nogil
 
-cdef NDIlib_metadata_frame_t* metadata_frame_create() except * nogil
+cdef NDIlib_metadata_frame_t* metadata_frame_create() except NULL nogil
 cdef void metadata_frame_destroy(NDIlib_metadata_frame_t* p) noexcept nogil

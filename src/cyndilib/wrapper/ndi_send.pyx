@@ -2,7 +2,7 @@
 cdef NDIlib_send_create_t* send_t_create(
     const char* ndi_name,
     const char* groups
-) except * nogil:
+) except NULL nogil:
     cdef NDIlib_send_create_t* p = <NDIlib_send_create_t*>mem_alloc(sizeof(NDIlib_send_create_t))
     if p is NULL:
         raise_mem_err()

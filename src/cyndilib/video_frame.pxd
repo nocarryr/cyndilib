@@ -89,18 +89,18 @@ cdef class VideoSendFrame(VideoFrame):
 
     cdef int _destroy(self) except -1
     cdef bint _write_available(self) except -1 nogil
-    cdef VideoSendFrame_item_s* _prepare_buffer_write(self) except * nogil
+    cdef VideoSendFrame_item_s* _prepare_buffer_write(self) except NULL nogil
     cdef int _set_buffer_write_complete(self, VideoSendFrame_item_s* item) except -1 nogil
-    cdef VideoSendFrame_item_s* _prepare_memview_write(self) except * nogil
+    cdef VideoSendFrame_item_s* _prepare_memview_write(self) except NULL nogil
     cdef int _write_data_to_memview(
         self,
         cnp.uint8_t[:] data,
         cnp.uint8_t[:] view,
         VideoSendFrame_item_s* item,
     ) except -1 nogil
-    cdef VideoSendFrame_item_s* _get_next_write_frame(self) except * nogil
+    cdef VideoSendFrame_item_s* _get_next_write_frame(self) except NULL nogil
     cdef bint _send_frame_available(self) except -1 nogil
-    cdef VideoSendFrame_item_s* _get_send_frame(self) except * nogil
+    cdef VideoSendFrame_item_s* _get_send_frame(self) except? NULL nogil
     cdef int _on_sender_write(self, VideoSendFrame_item_s* s_ptr) except -1 nogil
     cdef int _set_sender_status(self, bint attached) except -1 nogil
     cdef int _rebuild_array(self) except -1 nogil

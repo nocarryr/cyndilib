@@ -15,7 +15,7 @@ cdef int64_t posix_time_to_ndi(double ts) noexcept nogil:
     cdef long long result = llround(ts * 1e7)
     return result
 
-cdef NDIlib_source_t* source_create() except * nogil:
+cdef NDIlib_source_t* source_create() except NULL nogil:
     cdef NDIlib_source_t* p = <NDIlib_source_t*>mem_alloc(sizeof(NDIlib_source_t))
     if p is NULL:
         raise_mem_err()
@@ -27,13 +27,13 @@ cdef void source_destroy(NDIlib_source_t* p) noexcept nogil:
     if p is not NULL:
         mem_free(p)
 
-cdef NDIlib_video_frame_v2_t* video_frame_create() except * nogil:
+cdef NDIlib_video_frame_v2_t* video_frame_create() except NULL nogil:
     cdef NDIlib_video_frame_v2_t* p = <NDIlib_video_frame_v2_t*>mem_alloc(sizeof(NDIlib_video_frame_v2_t))
     if p is NULL:
         raise_mem_err()
     return p
 
-cdef NDIlib_video_frame_v2_t* video_frame_create_default() except * nogil:
+cdef NDIlib_video_frame_v2_t* video_frame_create_default() except NULL nogil:
     cdef NDIlib_video_frame_v2_t* p = video_frame_create()
     p.xres = 0
     p.yres = 0
@@ -78,13 +78,13 @@ cdef void video_frame_destroy(NDIlib_video_frame_v2_t* p) noexcept nogil:
     #     mem_free(p)
 
 
-cdef NDIlib_audio_frame_v3_t* audio_frame_create() except * nogil:
+cdef NDIlib_audio_frame_v3_t* audio_frame_create() except NULL nogil:
     cdef NDIlib_audio_frame_v3_t* p = <NDIlib_audio_frame_v3_t*>mem_alloc(sizeof(NDIlib_audio_frame_v3_t))
     if p is NULL:
         raise_mem_err()
     return p
 
-cdef NDIlib_audio_frame_v3_t* audio_frame_create_default() except * nogil:
+cdef NDIlib_audio_frame_v3_t* audio_frame_create_default() except NULL nogil:
     cdef NDIlib_audio_frame_v3_t* p = audio_frame_create()
     p.sample_rate = 48000
     p.no_channels = 2
@@ -121,7 +121,7 @@ cdef void audio_frame_destroy(NDIlib_audio_frame_v3_t* p) noexcept nogil:
     #     #     # p.p_metadata = NULL
     #     mem_free(p)
 
-cdef NDIlib_metadata_frame_t* metadata_frame_create() except * nogil:
+cdef NDIlib_metadata_frame_t* metadata_frame_create() except NULL nogil:
     cdef NDIlib_metadata_frame_t* p = <NDIlib_metadata_frame_t*>mem_alloc(sizeof(NDIlib_metadata_frame_t))
     if p is NULL:
         raise_mem_err()
@@ -138,7 +138,7 @@ cdef void metadata_frame_destroy(NDIlib_metadata_frame_t* p) noexcept nogil:
     #         p.p_data = NULL
     #     mem_free(p)
 
-cdef FourCCPackInfo* fourcc_pack_info_create() except * nogil:
+cdef FourCCPackInfo* fourcc_pack_info_create() except NULL nogil:
     cdef FourCCPackInfo* p = <FourCCPackInfo*>mem_alloc(sizeof(FourCCPackInfo))
     if p is NULL:
         raise_mem_err()
@@ -163,7 +163,7 @@ cdef int fourcc_pack_info_destroy(FourCCPackInfo* p) except -1 nogil:
     return 0
 
 
-cdef FourCCPackInfo* get_fourcc_pack_info(FourCC fourcc, size_t xres, size_t yres) except * nogil:
+cdef FourCCPackInfo* get_fourcc_pack_info(FourCC fourcc, size_t xres, size_t yres) except NULL nogil:
     cdef FourCCPackInfo* p = fourcc_pack_info_create()
     p.fourcc = fourcc
     p.xres = xres

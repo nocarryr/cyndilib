@@ -1,13 +1,13 @@
 
 __all__ = ('RecvBandwidth', 'RecvColorFormat')
 
-cdef NDIlib_recv_create_v3_t* recv_t_create() except * nogil:
+cdef NDIlib_recv_create_v3_t* recv_t_create() except NULL nogil:
     cdef NDIlib_recv_create_v3_t* p = <NDIlib_recv_create_v3_t*>mem_alloc(sizeof(NDIlib_recv_create_v3_t))
     if p is NULL:
         raise_mem_err()
     return p
 
-cdef NDIlib_recv_create_v3_t* recv_t_create_default() except * nogil:
+cdef NDIlib_recv_create_v3_t* recv_t_create_default() except NULL nogil:
     cdef NDIlib_recv_create_v3_t* p = recv_t_create()
     p.source_to_connect_to.p_ndi_name = NULL
     p.source_to_connect_to.p_url_address = NULL

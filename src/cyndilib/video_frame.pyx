@@ -646,7 +646,7 @@ cdef class VideoSendFrame(VideoFrame):
         cdef Py_ssize_t idx = frame_status_get_next_write_index(&(self.send_status))
         return idx != NULL_INDEX
 
-    cdef VideoSendFrame_item_s* _prepare_buffer_write(self) except * nogil:
+    cdef VideoSendFrame_item_s* _prepare_buffer_write(self) except NULL nogil:
         if self.buffer_write_item is not NULL:
             raise_withgil(PyExc_RuntimeError, 'buffer_write_item is not null')
         cdef VideoSendFrame_item_s* item = self._get_next_write_frame()
@@ -670,7 +670,7 @@ cdef class VideoSendFrame(VideoFrame):
         assert data.shape[0] == view.shape[0]
         self._write_data_to_memview(data, view, item)
 
-    cdef VideoSendFrame_item_s* _prepare_memview_write(self) except * nogil:
+    cdef VideoSendFrame_item_s* _prepare_memview_write(self) except NULL nogil:
         return self._prepare_buffer_write()
 
     cdef int _write_data_to_memview(
@@ -683,7 +683,7 @@ cdef class VideoSendFrame(VideoFrame):
         self._set_buffer_write_complete(item)
         return 0
 
-    cdef VideoSendFrame_item_s* _get_next_write_frame(self) except * nogil:
+    cdef VideoSendFrame_item_s* _get_next_write_frame(self) except NULL nogil:
         cdef Py_ssize_t idx = frame_status_get_next_write_index(&(self.send_status))
         if idx == NULL_INDEX:
             raise_withgil(PyExc_RuntimeError, 'no write frame available')
@@ -693,7 +693,7 @@ cdef class VideoSendFrame(VideoFrame):
     cdef bint _send_frame_available(self) except -1 nogil:
         return self._get_send_frame() != NULL
 
-    cdef VideoSendFrame_item_s* _get_send_frame(self) except * nogil:
+    cdef VideoSendFrame_item_s* _get_send_frame(self) except? NULL nogil:
         cdef Py_ssize_t idx = frame_status_get_next_read_index(&(self.send_status))
         if idx == NULL_INDEX:
             return NULL
