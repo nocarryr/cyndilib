@@ -98,6 +98,11 @@ jobs:
         if: matrix.os == 'ubuntu-latest'
         uses: docker/setup-qemu-action@v2
 
+      - uses: actions/setup-python@v5
+        with:
+          python-version: 3.8
+        if: runner.os == 'macOS' && runner.arch == 'ARM64'
+
       - name: Set cibuildwheel env
         id: cibuildwheel_env
         run: |
