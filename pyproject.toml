@@ -26,4 +26,4 @@ before-all = "apk add avahi-libs"
 
 [[tool.cibuildwheel.overrides]]
 select = "*-macosx*"
-dependency-versions = "./contraints-macosx.txt"
+dependency-versions = "./constraints-macosx.txt"
