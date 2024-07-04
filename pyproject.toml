@@ -14,7 +14,7 @@ test-command = [
     "python {project}/build_tests.py",
     "py.test {project}/tests/",
 ]
-test-skip = "cp37-*"
+test-skip = "cp38-macosx*"
 environment = {CI= "true", CYNDILIB_BUILD_PARALLEL= "auto"}
 
 [tool.cibuildwheel.linux]
