@@ -1,3 +1,4 @@
+cimport cython
 
 cdef int frame_status_init(SendFrame_status_s_ft* ptr) except -1 nogil:
     ptr.num_buffers = MAX_FRAME_BUFFERS
@@ -154,7 +155,8 @@ cdef Py_ssize_t frame_status_get_next_write_index(
     while True:
         if ptr.items[next_idx].write_available:
             return next_idx
-        next_idx = (next_idx + 1) % MAX_FRAME_BUFFERS
+        with cython.cdivision(True):
+            next_idx = (next_idx + 1) % MAX_FRAME_BUFFERS
         i += 1
         if i > MAX_FRAME_BUFFERS * 2:
             break
@@ -178,11 +180,13 @@ cdef Py_ssize_t frame_status_get_next_read_index(
 
     cdef Py_ssize_t idx = ptr.read_index, i = 0
     if idx == NULL_INDEX:
-        idx = (ptr.write_index - 1) % MAX_FRAME_BUFFERS
+        with cython.cdivision(True):
+            idx = (ptr.write_index - 1) % MAX_FRAME_BUFFERS
     while True:
         if ptr.items[idx].read_available:
             return idx
-        idx = (idx + 1) % MAX_FRAME_BUFFERS
+        with cython.cdivision(True):
+            idx = (idx + 1) % MAX_FRAME_BUFFERS
         i += 1
         if i > MAX_FRAME_BUFFERS * 2:
             break
