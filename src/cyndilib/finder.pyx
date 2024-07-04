@@ -11,8 +11,14 @@ __all__ = ('Source', 'Finder', 'FinderThreadWorker', 'FinderThread')
 cdef class Source:
     """Represents an |NDI| source
 
+    The source :attr:`name` is a combination of the sender's :attr:`host_name`
+    and a :attr:`stream_name` within the sender (as senders may send multiple streams).
+
+    The two names are concatenated within the :attr:`full name <name>` as
+    ``"<host_name> (<stream_name>)"``.
+
     Attributes:
-        name (str, readonly): The source name
+        name (str, readonly): The full source name as reported through the |NDI| library
         valid (bool, readonly): True if this source is currently tracked by the
             |NDI| library
     """
@@ -38,6 +44,28 @@ cdef class Source:
         obj.name = obj.cpp_name.decode('UTF-8')
         obj._set_ptr(ptr)
         return obj
+
+    @property
+    def host_name(self) -> str:
+        """The host name portion parsed from the source :attr:`name`
+        """
+        if not self.valid or self.name is None:
+            raise RuntimeError('Invalid source')
+        s = self.name.split('(')[0]
+        return s.rstrip(' ')
+
+    @property
+    def stream_name(self) -> str:
+        """The stream name portion parsed from the source :attr:`name`
+        """
+        if not self.valid or self.name is None:
+            raise RuntimeError('Invalid source')
+        l = self.name.split('(')[1:]
+        if len(l) > 1:
+            s = '('.join(l)
+        else:
+            s = l[0]
+        return s.rstrip(')')
 
     @property
     def program_tally(self):
