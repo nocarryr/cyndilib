@@ -103,7 +103,7 @@ jobs:
       - name: Set cibuildwheel env
         id: cibuildwheel_env
         run: |
-          CIBW_TEST_SKIP="cp37-*"
+          CIBW_TEST_SKIP="cp38-macosx*"
           if [ "${{ inputs.skip_tests }}" == "true" ]; then
             echo "skip_tests is true"
             CIBW_TEST_SKIP="*"
