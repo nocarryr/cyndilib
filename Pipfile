@@ -8,7 +8,7 @@ numpy = "*"
 cyndilib = {editable = true, path = "."}
 
 [dev-packages]
-cython = "*"
+cython = ">=3"
 ipython = "*"
 kivy = {extras = ["base"], version = "*"}
 pytest = "*"
