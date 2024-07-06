@@ -269,7 +269,8 @@ cdef class VideoRecvFrame(VideoFrame):
         cdef size_t bfr_len, size_in_bytes
         cdef bint is_empty
         cdef cnp.ndarray[cnp.uint8_t, ndim=1] frame_data
-        with self.read_lock:
+        self.read_lock._acquire(True, -1)
+        try:
             bfr_len = self.read_indices.size()
             is_empty = bfr_len == 0
             if not is_empty:
@@ -283,6 +284,8 @@ cdef class VideoRecvFrame(VideoFrame):
             if is_empty:
                 raise ValueError('Buffer empty')
             self.view_count += 1
+        finally:
+            self.read_lock._release()
 
         frame_data = self.current_frame_data
         self.bfr_shape[0] = frame_data.shape[0]
@@ -302,8 +305,9 @@ cdef class VideoRecvFrame(VideoFrame):
         buffer.suboffsets = NULL
 
     def __releasebuffer__(self, Py_buffer *buffer):
-        with self.read_lock:
-            self.view_count -= 1
+        self.read_lock._acquire(True, -1)
+        self.view_count -= 1
+        self.read_lock._release()
 
     def get_view_count(self):
         return self.view_count
@@ -315,8 +319,11 @@ cdef class VideoRecvFrame(VideoFrame):
         cdef cnp.uint8_t[:] read_data = self.current_frame_data
         cdef size_t ncols = all_frame_data.shape[1]
         if read_data.shape[0] != ncols:
-            with self.read_lock:
+            self.read_lock._acquire(True, -1)
+            try:
                 self.current_frame_data = np.zeros(ncols, dtype=np.uint8)
+            finally:
+                self.read_lock._release()
         return 0
 
     @cython.boundscheck(False)
@@ -356,7 +363,8 @@ cdef class VideoRecvFrame(VideoFrame):
         Returns the number of frames skipped
         """
         cdef size_t idx, max_remain, cur_size, num_skipped = 0
-        with self.read_lock:
+        self.read_lock._acquire(True, -1)
+        try:
             cur_size = self.read_indices.size()
             if not cur_size:
                 return
@@ -373,6 +381,8 @@ cdef class VideoRecvFrame(VideoFrame):
                     break
                 if self.read_indices.size() <= max_remain:
                     break
+        finally:
+            self.read_lock._release()
         return num_skipped
 
     @cython.boundscheck(False)
@@ -388,7 +398,8 @@ cdef class VideoRecvFrame(VideoFrame):
         cdef cnp.uint8_t[:,:] all_frame_data = self.all_frame_data
         cdef cnp.uint8_t[:] read_view = self.current_frame_data
         cdef bint valid = False
-        with self.read_lock:
+        self.read_lock._acquire(True, -1)
+        try:
             vc = self.view_count
             self.view_count += 1
             try:
@@ -407,6 +418,8 @@ cdef class VideoRecvFrame(VideoFrame):
             finally:
                 self.view_count -= 1
             return valid
+        finally:
+            self.read_lock._release()
 
     cdef size_t _get_next_write_index(self) except? -1 nogil:
         cdef size_t idx, niter, result, bfr_len = self.read_indices.size()
@@ -436,12 +449,15 @@ cdef class VideoRecvFrame(VideoFrame):
 
         if arr.shape[1] == ncols:
             return 0
-        with self.read_lock:
+        self.read_lock._acquire(True, -1)
+        try:
             self.all_frame_data = np.zeros((self.max_buffers, ncols), dtype=np.uint8)
             self.read_indices.clear()
             self.read_indices_set.clear()
             if self.view_count == 0:
                 self.current_frame_data = np.zeros(ncols, dtype=np.uint8)
+        finally:
+            self.read_lock._release()
         return 0
 
     cdef int _prepare_incoming(self, NDIlib_recv_instance_t recv_ptr) except -1:
@@ -449,11 +465,14 @@ cdef class VideoRecvFrame(VideoFrame):
         self._recalc_pack_info()
         self._check_write_array_size()
         if self.read_indices.size() == self.max_buffers:
-            with self.read_lock:
+            self.read_lock._acquire(True, -1)
+            try:
                 if self.read_indices.size() == self.max_buffers:
                     bfr_idx = self.read_indices.front()
                     self.read_indices.pop_front()
                     self.read_indices_set.erase(bfr_idx)
+            finally:
+                self.read_lock._release()
         return 0
 
     cdef int _process_incoming(self, NDIlib_recv_instance_t recv_ptr) except -1:

@@ -235,11 +235,11 @@ cdef class Lock:
         return self._release()
 
     def __enter__(self):
-        self.acquire()
+        self._acquire(True, -1)
         return self
 
     def __exit__(self, *args):
-        self.release()
+        self._release()
 
     def __repr__(self):
         return '<{self.__class__} {self.name} (locked={self.locked}) at {id}>'.format(self=self, id=id(self))
@@ -565,16 +565,20 @@ cdef class Event:
     cpdef set(self):
         """Set the internal flag to ``True``, awakening any threads waiting for it
         """
-        with self._cond:
+        self._cond._acquire(True, -1)
+        try:
             self._flag = True
             self._cond.notify_all()
+        finally:
+            self._cond._release()
 
     cpdef clear(self):
         """Reset the internal flag to ``False``.  After this, any threads making
         a call to :meth:`wait` will block until the event is :meth:`set` again
         """
-        with self._cond:
-            self._flag = False
+        self._cond._acquire(True, -1)
+        self._flag = False
+        self._cond._release()
 
     cpdef bint wait(self, object timeout=None):
         """Block until the internal flag is ``True`` by a call to :meth:`set`
@@ -589,8 +593,11 @@ cdef class Event:
             bool: ``True`` if the flag was set before a timeout, ``False`` otherwise
         """
         cdef bint signaled
-        with self._cond:
+        self._cond._acquire(True, -1)
+        try:
             signaled = self._flag
             if not signaled:
                 signaled = self._cond.wait(timeout)
             return signaled
+        finally:
+            self._cond._release()

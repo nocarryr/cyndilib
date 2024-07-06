@@ -277,9 +277,12 @@ cdef class Receiver:
         if value is self._connected:
             return 0
         with gil:
-            with self.connection_lock:
+            self.connection_lock._acquire(True, -1)
+            try:
                 self._connected = value
-                self.connection_notify.notify_all()
+                self.connection_notify._notify_all()
+            finally:
+                self.connection_lock._release()
         return 0
 
     cdef bint _wait_for_connect(self, float timeout) except -1 nogil:
@@ -289,8 +292,11 @@ cdef class Receiver:
             return True
         cdef bint r
         with gil:
-            with self.connection_lock:
+            self.connection_lock._acquire(True, -1)
+            try:
                 self.connection_lock.wait(timeout)
+            finally:
+                self.connection_lock._release()
         return self._connected
 
 

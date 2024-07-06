@@ -223,11 +223,14 @@ cdef class AudioRecvFrame(AudioFrame):
         cdef cnp.float32_t[:,:] result_view
         cdef cnp.int64_t[:] timestamp_view
         cdef cnp.float32_t[:,:,:] all_frame_data
-        with self.read_lock:
+        self.read_lock._acquire(True, -1)
+        try:
             bfr_len = self.read_indices.size()
             if not bfr_len:
                 return None
             all_frame_data = self.all_frame_data
+        finally:
+            self.read_lock._release()
 
         cdef size_t nrows = all_frame_data.shape[1]
         cdef size_t ncols = all_frame_data.shape[2] * bfr_len
@@ -303,12 +306,15 @@ cdef class AudioRecvFrame(AudioFrame):
         if not bfr_len:
             return None
 
-        with self.read_lock:
+        self.read_lock._acquire(True, -1)
+        try:
             bfr_idx = self.read_indices.front()
             if self.view_count == 0:
                 if self._check_read_array_size():
                     arr = self.current_frame_data
                 advance = True
+        finally:
+            self.read_lock._release()
 
         with nogil:
             timestamp = self._fill_read_data(
@@ -329,9 +335,12 @@ cdef class AudioRecvFrame(AudioFrame):
         cdef size_t ncols, nrows, bfr_idx
         cdef int64_t timestamp
         cdef bint advance = True
-        with self.read_lock:
+        self.read_lock._acquire(True, -1)
+        try:
             ncols, nrows = self.get_read_shape()
             bfr_idx = self.read_indices.front()
+        finally:
+            self.read_lock._release()
 
         if dest.shape[0] != ncols or dest.shape[1] != nrows:
             raise IndexError('Array shape does not match')
@@ -357,8 +366,11 @@ cdef class AudioRecvFrame(AudioFrame):
         """
         cdef cnp.float32_t[:,:,:] all_frame_data = self.all_frame_data
         cdef size_t bfr_len, nbfrs_filled, col_idx
-        with self.read_lock:
+        self.read_lock._acquire(True, -1)
+        try:
             bfr_len = self.read_indices.size()
+        finally:
+            self.read_lock._release()
 
         with nogil:
             nbfrs_filled, col_idx = self._fill_all_read_data(
@@ -374,9 +386,12 @@ cdef class AudioRecvFrame(AudioFrame):
         cdef size_t nrows = all_frame_data.shape[1]
         cdef size_t ncols = all_frame_data.shape[2]
         if read_data.shape[0] != nrows or read_data.shape[1] != ncols:
-            with self.read_lock:
+            self.read_lock._acquire(True, -1)
+            try:
                 self.current_frame_data = np.zeros((nrows, ncols), dtype=np.float32)
                 return True
+            finally:
+                self.read_lock._release()
         return False
 
     @cython.boundscheck(False)
@@ -403,7 +418,8 @@ cdef class AudioRecvFrame(AudioFrame):
         cdef size_t bfr_len, bfr_idx
         cdef bint is_empty
         cdef cnp.ndarray[cnp.float32_t, ndim=2] frame_data = self.current_frame_data
-        with self.read_lock:
+        self.read_lock._acquire(True, -1)
+        try:
             bfr_len = self.read_indices.size()
             is_empty = bfr_len == 0
             if not is_empty:
@@ -418,6 +434,8 @@ cdef class AudioRecvFrame(AudioFrame):
             if is_empty:
                 raise ValueError('Buffer empty')
             self.view_count += 1
+        finally:
+            self.read_lock._release()
 
         cdef size_t i, arr_size, ndim = frame_data.ndim
         arr_size =  frame_data.shape[0] * frame_data.shape[1]
@@ -444,8 +462,11 @@ cdef class AudioRecvFrame(AudioFrame):
         buffer.suboffsets = NULL
 
     def __releasebuffer__(self, Py_buffer *buffer):
-        with self.read_lock:
+        self.read_lock._acquire(True, -1)
+        try:
             self.view_count -= 1
+        finally:
+            self.read_lock._release()
 
     cdef size_t _get_next_write_index(self) except? -1 nogil:
         cdef size_t result, niter, bfr_len = self.read_indices.size()
@@ -477,25 +498,31 @@ cdef class AudioRecvFrame(AudioFrame):
         if arr.shape[1] == nrows and arr.shape[2] == ncols:
             return 0
 
-        with self.read_lock:
+        self.read_lock._acquire(True, -1)
+        try:
             self.all_frame_data = np.zeros((self.max_buffers, nrows, ncols), dtype=np.float32)
             self.read_indices.clear()
             self.read_indices_set.clear()
             self.frame_timestamps.clear()
             if self.view_count == 0:
                 self.current_frame_data = np.zeros((nrows, ncols), dtype=np.float32)
+        finally:
+            self.read_lock._release()
         return 0
 
     cdef int _prepare_incoming(self, NDIlib_recv_instance_t recv_ptr) except -1:
         cdef size_t bfr_idx
         self._check_write_array_size()
         if self.read_indices.size() == self.max_buffers:
-            with self.read_lock:
+            self.read_lock._acquire(True, -1)
+            try:
                 if self.read_indices.size() == self.max_buffers:
                     bfr_idx = self.read_indices.front()
                     self.read_indices.pop_front()
                     self.read_indices_set.erase(bfr_idx)
                     self.frame_timestamps.pop_front()
+            finally:
+                self.read_lock._release()
         return 0
 
     @cython.boundscheck(False)
