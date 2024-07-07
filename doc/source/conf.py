@@ -52,6 +52,11 @@ rst_epilog = """
 
 """
 
+codeautolink_custom_blocks = {
+    "python3": None,
+    "pycon3": "sphinx_codeautolink.clean_pycon",
+}
+
 # -- Options for HTML output -------------------------------------------------
 # https://www.sphinx-doc.org/en/master/usage/configuration.html#options-for-html-output
 

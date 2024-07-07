@@ -12,6 +12,7 @@ Welcome to cyndilib's documentation!
    :caption: Contents:
 
    overview
+   guide/index.rst
    examples
    reference/index.rst
    reference/glossary.rst
