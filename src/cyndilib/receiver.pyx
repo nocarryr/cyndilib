@@ -102,7 +102,7 @@ cdef class Receiver:
         video_frame (VideoRecvFrame):
         audio_frame (AudioRecvFrame):
         metadata_frame (MetadataRecvFrame):
-        framesync (FrameSync):
+        frame_sync (FrameSync):
 
     """
     def __cinit__(self, *args, **kwargs):
