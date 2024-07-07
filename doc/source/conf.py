@@ -27,6 +27,7 @@ extensions = [
     'sphinx.ext.viewcode',
     'sphinx.ext.intersphinx',
     'sphinx.ext.extlinks',
+    'sphinx_codeautolink',
 ]
 
 
