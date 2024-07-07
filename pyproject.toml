@@ -7,12 +7,14 @@ build = "cp3{7,8,9,10,11}-*"
 skip = "*-musllinux*"
 test-requires = [
     "pytest",
+    "pytest-doctestplus",
     "psutil",
     "cython>=0.29.32",
 ]
 test-command = [
     "python {project}/build_tests.py",
     "py.test {project}/tests/",
+    "py.test {project}/doc/",
 ]
 test-skip = "cp38-macosx*"
 environment = {CI= "true", CYNDILIB_BUILD_PARALLEL= "auto"}
