@@ -17,6 +17,8 @@ snakeviz = "*"
 sphinx = "*"
 furo = "*"
 psutil = "*"
+pytest-doctestplus = "*"
+sphinx-codeautolink = "*"
 
 [requires]
 python_version = "3.10"
