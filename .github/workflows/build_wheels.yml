@@ -142,13 +142,13 @@ jobs:
       needs: [test_inplace, build_wheels]
       runs-on: ubuntu-latest
       if: ${{ inputs.allow_deploy }}
+      permissions:
+        id-token: write
       steps:
       - uses: actions/download-artifact@v3
         with:
           name: artifact
           path: dist
 
-      - uses: pypa/gh-action-pypi-publish@release/v1
-        with:
-          password: ${{ secrets.PYPI_PASSWORD }}
-          verbose: true
+      - name: Publish to PyPI
+        uses: pypa/gh-action-pypi-publish@release/v1
