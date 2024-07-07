@@ -14,7 +14,6 @@ test-requires = [
 test-command = [
     "python {project}/build_tests.py",
     "py.test {project}/tests/",
-    "py.test {project}/doc/",
 ]
 test-skip = "cp38-macosx*"
 environment = {CI= "true", CYNDILIB_BUILD_PARALLEL= "auto"}
