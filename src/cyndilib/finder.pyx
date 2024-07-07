@@ -463,6 +463,7 @@ class FinderThread(threading.Thread):
     # cdef Finder finder
     def __init__(self, Finder finder):
         super().__init__()
+        self.daemon = True
         self.finder = Finder
         self.worker = FinderThreadWorker(finder)
         self.running = False
