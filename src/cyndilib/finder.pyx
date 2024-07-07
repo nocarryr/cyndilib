@@ -127,8 +127,8 @@ cdef class Source:
         return 0
 
     def __repr__(self):
-        s = '' if self.valid else '(invalid)'
-        return f'<Source: {s} "{self}">'
+        s = ' ' if self.valid else ' (invalid) '
+        return f'<Source:{s}"{self}">'
     def __str__(self):
         return self.name
 
