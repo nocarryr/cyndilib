@@ -1,12 +1,11 @@
 from __future__ import annotations
 
-from typing import NamedTuple
+from typing import NamedTuple, TYPE_CHECKING
 from typing_extensions import Self
 import enum
 import time
 import subprocess
 import shlex
-from fractions import Fraction
 
 import click
 
@@ -14,7 +13,11 @@ from cyndilib.wrapper.ndi_structs import FourCC
 from cyndilib.wrapper.ndi_recv import RecvColorFormat, RecvBandwidth
 from cyndilib.video_frame import VideoFrameSync
 from cyndilib.receiver import Receiver
-from cyndilib.finder import Finder, Source
+from cyndilib.finder import Finder
+if TYPE_CHECKING:
+    from fractions import Fraction
+    from cyndilib.finder import Source
+    from cyndilib.framesync import FrameSync
 
 
 FF_PLAY = '{ffplay} -video_size {xres}x{yres} -pixel_format {pix_fmt} -f rawvideo -i pipe:'
@@ -74,29 +77,6 @@ class Options(NamedTuple):
     """Name/Path of the ``ffplay`` executable"""
 
 
-def build_receiver(options: Options, source: Source) -> Receiver:
-    """Create the receiver and video frame, then connect it to the given
-    ndi source
-    """
-    receiver = Receiver(
-        color_format=options.recv_fmt.value,
-        bandwidth=options.recv_bandwidth.value,
-    )
-    vf = VideoFrameSync()
-    receiver.frame_sync.set_video_frame(vf)
-    receiver.set_source(source)
-
-    click.echo(f'connecting to "{source.name}"...')
-    i = 0
-    while not receiver.is_connected():
-        if i > 30:
-            raise Exception('timeout waiting for connection')
-        time.sleep(.5)
-        i += 1
-    click.echo('connected')
-    return receiver
-
-
 def get_source(finder: Finder, name: str) -> Source:
     """Use the Finder to search for an NDI source by name using either its
     full name or its :attr:`~cyndilib.finder.Source.stream_name`
@@ -134,8 +114,25 @@ def play(options: Options) -> None:
     with Finder() as finder:
         source = get_source(finder, options.sender_name)
 
-        receiver = build_receiver(options, source)
-        vf = receiver.frame_sync.video_frame
+        # Build the receiver and video frame
+        receiver = Receiver(
+            color_format=options.recv_fmt.value,
+            bandwidth=options.recv_bandwidth.value,
+        )
+        vf = VideoFrameSync()
+        frame_sync: FrameSync = receiver.frame_sync
+        frame_sync.set_video_frame(vf)
+
+        # Set the receiver source and wait for it to connect
+        receiver.set_source(source)
+        click.echo(f'connecting to "{source.name}"...')
+        i = 0
+        while not receiver.is_connected():
+            if i > 30:
+                raise Exception('timeout waiting for connection')
+            time.sleep(.5)
+            i += 1
+        click.echo('connected')
 
         proc: subprocess.Popen|None = None
 
