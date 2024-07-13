@@ -60,20 +60,20 @@ ctypedef fused SendFrame_item_s_ft:
 
 
 cdef int frame_status_init(SendFrame_status_s_ft* ptr) except -1 nogil
-cdef int frame_status_free(SendFrame_status_s_ft* ptr) except -1 nogil
+cdef void frame_status_free(SendFrame_status_s_ft* ptr) noexcept nogil
 cdef int frame_status_copy_frame_ptr(
     SendFrame_status_s_ft* ptr,
     NDIlib_frame_type_ft* frame_ptr,
 ) except -1 nogil
 cdef int frame_status_alloc_p_data(SendFrame_status_s_ft* ptr) except -1 nogil
-cdef int frame_status_set_send_ready(SendFrame_status_s_ft* ptr) except -1 nogil
-cdef int frame_status_set_send_complete(
+cdef void frame_status_set_send_ready(SendFrame_status_s_ft* ptr) noexcept nogil
+cdef void frame_status_set_send_complete(
     SendFrame_status_s_ft* ptr,
     Py_ssize_t idx,
-) except -1 nogil
+) noexcept nogil
 cdef Py_ssize_t frame_status_get_next_write_index(
     SendFrame_status_s_ft* ptr,
-) except? -1 nogil
+) noexcept nogil
 cdef Py_ssize_t frame_status_get_next_read_index(
     SendFrame_status_s_ft* ptr,
-) except? -1 nogil
+) noexcept nogil

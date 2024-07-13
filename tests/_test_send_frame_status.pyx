@@ -110,6 +110,13 @@ def assert_not_equal(a, b, msg=''):
     if a == b:
         raise AssertionError(f'assert {a} != {b}{msg}')
 
+def assert_in_range(a, vmin, vmax, msg=''):
+    if len(msg):
+        msg = f' ({msg})'
+    if a < vmin or a > vmax:
+        raise AssertionError(f'assert {vmin} <= {a} <= {vmax})')
+
+
 def test_indexing():
     cdef VideoSendFrame_status_s vid_s
     cdef VideoSendFrame_status_s* vid_ptr = &vid_s
@@ -121,11 +128,23 @@ def test_indexing():
     _test_indexing(vid_ptr)
     _test_indexing(aud_ptr)
 
+
+cdef _check_next_ix_err_result(SendFrame_status_s_ft* s_ptr):
+    cdef Py_ssize_t tmp
+    tmp = frame_status_get_next_write_index(s_ptr)
+    if tmp != NULL_INDEX:
+        assert_in_range(tmp, 0, MAX_FRAME_BUFFERS-1)
+    tmp = frame_status_get_next_read_index(s_ptr)
+    if tmp != NULL_INDEX:
+        assert_in_range(tmp, 0, MAX_FRAME_BUFFERS-1)
+
+
 cdef _test_indexing(SendFrame_status_s_ft* s_ptr):
     cdef Py_ssize_t max_iter = s_ptr.data.num_buffers * 8, i
     cdef Py_ssize_t write_index=0, read_index=NULL_INDEX
 
     for i in range(max_iter):
+        _check_next_ix_err_result(s_ptr)
         # print(f'loop_start: {i}')
         assert_equal(write_index, s_ptr.data.write_index)
         assert_equal(read_index, s_ptr.data.read_index)
@@ -136,6 +155,7 @@ cdef _test_indexing(SendFrame_status_s_ft* s_ptr):
 
         # print('set_send_ready')
         frame_status_set_send_ready(s_ptr)
+        _check_next_ix_err_result(s_ptr)
         read_index = write_index
         write_index += 1
         if write_index >= s_ptr.data.num_buffers:
@@ -149,6 +169,7 @@ cdef _test_indexing(SendFrame_status_s_ft* s_ptr):
 
         # print('set_send_complete')
         frame_status_set_send_complete(s_ptr, read_index)
+        _check_next_ix_err_result(s_ptr)
         read_index = NULL_INDEX
         assert_equal(write_index, s_ptr.data.write_index)
         assert_equal(read_index, s_ptr.data.read_index)

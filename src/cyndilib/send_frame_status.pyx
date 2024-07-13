@@ -37,33 +37,30 @@ cdef int frame_status_item_init(SendFrame_item_s_ft* ptr) except -1 nogil:
     return 0
 
 
-cdef int frame_status_free(SendFrame_status_s_ft* ptr) except -1 nogil:
+cdef void frame_status_free(SendFrame_status_s_ft* ptr) noexcept nogil:
     cdef size_t i
     for i in range(MAX_FRAME_BUFFERS):
         frame_status_item_free(&(ptr.items[i]))
     ptr.data.write_index = 0
     ptr.data.read_index = NULL_INDEX
-    return 0
 
 
-cdef int frame_status_item_free(SendFrame_item_s_ft* ptr) except -1 nogil:
+cdef void frame_status_item_free(SendFrame_item_s_ft* ptr) noexcept nogil:
     if ptr.frame_ptr is NULL:
-        return 0
+        return
     frame_status_item_free_p_data(ptr)
     NDIlib_frame_type_ft_free(ptr.frame_ptr)
     # mem_free(ptr.frame_ptr)
     ptr.frame_ptr = NULL
-    return 0
 
 
-cdef int NDIlib_frame_type_ft_free(NDIlib_frame_type_ft* frame_ptr) except -1 nogil:
+cdef void NDIlib_frame_type_ft_free(NDIlib_frame_type_ft* frame_ptr) noexcept nogil:
     if NDIlib_frame_type_ft is NDIlib_video_frame_v2_t:
         video_frame_destroy(frame_ptr)
     elif NDIlib_frame_type_ft is NDIlib_audio_frame_v3_t:
         audio_frame_destroy(frame_ptr)
     else:
         pass
-    return 0
 
 
 cdef int frame_status_copy_frame_ptr(
@@ -129,28 +126,26 @@ cdef int frame_status_item_alloc_p_data(
     ptr.data.alloc_size = total_size
     return 0
 
-cdef int frame_status_item_free_p_data(SendFrame_item_s_ft* ptr) except -1 nogil:
+cdef void frame_status_item_free_p_data(SendFrame_item_s_ft* ptr) noexcept nogil:
     if ptr.frame_ptr.p_data is NULL:
-        return 0
+        return
     if ptr.data.read_available:
         ptr.frame_ptr == NULL
     else:
         mem_free(ptr.frame_ptr.p_data)
         ptr.frame_ptr.p_data = NULL
     ptr.data.alloc_size = 0
-    return 0
 
-cdef int frame_status_set_send_ready(SendFrame_status_s_ft* ptr) except -1 nogil:
+cdef void frame_status_set_send_ready(SendFrame_status_s_ft* ptr) noexcept nogil:
     cdef Py_ssize_t idx = ptr.data.write_index
     ptr.items[idx].data.write_available = False
     ptr.items[idx].data.read_available = True
     ptr.data.read_index = idx
     ptr.data.write_index = frame_status_get_next_write_index(ptr)
-    return 0
 
 cdef Py_ssize_t frame_status_get_next_write_index(
     SendFrame_status_s_ft* ptr,
-) except? -1 nogil:
+) noexcept nogil:
     cdef Py_ssize_t next_idx = ptr.data.write_index, i = 0
     while True:
         if ptr.items[next_idx].data.write_available:
@@ -162,21 +157,20 @@ cdef Py_ssize_t frame_status_get_next_write_index(
             break
     return NULL_INDEX
 
-cdef int frame_status_set_send_complete(
+cdef void frame_status_set_send_complete(
     SendFrame_status_s_ft* ptr,
     Py_ssize_t idx,
-) except -1 nogil:
+) noexcept nogil:
 
     ptr.items[idx].data.write_available = True
     ptr.items[idx].data.read_available = False
     if ptr.data.read_index == idx:
         ptr.data.read_index = frame_status_get_next_read_index(ptr)
-    return 0
 
 
 cdef Py_ssize_t frame_status_get_next_read_index(
     SendFrame_status_s_ft* ptr,
-) except? -1 nogil:
+) noexcept nogil:
 
     cdef Py_ssize_t idx = ptr.data.read_index, i = 0
     if idx == NULL_INDEX:
