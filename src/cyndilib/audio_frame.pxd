@@ -99,24 +99,24 @@ cdef class AudioSendFrame(AudioFrame):
 
     cpdef set_max_num_samples(self, size_t n)
     cdef int _destroy(self) except -1
-    cdef bint _write_available(self) except -1 nogil
-    cdef int _set_shape_from_memview(
+    cdef bint _write_available(self) noexcept nogil
+    cdef void _set_shape_from_memview(
         self,
         AudioSendFrame_item_s* item,
         cnp.float32_t[:,:] data,
-    ) except -1 nogil
+    ) noexcept nogil
     cdef AudioSendFrame_item_s* _prepare_buffer_write(self) except NULL nogil
-    cdef int _set_buffer_write_complete(self, AudioSendFrame_item_s* item) except -1 nogil
+    cdef void _set_buffer_write_complete(self, AudioSendFrame_item_s* item) noexcept nogil
     cdef AudioSendFrame_item_s* _prepare_memview_write(self) except NULL nogil
-    cdef int _write_data_to_memview(
+    cdef void _write_data_to_memview(
         self,
         cnp.float32_t[:,:] data,
         cnp.float32_t[:,:] view,
         AudioSendFrame_item_s* item,
-    ) except -1 nogil
+    ) noexcept nogil
     cdef AudioSendFrame_item_s* _get_next_write_frame(self) except NULL nogil
-    cdef bint _send_frame_available(self) except -1 nogil
-    cdef AudioSendFrame_item_s* _get_send_frame(self) except? NULL nogil
-    cdef int _on_sender_write(self, AudioSendFrame_item_s* s_ptr) except -1 nogil
+    cdef bint _send_frame_available(self) noexcept nogil
+    cdef AudioSendFrame_item_s* _get_send_frame(self) except NULL nogil
+    cdef void _on_sender_write(self, AudioSendFrame_item_s* s_ptr) noexcept nogil
     cdef int _set_sender_status(self, bint attached) except -1 nogil
     cdef int _rebuild_array(self) except -1 nogil

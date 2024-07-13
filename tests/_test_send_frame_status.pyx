@@ -45,13 +45,13 @@ def set_send_frame_send_complete(object frame):
     cdef AudioSendFrame_item_s* aitem
     if isinstance(frame, VideoSendFrame):
         vf = frame
+        assert vf._send_frame_available()
         vitem = vf._get_send_frame()
-        assert vitem is not NULL
         vf._on_sender_write(vitem)
     elif isinstance(frame, AudioSendFrame):
         af = frame
+        assert af._send_frame_available()
         aitem = af._get_send_frame()
-        assert aitem is not NULL
         af._on_sender_write(aitem)
     else:
         raise Exception()
@@ -68,12 +68,14 @@ def write_audio_frame_memview(AudioSendFrame af, cnp.float32_t[:,:] data):
 
 
 def get_audio_frame_data(AudioSendFrame af, cnp.float32_t[:,:] dest_arr):
+    assert af._send_frame_available()
     cdef AudioSendFrame_item_s* item = af._get_send_frame()
     assert item is not NULL
     cdef float32_t* flt_ptr = <float32_t*>item.frame_ptr.p_data
     unpack_audio(&flt_ptr, dest_arr)
 
 def get_video_frame_data(VideoSendFrame vf, cnp.uint8_t[:] dest_arr):
+    assert vf._send_frame_available()
     cdef VideoSendFrame_item_s* item = vf._get_send_frame()
     assert item is not NULL
     assert dest_arr.shape[0] == vf.pack_info.total_size

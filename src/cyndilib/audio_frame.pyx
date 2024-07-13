@@ -733,16 +733,16 @@ cdef class AudioSendFrame(AudioFrame):
     def get_write_available(self):
         return self._write_available()
 
-    cdef bint _write_available(self) except -1 nogil:
+    cdef bint _write_available(self) noexcept nogil:
         cdef Py_ssize_t idx = frame_status_get_next_write_index(&(self.send_status))
         return idx != NULL_INDEX
 
-    cdef int _set_shape_from_memview(
+    cdef void _set_shape_from_memview(
         self,
         AudioSendFrame_item_s* item,
         cnp.float32_t[:,:] data,
-    ) except -1 nogil:
-        return 0
+    ) noexcept nogil:
+        return
 
     cdef AudioSendFrame_item_s* _prepare_buffer_write(self) except NULL nogil:
         if self.buffer_write_item is not NULL:
@@ -753,13 +753,12 @@ cdef class AudioSendFrame(AudioFrame):
         self.buffer_write_item = item
         return item
 
-    cdef int _set_buffer_write_complete(self, AudioSendFrame_item_s* item) except -1 nogil:
+    cdef void _set_buffer_write_complete(self, AudioSendFrame_item_s* item) noexcept nogil:
         cdef AudioSendFrame_item_s* cur_item = self.buffer_write_item
         if cur_item is not NULL and cur_item.data.idx == item.data.idx:
             self.buffer_write_item = NULL
         self.send_status.data.read_index = item.data.idx
         frame_status_set_send_ready(&(self.send_status))
-        return 0
 
     def write_data(self, cnp.float32_t[:,:] data):
         cdef AudioSendFrame_item_s* item = self._prepare_memview_write()
@@ -770,17 +769,16 @@ cdef class AudioSendFrame(AudioFrame):
     cdef AudioSendFrame_item_s* _prepare_memview_write(self) except NULL nogil:
         return self._prepare_buffer_write()
 
-    cdef int _write_data_to_memview(
+    cdef void _write_data_to_memview(
         self,
         cnp.float32_t[:,:] data,
         cnp.float32_t[:,:] view,
         AudioSendFrame_item_s* item
-    ) except -1 nogil:
+    ) noexcept nogil:
         self._set_shape_from_memview(item, data)
         cdef size_t nrows = item.data.shape[0], ncols = item.data.shape[1]
         view[...] = data
         self._set_buffer_write_complete(item)
-        return 0
 
     cdef AudioSendFrame_item_s* _get_next_write_frame(self) except NULL nogil:
         cdef Py_ssize_t idx = frame_status_get_next_write_index(&(self.send_status))
@@ -789,18 +787,18 @@ cdef class AudioSendFrame(AudioFrame):
         self.send_status.data.write_index = idx
         return &(self.send_status.items[idx])
 
-    cdef bint _send_frame_available(self) except -1 nogil:
-        return self._get_send_frame() != NULL
+    cdef bint _send_frame_available(self) noexcept nogil:
+        cdef Py_ssize_t idx = frame_status_get_next_read_index(&(self.send_status))
+        return idx != NULL_INDEX
 
-    cdef AudioSendFrame_item_s* _get_send_frame(self) except? NULL nogil:
+    cdef AudioSendFrame_item_s* _get_send_frame(self) except NULL nogil:
         cdef Py_ssize_t idx = frame_status_get_next_read_index(&(self.send_status))
         if idx == NULL_INDEX:
-            return NULL
+            raise_withgil(PyExc_IndexError, 'no read index available')
         return &(self.send_status.items[idx])
 
-    cdef int _on_sender_write(self, AudioSendFrame_item_s* s_ptr) except -1 nogil:
+    cdef void _on_sender_write(self, AudioSendFrame_item_s* s_ptr) noexcept nogil:
         frame_status_set_send_complete(&(self.send_status), s_ptr.data.idx)
-        return 0
 
     cdef int _set_sender_status(self, bint attached) except -1 nogil:
         if attached:
