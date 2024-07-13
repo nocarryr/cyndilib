@@ -117,6 +117,7 @@ cdef class AudioSendFrame(AudioFrame):
     cdef AudioSendFrame_item_s* _get_next_write_frame(self) except NULL nogil
     cdef bint _send_frame_available(self) noexcept nogil
     cdef AudioSendFrame_item_s* _get_send_frame(self) except NULL nogil
+    cdef AudioSendFrame_item_s* _get_send_frame_noexcept(self) noexcept nogil
     cdef void _on_sender_write(self, AudioSendFrame_item_s* s_ptr) noexcept nogil
     cdef int _set_sender_status(self, bint attached) except -1 nogil
     cdef int _rebuild_array(self) except -1 nogil

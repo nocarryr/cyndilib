@@ -797,6 +797,16 @@ cdef class AudioSendFrame(AudioFrame):
             raise_withgil(PyExc_IndexError, 'no read index available')
         return &(self.send_status.items[idx])
 
+    cdef AudioSendFrame_item_s* _get_send_frame_noexcept(self) noexcept nogil:
+        """Version of :meth:`_get_send_frame` that does NOT check if an
+        index is available
+
+        :meth:`_send_frame_available` must be checked before calling this
+        or bad things could happen
+        """
+        cdef Py_ssize_t idx = frame_status_get_next_read_index(&(self.send_status))
+        return &(self.send_status.items[idx])
+
     cdef void _on_sender_write(self, AudioSendFrame_item_s* s_ptr) noexcept nogil:
         frame_status_set_send_complete(&(self.send_status), s_ptr.data.idx)
 
