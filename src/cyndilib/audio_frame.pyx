@@ -35,9 +35,9 @@ cdef class AudioFrame:
     def sample_rate(self, size_t value):
         self._set_sample_rate(value)
 
-    cdef int _get_sample_rate(self) nogil:
+    cdef int _get_sample_rate(self) noexcept nogil:
         return self.ptr.sample_rate
-    cdef void _set_sample_rate(self, int value) nogil:
+    cdef void _set_sample_rate(self, int value) noexcept nogil:
         self.ptr.sample_rate = value
 
     @property
@@ -49,9 +49,9 @@ cdef class AudioFrame:
     def num_channels(self, size_t value):
         self._set_num_channels(value)
 
-    cdef int _get_num_channels(self) nogil:
+    cdef int _get_num_channels(self) noexcept nogil:
         return self.ptr.no_channels
-    cdef void _set_num_channels(self, int value) nogil:
+    cdef void _set_num_channels(self, int value) noexcept nogil:
         self.ptr.no_channels = value
 
     @property
@@ -63,9 +63,9 @@ cdef class AudioFrame:
     def num_samples(self, size_t value):
         self._set_num_samples(value)
 
-    cdef int _get_num_samples(self) nogil:
+    cdef int _get_num_samples(self) noexcept nogil:
         return self.ptr.no_samples
-    cdef void _set_num_samples(self, int value) nogil:
+    cdef void _set_num_samples(self, int value) noexcept nogil:
         self.ptr.no_samples = value
 
     @property
@@ -77,9 +77,9 @@ cdef class AudioFrame:
     def timecode(self, size_t value):
         self._set_timecode(value)
 
-    cdef int64_t _get_timecode(self) nogil:
+    cdef int64_t _get_timecode(self) noexcept nogil:
         return self.ptr.timecode
-    cdef int64_t _set_timecode(self, int64_t value) nogil:
+    cdef int64_t _set_timecode(self, int64_t value) noexcept nogil:
         self.ptr.timecode = value
 
     @property
@@ -93,14 +93,14 @@ cdef class AudioFrame:
     def channel_stride(self, size_t value):
         self._set_channel_stride(value)
 
-    cdef int _get_channel_stride(self) nogil:
+    cdef int _get_channel_stride(self) noexcept nogil:
         return self.ptr.channel_stride_in_bytes
-    cdef void _set_channel_stride(self, int value) nogil:
+    cdef void _set_channel_stride(self, int value) noexcept nogil:
         self.ptr.channel_stride_in_bytes = value
 
-    cdef uint8_t* _get_data(self) nogil:
+    cdef uint8_t* _get_data(self) noexcept nogil:
         return self.ptr.p_data
-    cdef void _set_data(self, uint8_t* data) nogil:
+    cdef void _set_data(self, uint8_t* data) noexcept nogil:
         self.ptr.p_data = data
 
     cdef const char* _get_metadata(self) noexcept nogil:
@@ -119,9 +119,9 @@ cdef class AudioFrame:
     def timestamp(self, int value):
         self._set_timestamp(value)
 
-    cdef int64_t _get_timestamp(self) nogil:
+    cdef int64_t _get_timestamp(self) noexcept nogil:
         return self.ptr.timestamp
-    cdef void _set_timestamp(self, int64_t value) nogil:
+    cdef void _set_timestamp(self, int64_t value) noexcept nogil:
         self.ptr.timestamp = value
 
 

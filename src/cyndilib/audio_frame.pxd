@@ -16,22 +16,22 @@ from .send_frame_status cimport *
 cdef class AudioFrame:
     cdef NDIlib_audio_frame_v3_t* ptr
 
-    cdef int _get_sample_rate(self) nogil
-    cdef void _set_sample_rate(self, int value) nogil
-    cdef int _get_num_channels(self) nogil
-    cdef void _set_num_channels(self, int value) nogil
-    cdef int _get_num_samples(self) nogil
-    cdef void _set_num_samples(self, int value) nogil
-    cdef int64_t _get_timecode(self) nogil
-    cdef int64_t _set_timecode(self, int64_t value) nogil
-    cdef int _get_channel_stride(self) nogil
-    cdef void _set_channel_stride(self, int value) nogil
-    cdef uint8_t* _get_data(self) nogil
-    cdef void _set_data(self, uint8_t* data) nogil
+    cdef int _get_sample_rate(self) noexcept nogil
+    cdef void _set_sample_rate(self, int value) noexcept nogil
+    cdef int _get_num_channels(self) noexcept nogil
+    cdef void _set_num_channels(self, int value) noexcept nogil
+    cdef int _get_num_samples(self) noexcept nogil
+    cdef void _set_num_samples(self, int value) noexcept nogil
+    cdef int64_t _get_timecode(self) noexcept nogil
+    cdef int64_t _set_timecode(self, int64_t value) noexcept nogil
+    cdef int _get_channel_stride(self) noexcept nogil
+    cdef void _set_channel_stride(self, int value) noexcept nogil
+    cdef uint8_t* _get_data(self) noexcept nogil
+    cdef void _set_data(self, uint8_t* data) noexcept nogil
     cdef const char* _get_metadata(self) noexcept nogil
     cdef bytes _get_metadata_bytes(self)
-    cdef int64_t _get_timestamp(self) nogil
-    cdef void _set_timestamp(self, int64_t value) nogil
+    cdef int64_t _get_timestamp(self) noexcept nogil
+    cdef void _set_timestamp(self, int64_t value) noexcept nogil
 
 
 cdef class AudioRecvFrame(AudioFrame):

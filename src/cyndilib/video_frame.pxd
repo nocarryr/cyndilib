@@ -21,30 +21,30 @@ cdef class VideoFrame:
     cpdef str get_format_string(self)
     cdef (int, int) _get_resolution(self) noexcept nogil
     cdef int _set_resolution(self, int xres, int yres) except -1 nogil
-    cdef int _get_xres(self) nogil
+    cdef int _get_xres(self) noexcept nogil
     cdef int _set_xres(self, int value) except -1 nogil
-    cdef int _get_yres(self) nogil
+    cdef int _get_yres(self) noexcept nogil
     cdef int _set_yres(self, int value) except -1 nogil
     cdef FourCC _get_fourcc(self) noexcept nogil
     cdef int _set_fourcc(self, FourCC value) except -1 nogil
     cdef frame_rate_t* _get_frame_rate(self) noexcept nogil
-    cdef int _set_frame_rate(self, frame_rate_ft fr) except -1 nogil
-    cdef float _get_aspect(self) nogil
+    cdef int _set_frame_rate(self, frame_rate_ft fr) noexcept nogil
+    cdef float _get_aspect(self) noexcept nogil
     cdef void _set_aspect(self, float value) noexcept nogil
     cdef FrameFormat _get_frame_format(self) noexcept nogil
     cdef void _set_frame_format(self, FrameFormat fmt) noexcept nogil
-    cdef int64_t _get_timecode(self) nogil
-    cdef int64_t _set_timecode(self, int64_t value) nogil
-    cdef int _get_line_stride(self) nogil
-    cdef void _set_line_stride(self, int value) nogil
-    cdef size_t _get_buffer_size(self) except? -1 nogil
-    cdef uint8_t* _get_data(self) nogil
-    cdef void _set_data(self, uint8_t* data) nogil
+    cdef int64_t _get_timecode(self) noexcept nogil
+    cdef int64_t _set_timecode(self, int64_t value) noexcept nogil
+    cdef int _get_line_stride(self) noexcept nogil
+    cdef void _set_line_stride(self, int value) noexcept nogil
+    cdef size_t _get_buffer_size(self) noexcept nogil
+    cdef uint8_t* _get_data(self) noexcept nogil
+    cdef void _set_data(self, uint8_t* data) noexcept nogil
     cdef const char* _get_metadata(self) noexcept nogil
     cdef bytes _get_metadata_bytes(self)
-    cdef int64_t _get_timestamp(self) nogil
-    cdef void _set_timestamp(self, int64_t value) nogil
-    cdef size_t _get_data_size(self) nogil
+    cdef int64_t _get_timestamp(self) noexcept nogil
+    cdef void _set_timestamp(self, int64_t value) noexcept nogil
+    cdef size_t _get_data_size(self) noexcept nogil
     cpdef size_t get_data_size(self)
     cdef int _recalc_pack_info(self) except -1 nogil
 

@@ -60,7 +60,8 @@ cdef class VideoFrame:
         self.ptr.yres = yres
         self._recalc_pack_info()
         if self.ptr.yres > 0:
-            self._set_aspect(self.ptr.xres / <double>(self.ptr.yres))
+            with cython.cdivision(True):
+                self._set_aspect(self.ptr.xres / <double>(self.ptr.yres))
         return 0
 
     @property
@@ -75,22 +76,24 @@ cdef class VideoFrame:
         """
         return self._get_yres()
 
-    cdef int _get_xres(self) nogil:
+    cdef int _get_xres(self) noexcept nogil:
         return self.ptr.xres
     cdef int _set_xres(self, int value) except -1 nogil:
         self.ptr.xres = value
         self._recalc_pack_info()
         if self.ptr.yres > 0:
-            self._set_aspect(self.ptr.xres / <double>(self.ptr.yres))
+            with cython.cdivision(True):
+                self._set_aspect(self.ptr.xres / <double>(self.ptr.yres))
         return 0
 
-    cdef int _get_yres(self) nogil:
+    cdef int _get_yres(self) noexcept nogil:
         return self.ptr.yres
     cdef int _set_yres(self, int value) except -1 nogil:
         self.ptr.yres = value
         self._recalc_pack_info()
         if self.ptr.yres > 0:
-            self._set_aspect(self.ptr.xres / <double>(self.ptr.yres))
+            with cython.cdivision(True):
+                self._set_aspect(self.ptr.xres / <double>(self.ptr.yres))
         return 0
 
     @property
@@ -129,7 +132,7 @@ cdef class VideoFrame:
         self.frame_rate.denominator = self.ptr.frame_rate_D
         return &self.frame_rate
 
-    cdef int _set_frame_rate(self, frame_rate_ft fr) except -1 nogil:
+    cdef int _set_frame_rate(self, frame_rate_ft fr) noexcept nogil:
         if frame_rate_ft is frame_rate_t:
             self.ptr.frame_rate_N = fr.numerator
             self.ptr.frame_rate_D = fr.denominator
@@ -140,7 +143,7 @@ cdef class VideoFrame:
         self.frame_rate.denominator = self.ptr.frame_rate_D
         return 0
 
-    cdef float _get_aspect(self) nogil:
+    cdef float _get_aspect(self) noexcept nogil:
         return self.ptr.picture_aspect_ratio
     cdef void _set_aspect(self, float value) noexcept nogil:
         self.ptr.picture_aspect_ratio = value
@@ -150,28 +153,28 @@ cdef class VideoFrame:
     cdef void _set_frame_format(self, FrameFormat fmt) noexcept nogil:
         self.ptr.frame_format_type = frame_format_cast(fmt)
 
-    cdef int64_t _get_timecode(self) nogil:
+    cdef int64_t _get_timecode(self) noexcept nogil:
         return self.ptr.timecode
-    cdef int64_t _set_timecode(self, int64_t value) nogil:
+    cdef int64_t _set_timecode(self, int64_t value) noexcept nogil:
         self.ptr.timecode = value
 
     def get_line_stride(self):
         return self._get_line_stride()
 
-    cdef int _get_line_stride(self) nogil:
+    cdef int _get_line_stride(self) noexcept nogil:
         return self.ptr.line_stride_in_bytes
-    cdef void _set_line_stride(self, int value) nogil:
+    cdef void _set_line_stride(self, int value) noexcept nogil:
         self.ptr.line_stride_in_bytes = value
 
     def get_buffer_size(self):
         return self._get_buffer_size()
 
-    cdef size_t _get_buffer_size(self) except? -1 nogil:
+    cdef size_t _get_buffer_size(self) noexcept nogil:
         return self.pack_info.total_size
 
-    cdef uint8_t* _get_data(self) nogil:
+    cdef uint8_t* _get_data(self) noexcept nogil:
         return self.ptr.p_data
-    cdef void _set_data(self, uint8_t* data) nogil:
+    cdef void _set_data(self, uint8_t* data) noexcept nogil:
         self.ptr.p_data = data
 
     cdef const char* _get_metadata(self) noexcept nogil:
@@ -181,9 +184,9 @@ cdef class VideoFrame:
         cdef bytes result = self.ptr.p_metadata
         return result
 
-    cdef int64_t _get_timestamp(self) nogil:
+    cdef int64_t _get_timestamp(self) noexcept nogil:
         return self.ptr.timestamp
-    cdef void _set_timestamp(self, int64_t value) nogil:
+    cdef void _set_timestamp(self, int64_t value) noexcept nogil:
         self.ptr.timestamp = value
 
     def get_timestamp_posix(self):
@@ -203,7 +206,7 @@ cdef class VideoFrame:
     # cdef double _get_timestamp_posix(self) nogil:
     #     return ndi_time_to_posix(self.ptr.timestamp)
 
-    cdef size_t _get_data_size(self) nogil:
+    cdef size_t _get_data_size(self) noexcept nogil:
         return self.pack_info.total_size
     cpdef size_t get_data_size(self):
         return self._get_data_size()
