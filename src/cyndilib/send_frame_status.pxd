@@ -14,7 +14,7 @@ cdef extern from *:
     cdef const Py_ssize_t NULL_INDEX
 
 
-cdef struct VideoSendFrame_item_s:
+cdef struct SendFrame_item_s:
     Py_ssize_t idx
     Py_ssize_t view_count
     Py_ssize_t alloc_size
@@ -22,36 +22,31 @@ cdef struct VideoSendFrame_item_s:
     bint read_available
     Py_ssize_t[3] shape
     Py_ssize_t[3] strides
+
+
+cdef struct SendFrame_status_s:
+    Py_ssize_t num_buffers
+    Py_ssize_t write_index
+    Py_ssize_t read_index
+    Py_ssize_t ndim
+    Py_ssize_t[3] shape
+    Py_ssize_t[3] strides
+    bint attached_to_sender
+
+cdef struct VideoSendFrame_item_s:
+    SendFrame_item_s data
     NDIlib_video_frame_v2_t* frame_ptr
 
 cdef struct VideoSendFrame_status_s:
-    Py_ssize_t num_buffers
-    Py_ssize_t write_index
-    Py_ssize_t read_index
-    Py_ssize_t ndim
-    Py_ssize_t[3] shape
-    Py_ssize_t[3] strides
-    bint attached_to_sender
+    SendFrame_status_s data
     VideoSendFrame_item_s[MAX_FRAME_BUFFERS] items
 
 cdef struct AudioSendFrame_item_s:
-    Py_ssize_t idx
-    Py_ssize_t view_count
-    Py_ssize_t alloc_size
-    bint write_available
-    bint read_available
-    Py_ssize_t[3] shape
-    Py_ssize_t[3] strides
+    SendFrame_item_s data
     NDIlib_audio_frame_v3_t* frame_ptr
 
 cdef struct AudioSendFrame_status_s:
-    Py_ssize_t num_buffers
-    Py_ssize_t write_index
-    Py_ssize_t read_index
-    Py_ssize_t ndim
-    Py_ssize_t[3] shape
-    Py_ssize_t[3] strides
-    bint attached_to_sender
+    SendFrame_status_s data
     AudioSendFrame_item_s[MAX_FRAME_BUFFERS] items
 
 

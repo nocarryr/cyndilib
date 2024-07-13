@@ -58,12 +58,12 @@ def set_send_frame_send_complete(object frame):
 
 def write_audio_frame_memview(AudioSendFrame af, cnp.float32_t[:,:] data):
     cdef AudioSendFrame_item_s* item = af._prepare_memview_write()
-    assert item.view_count == 0
+    assert item.data.view_count == 0
     cdef cnp.float32_t[:,:] view = af
-    assert item.view_count == 1
+    assert item.data.view_count == 1
     view[...] = data
     view = data[:0,:0]
-    assert item.view_count == 0
+    assert item.data.view_count == 0
     af._set_buffer_write_complete(item)
 
 
@@ -122,13 +122,13 @@ def test_indexing():
     _test_indexing(aud_ptr)
 
 cdef _test_indexing(SendFrame_status_s_ft* s_ptr):
-    cdef size_t max_iter = s_ptr.num_buffers * 8, i
-    cdef size_t write_index=0, read_index=NULL_INDEX
+    cdef Py_ssize_t max_iter = s_ptr.data.num_buffers * 8, i
+    cdef Py_ssize_t write_index=0, read_index=NULL_INDEX
 
     for i in range(max_iter):
         # print(f'loop_start: {i}')
-        assert_equal(write_index, s_ptr.write_index)
-        assert_equal(read_index, s_ptr.read_index)
+        assert_equal(write_index, s_ptr.data.write_index)
+        assert_equal(read_index, s_ptr.data.read_index)
         assert_equal(write_index, frame_status_get_next_write_index(s_ptr))
         assert_equal(read_index, NULL_INDEX)
         assert_equal(read_index, frame_status_get_next_read_index(s_ptr))
@@ -138,20 +138,20 @@ cdef _test_indexing(SendFrame_status_s_ft* s_ptr):
         frame_status_set_send_ready(s_ptr)
         read_index = write_index
         write_index += 1
-        if write_index >= s_ptr.num_buffers:
+        if write_index >= s_ptr.data.num_buffers:
             write_index = 0
         print(f'w = {write_index}, r = {read_index}')
         _check_item_flags(s_ptr, write_index, read_index)
-        assert_equal(write_index, s_ptr.write_index)
-        assert_equal(read_index, s_ptr.read_index)
+        assert_equal(write_index, s_ptr.data.write_index)
+        assert_equal(read_index, s_ptr.data.read_index)
         assert_equal(write_index, frame_status_get_next_write_index(s_ptr))
         assert_equal(read_index, frame_status_get_next_read_index(s_ptr))
 
         # print('set_send_complete')
         frame_status_set_send_complete(s_ptr, read_index)
         read_index = NULL_INDEX
-        assert_equal(write_index, s_ptr.write_index)
-        assert_equal(read_index, s_ptr.read_index)
+        assert_equal(write_index, s_ptr.data.write_index)
+        assert_equal(read_index, s_ptr.data.read_index)
         assert_equal(write_index, frame_status_get_next_write_index(s_ptr))
         assert_equal(read_index, frame_status_get_next_read_index(s_ptr))
         _check_item_flags(s_ptr, write_index, read_index)
@@ -159,8 +159,8 @@ cdef _test_indexing(SendFrame_status_s_ft* s_ptr):
 cdef _check_item_view_counts(SendFrame_status_s_ft* s_ptr):
     cdef size_t i
 
-    for i in range(s_ptr.num_buffers):
-        assert_equal(s_ptr.items[i].view_count, 0)
+    for i in range(s_ptr.data.num_buffers):
+        assert_equal(s_ptr.items[i].data.view_count, 0)
 
 cdef _check_item_flags(SendFrame_status_s_ft* s_ptr, Py_ssize_t write_index, Py_ssize_t read_index):
     cdef size_t i
@@ -168,18 +168,18 @@ cdef _check_item_flags(SendFrame_status_s_ft* s_ptr, Py_ssize_t write_index, Py_
 
     assert_not_equal(write_index, read_index)
 
-    for i in range(s_ptr.num_buffers):
+    for i in range(s_ptr.data.num_buffers):
         avail = read_index != i
-        if s_ptr.items[i].write_available is not avail:
+        if s_ptr.items[i].data.write_available is not avail:
             raise AssertionError(f'write_available should be {avail} for i={i}, write_index={write_index}')
 
         avail = read_index == i
-        if s_ptr.items[i].read_available is not avail:
+        if s_ptr.items[i].data.read_available is not avail:
             raise AssertionError(f'read_available should be {avail} for i={i}, write_index={write_index}')
 
 cdef _check_send_frame(SendFrame_status_s_ft* s_ptr, NDIlib_frame_type_ft* source_frame, Py_ssize_t write_index, Py_ssize_t read_index):
-    assert_equal(write_index, s_ptr.write_index)
-    assert_equal(read_index, s_ptr.read_index)
+    assert_equal(write_index, s_ptr.data.write_index)
+    assert_equal(read_index, s_ptr.data.read_index)
     assert_equal(write_index, frame_status_get_next_write_index(s_ptr))
     assert_equal(read_index, frame_status_get_next_read_index(s_ptr))
     cdef Py_ssize_t chk_item_write_index = write_index, chk_item_read_index = read_index
@@ -196,27 +196,27 @@ cdef _check_send_frame(SendFrame_status_s_ft* s_ptr, NDIlib_frame_type_ft* sourc
         pack_info.yres = source_frame.yres
         pack_info.fourcc = fourcc_type_uncast(source_frame.FourCC)
         calc_fourcc_pack_info(&pack_info)
-        assert_equal(s_ptr.ndim, pack_info.num_planes)
-        assert_equal(s_ptr.ndim, 1)                     # <- not testing 4:2:0 yet
+        assert_equal(s_ptr.data.ndim, pack_info.num_planes)
+        assert_equal(s_ptr.data.ndim, 1)                     # <- not testing 4:2:0 yet
         shape[0] = pack_info.total_size
         strides[0] = sizeof(uint8_t)
         assert_equal(pack_info.xres*pack_info.yres*4, pack_info.total_size)
         assert_equal(source_frame.line_stride_in_bytes, pack_info.xres*4)
 
     elif SendFrame_status_s_ft is AudioSendFrame_status_s and NDIlib_frame_type_ft is NDIlib_audio_frame_v3_t:
-        assert_equal(s_ptr.ndim, source_frame.no_channels)
-        shape[0] = s_ptr.ndim
+        assert_equal(s_ptr.data.ndim, source_frame.no_channels)
+        shape[0] = s_ptr.data.ndim
         shape[1] = source_frame.no_samples
         strides[0] = sizeof(float32_t) * shape[1]
         strides[1] = sizeof(float32_t)
         assert_equal(source_frame.channel_stride_in_bytes, strides[0])
 
-    for i in range(s_ptr.ndim):
-        assert_equal(shape[i], s_ptr.shape[i], f'shape[{i}]')
-        assert_equal(strides[i], s_ptr.strides[i], f'strides[{i}]')
+    for i in range(s_ptr.data.ndim):
+        assert_equal(shape[i], s_ptr.data.shape[i], f'shape[{i}]')
+        assert_equal(strides[i], s_ptr.data.strides[i], f'strides[{i}]')
 
-    for i in range(s_ptr.num_buffers):
-        _check_send_frame_item(&(s_ptr.items[i]), i, s_ptr.ndim, shape, strides, source_frame)
+    for i in range(s_ptr.data.num_buffers):
+        _check_send_frame_item(&(s_ptr.items[i]), i, s_ptr.data.ndim, shape, strides, source_frame)
 
 cdef _check_send_frame_item(
     SendFrame_item_s_ft* item,
@@ -228,14 +228,14 @@ cdef _check_send_frame_item(
 ):
 
     cdef size_t expected_alloc, i
-    assert_equal(item.idx, idx)
+    assert_equal(item.data.idx, idx)
 
     expected_alloc = strides[ndim-1]
 
     for i in range(ndim):
-        assert_equal(item.shape[i], shape[i])
-        assert_equal(item.strides[i], strides[i])
-        expected_alloc *= item.shape[i]
+        assert_equal(item.data.shape[i], shape[i])
+        assert_equal(item.data.strides[i], strides[i])
+        expected_alloc *= item.data.shape[i]
 
     if SendFrame_item_s_ft is VideoSendFrame_item_s and NDIlib_frame_type_ft is NDIlib_video_frame_v2_t:
         assert_equal(item.frame_ptr.xres, source_frame.xres)
@@ -252,7 +252,7 @@ cdef _check_send_frame_item(
         assert_equal(item.frame_ptr.no_samples, source_frame.no_samples)
         assert_equal(item.frame_ptr.channel_stride_in_bytes, source_frame.channel_stride_in_bytes)
 
-    assert_equal(item.alloc_size, expected_alloc)
+    assert_equal(item.data.alloc_size, expected_alloc)
     assert item.frame_ptr.p_data is not NULL
 
 

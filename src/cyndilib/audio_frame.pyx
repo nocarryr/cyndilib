@@ -649,9 +649,9 @@ cdef class AudioSendFrame(AudioFrame):
     def __cinit__(self, *args, **kwargs):
         self.max_num_samples = 1602
         frame_status_init(&(self.send_status))
-        self.send_status.ndim = 2
-        self.send_status.strides[0] = 0
-        self.send_status.strides[1] = sizeof(float32_t)
+        self.send_status.data.ndim = 2
+        self.send_status.data.strides[0] = 0
+        self.send_status.data.strides[1] = sizeof(float32_t)
         self.buffer_write_item = NULL
 
     def __init__(self, size_t max_num_samples=1602, *args, **kwargs):
@@ -665,31 +665,31 @@ cdef class AudioSendFrame(AudioFrame):
 
     @property
     def attached_to_sender(self):
-        return self.send_status.attached_to_sender
+        return self.send_status.data.attached_to_sender
 
     @property
     def write_index(self):
-        return self.send_status.write_index
+        return self.send_status.data.write_index
 
     @property
     def read_index(self):
-        return self.send_status.read_index
+        return self.send_status.data.read_index
 
     @property
     def shape(self):
         cdef AudioSendFrame_status_s* ptr = &(self.send_status)
-        cdef list l = ptr.shape
-        return tuple(l[:ptr.ndim])
+        cdef list l = ptr.data.shape
+        return tuple(l[:ptr.data.ndim])
 
     @property
     def strides(self):
         cdef AudioSendFrame_status_s* ptr = &(self.send_status)
-        cdef list l = ptr.strides
-        return tuple(l[:ptr.ndim])
+        cdef list l = ptr.data.strides
+        return tuple(l[:ptr.data.ndim])
 
     @property
     def ndim(self):
-        return self.send_status.ndim
+        return self.send_status.data.ndim
 
     cpdef set_max_num_samples(self, size_t n):
         assert not self.attached_to_sender
@@ -702,16 +702,16 @@ cdef class AudioSendFrame(AudioFrame):
         if item is NULL:
             item = self._prepare_buffer_write()
         assert item is not NULL
-        item.view_count += 1
+        item.data.view_count += 1
         buffer.buf = <char *>item.frame_ptr.p_data
         buffer.format = 'f'
         buffer.itemsize = sizeof(float32_t)
-        buffer.len = sizeof(float32_t) * s_ptr.shape[0] * s_ptr.shape[1]
-        buffer.ndim = self.send_status.ndim
+        buffer.len = sizeof(float32_t) * s_ptr.data.shape[0] * s_ptr.data.shape[1]
+        buffer.ndim = self.send_status.data.ndim
         buffer.obj = self
         buffer.readonly = 0
-        buffer.shape = s_ptr.shape
-        buffer.strides = s_ptr.strides
+        buffer.shape = s_ptr.data.shape
+        buffer.strides = s_ptr.data.strides
         buffer.suboffsets = NULL
         buffer.internal = <void*>item
 
@@ -719,8 +719,8 @@ cdef class AudioSendFrame(AudioFrame):
         cdef AudioSendFrame_item_s* item
         if buffer.internal is not NULL:
             item = <AudioSendFrame_item_s*>buffer.internal
-            assert item.view_count > 0
-            item.view_count -= 1
+            assert item.data.view_count > 0
+            item.data.view_count -= 1
 
     def destroy(self):
         self._destroy()
@@ -748,16 +748,16 @@ cdef class AudioSendFrame(AudioFrame):
         if self.buffer_write_item is not NULL:
             raise_withgil(PyExc_RuntimeError, 'buffer_write_item is not null')
         cdef AudioSendFrame_item_s* item = self._get_next_write_frame()
-        if item.view_count != 0:
+        if item.data.view_count != 0:
             raise_withgil(PyExc_RuntimeError, 'buffer item view count nonzero')
         self.buffer_write_item = item
         return item
 
     cdef int _set_buffer_write_complete(self, AudioSendFrame_item_s* item) except -1 nogil:
         cdef AudioSendFrame_item_s* cur_item = self.buffer_write_item
-        if cur_item is not NULL and cur_item.idx == item.idx:
+        if cur_item is not NULL and cur_item.data.idx == item.data.idx:
             self.buffer_write_item = NULL
-        self.send_status.read_index = item.idx
+        self.send_status.data.read_index = item.data.idx
         frame_status_set_send_ready(&(self.send_status))
         return 0
 
@@ -777,7 +777,7 @@ cdef class AudioSendFrame(AudioFrame):
         AudioSendFrame_item_s* item
     ) except -1 nogil:
         self._set_shape_from_memview(item, data)
-        cdef size_t nrows = item.shape[0], ncols = item.shape[1]
+        cdef size_t nrows = item.data.shape[0], ncols = item.data.shape[1]
         view[...] = data
         self._set_buffer_write_complete(item)
         return 0
@@ -786,7 +786,7 @@ cdef class AudioSendFrame(AudioFrame):
         cdef Py_ssize_t idx = frame_status_get_next_write_index(&(self.send_status))
         if idx == NULL_INDEX:
             raise_withgil(PyExc_RuntimeError, 'no write frame available')
-        self.send_status.write_index = idx
+        self.send_status.data.write_index = idx
         return &(self.send_status.items[idx])
 
     cdef bint _send_frame_available(self) except -1 nogil:
@@ -799,26 +799,26 @@ cdef class AudioSendFrame(AudioFrame):
         return &(self.send_status.items[idx])
 
     cdef int _on_sender_write(self, AudioSendFrame_item_s* s_ptr) except -1 nogil:
-        frame_status_set_send_complete(&(self.send_status), s_ptr.idx)
+        frame_status_set_send_complete(&(self.send_status), s_ptr.data.idx)
         return 0
 
     cdef int _set_sender_status(self, bint attached) except -1 nogil:
         if attached:
             self._rebuild_array()
-        self.send_status.attached_to_sender = attached
+        self.send_status.data.attached_to_sender = attached
         return 0
 
     cdef int _rebuild_array(self) except -1 nogil:
         cdef size_t nrows = self.ptr.no_channels, ncols = self.max_num_samples
         cdef size_t total_size = sizeof(float32_t) * nrows * ncols
         cdef AudioSendFrame_status_s* s_ptr = &(self.send_status)
-        s_ptr.shape[0] = nrows
-        s_ptr.shape[1] = ncols
-        s_ptr.strides[0] = sizeof(float32_t) * ncols
-        s_ptr.strides[1] = sizeof(float32_t)
+        s_ptr.data.shape[0] = nrows
+        s_ptr.data.shape[1] = ncols
+        s_ptr.data.strides[0] = sizeof(float32_t) * ncols
+        s_ptr.data.strides[1] = sizeof(float32_t)
         self.ptr.no_channels = nrows
         self.ptr.no_samples = ncols
-        self.ptr.channel_stride_in_bytes = s_ptr.strides[0]
+        self.ptr.channel_stride_in_bytes = s_ptr.data.strides[0]
         frame_status_copy_frame_ptr(s_ptr, self.ptr)
         frame_status_alloc_p_data(s_ptr)
         return 0

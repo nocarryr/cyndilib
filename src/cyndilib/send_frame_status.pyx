@@ -1,29 +1,29 @@
 cimport cython
 
 cdef int frame_status_init(SendFrame_status_s_ft* ptr) except -1 nogil:
-    ptr.num_buffers = MAX_FRAME_BUFFERS
-    ptr.write_index = 0
-    ptr.read_index = NULL_INDEX
-    ptr.ndim = 0
-    ptr.attached_to_sender = False
+    ptr.data.num_buffers = MAX_FRAME_BUFFERS
+    ptr.data.write_index = 0
+    ptr.data.read_index = NULL_INDEX
+    ptr.data.ndim = 0
+    ptr.data.attached_to_sender = False
     cdef Py_ssize_t i
     for i in range(3):
-        ptr.shape[i] = 0
-        ptr.strides[i] = 0
+        ptr.data.shape[i] = 0
+        ptr.data.strides[i] = 0
     for i in range(MAX_FRAME_BUFFERS):
-        ptr.items[i].idx = i
+        ptr.items[i].data.idx = i
         frame_status_item_init(&(ptr.items[i]))
     return 0
 
 cdef int frame_status_item_init(SendFrame_item_s_ft* ptr) except -1 nogil:
-    ptr.view_count = 0
-    ptr.alloc_size = 0
-    ptr.write_available = True
-    ptr.read_available = False
+    ptr.data.view_count = 0
+    ptr.data.alloc_size = 0
+    ptr.data.write_available = True
+    ptr.data.read_available = False
     cdef size_t i
     for i in range(3):
-        ptr.shape[i] = 0
-        ptr.strides[i] = 0
+        ptr.data.shape[i] = 0
+        ptr.data.strides[i] = 0
     if ptr.frame_ptr is not NULL:
         return 0
     if SendFrame_item_s_ft is VideoSendFrame_item_s:
@@ -41,8 +41,8 @@ cdef int frame_status_free(SendFrame_status_s_ft* ptr) except -1 nogil:
     cdef size_t i
     for i in range(MAX_FRAME_BUFFERS):
         frame_status_item_free(&(ptr.items[i]))
-    ptr.write_index = 0
-    ptr.read_index = NULL_INDEX
+    ptr.data.write_index = 0
+    ptr.data.read_index = NULL_INDEX
     return 0
 
 
@@ -95,20 +95,20 @@ cdef int frame_status_item_copy_frame_ptr(
 
 
 cdef int frame_status_alloc_p_data(SendFrame_status_s_ft* ptr) except -1 nogil:
-    if ptr.ndim < 1 or ptr.ndim > 3:
+    if ptr.data.ndim < 1 or ptr.data.ndim > 3:
         raise_withgil(PyExc_ValueError, 'ndim must be between 1 and 3')
 
-    cdef Py_ssize_t total_size = ptr.strides[ptr.ndim-1]
+    cdef Py_ssize_t total_size = ptr.data.strides[ptr.data.ndim-1]
     cdef size_t i
 
-    for i in range(ptr.ndim):
-        total_size *= ptr.shape[i]
+    for i in range(ptr.data.ndim):
+        total_size *= ptr.data.shape[i]
 
     if total_size == 0:
         raise_withgil(PyExc_ValueError, 'cannot create with size of zero')
 
     for i in range(MAX_FRAME_BUFFERS):
-        frame_status_item_alloc_p_data(&(ptr.items[i]), total_size, ptr.shape, ptr.strides)
+        frame_status_item_alloc_p_data(&(ptr.items[i]), total_size, ptr.data.shape, ptr.data.strides)
     return 0
 
 cdef int frame_status_item_alloc_p_data(
@@ -120,40 +120,40 @@ cdef int frame_status_item_alloc_p_data(
 
     cdef size_t i
     for i in range(3):
-        ptr.shape[i] = shape[i]
-        ptr.strides[i] = strides[i]
+        ptr.data.shape[i] = shape[i]
+        ptr.data.strides[i] = strides[i]
     frame_status_item_free_p_data(ptr)
     ptr.frame_ptr.p_data = <uint8_t*>mem_alloc(sizeof(uint8_t) * total_size)
     if ptr.frame_ptr.p_data is NULL:
         raise_mem_err()
-    ptr.alloc_size = total_size
+    ptr.data.alloc_size = total_size
     return 0
 
 cdef int frame_status_item_free_p_data(SendFrame_item_s_ft* ptr) except -1 nogil:
     if ptr.frame_ptr.p_data is NULL:
         return 0
-    if ptr.read_available:
+    if ptr.data.read_available:
         ptr.frame_ptr == NULL
     else:
         mem_free(ptr.frame_ptr.p_data)
         ptr.frame_ptr.p_data = NULL
-    ptr.alloc_size = 0
+    ptr.data.alloc_size = 0
     return 0
 
 cdef int frame_status_set_send_ready(SendFrame_status_s_ft* ptr) except -1 nogil:
-    cdef Py_ssize_t idx = ptr.write_index
-    ptr.items[idx].write_available = False
-    ptr.items[idx].read_available = True
-    ptr.read_index = idx
-    ptr.write_index = frame_status_get_next_write_index(ptr)
+    cdef Py_ssize_t idx = ptr.data.write_index
+    ptr.items[idx].data.write_available = False
+    ptr.items[idx].data.read_available = True
+    ptr.data.read_index = idx
+    ptr.data.write_index = frame_status_get_next_write_index(ptr)
     return 0
 
 cdef Py_ssize_t frame_status_get_next_write_index(
     SendFrame_status_s_ft* ptr,
 ) except? -1 nogil:
-    cdef Py_ssize_t next_idx = ptr.write_index, i = 0
+    cdef Py_ssize_t next_idx = ptr.data.write_index, i = 0
     while True:
-        if ptr.items[next_idx].write_available:
+        if ptr.items[next_idx].data.write_available:
             return next_idx
         with cython.cdivision(True):
             next_idx = (next_idx + 1) % MAX_FRAME_BUFFERS
@@ -167,10 +167,10 @@ cdef int frame_status_set_send_complete(
     Py_ssize_t idx,
 ) except -1 nogil:
 
-    ptr.items[idx].write_available = True
-    ptr.items[idx].read_available = False
-    if ptr.read_index == idx:
-        ptr.read_index = frame_status_get_next_read_index(ptr)
+    ptr.items[idx].data.write_available = True
+    ptr.items[idx].data.read_available = False
+    if ptr.data.read_index == idx:
+        ptr.data.read_index = frame_status_get_next_read_index(ptr)
     return 0
 
 
@@ -178,12 +178,12 @@ cdef Py_ssize_t frame_status_get_next_read_index(
     SendFrame_status_s_ft* ptr,
 ) except? -1 nogil:
 
-    cdef Py_ssize_t idx = ptr.read_index, i = 0
+    cdef Py_ssize_t idx = ptr.data.read_index, i = 0
     if idx == NULL_INDEX:
         with cython.cdivision(True):
-            idx = (ptr.write_index - 1) % MAX_FRAME_BUFFERS
+            idx = (ptr.data.write_index - 1) % MAX_FRAME_BUFFERS
     while True:
-        if ptr.items[idx].read_available:
+        if ptr.items[idx].data.read_available:
             return idx
         with cython.cdivision(True):
             idx = (idx + 1) % MAX_FRAME_BUFFERS
