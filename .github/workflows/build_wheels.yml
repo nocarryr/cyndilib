@@ -44,7 +44,7 @@ jobs:
       - name: Install Dependencies
         run: |
           python -m pip install -U pip setuptools
-          pip install pytest psutil
+          pip install pytest pytest-xdist psutil
       - name: Install Project
         run: pip install -e .
         env:
@@ -54,7 +54,7 @@ jobs:
           pip install cython>=0.29.32
           python build_tests.py
       - name: Run tests
-        run: py.test
+        run: py.test -n auto
 
   build_wheels:
     name: Build wheels on ${{ matrix.os }}_${{ matrix.python-version }}-${{ matrix.arch }}
