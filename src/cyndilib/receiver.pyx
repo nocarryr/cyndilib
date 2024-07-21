@@ -573,9 +573,8 @@ cdef class RecvThreadWorker:
                 self.wait_for_evt(.1)
         return 0
 
-    cdef int time_sleep(self, double timeout) except -1 nogil:
+    cdef void time_sleep(self, double timeout) noexcept nogil:
         sleep(timeout)
-        return 0
 
     cdef int wait_for_evt(self, double timeout) except -1 nogil:
         with gil:
