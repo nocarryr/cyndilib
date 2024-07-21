@@ -51,8 +51,9 @@ cdef class AudioFrame:
 
     cdef int _get_num_channels(self) noexcept nogil:
         return self.ptr.no_channels
-    cdef void _set_num_channels(self, int value) noexcept nogil:
+    cdef int _set_num_channels(self, int value) except -1 nogil:
         self.ptr.no_channels = value
+        return 0
 
     @property
     def num_samples(self):
@@ -65,8 +66,9 @@ cdef class AudioFrame:
 
     cdef int _get_num_samples(self) noexcept nogil:
         return self.ptr.no_samples
-    cdef void _set_num_samples(self, int value) noexcept nogil:
+    cdef int _set_num_samples(self, int value) except -1 nogil:
         self.ptr.no_samples = value
+        return 0
 
     @property
     def timecode(self):
@@ -95,8 +97,9 @@ cdef class AudioFrame:
 
     cdef int _get_channel_stride(self) noexcept nogil:
         return self.ptr.channel_stride_in_bytes
-    cdef void _set_channel_stride(self, int value) noexcept nogil:
+    cdef int _set_channel_stride(self, int value) except -1 nogil:
         self.ptr.channel_stride_in_bytes = value
+        return 0
 
     cdef uint8_t* _get_data(self) noexcept nogil:
         return self.ptr.p_data
@@ -815,6 +818,21 @@ cdef class AudioSendFrame(AudioFrame):
             self._rebuild_array()
         self.send_status.data.attached_to_sender = attached
         return 0
+
+    cdef int _set_num_channels(self, int value) except -1 nogil:
+        if self.send_status.data.attached_to_sender:
+            raise_exception('Cannot alter frame')
+        return AudioFrame._set_num_channels(self, value)
+
+    cdef int _set_num_samples(self, int value) except -1 nogil:
+        if self.send_status.data.attached_to_sender:
+            raise_exception('Cannot alter frame')
+        return AudioFrame._set_num_samples(self, value)
+
+    cdef int _set_channel_stride(self, int value) except -1 nogil:
+        if self.send_status.data.attached_to_sender:
+            raise_exception('Cannot alter frame')
+        return AudioFrame._set_channel_stride(self, value)
 
     cdef int _rebuild_array(self) except -1 nogil:
         cdef size_t nrows = self.ptr.no_channels, ncols = self.max_num_samples

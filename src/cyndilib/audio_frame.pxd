@@ -19,13 +19,13 @@ cdef class AudioFrame:
     cdef int _get_sample_rate(self) noexcept nogil
     cdef void _set_sample_rate(self, int value) noexcept nogil
     cdef int _get_num_channels(self) noexcept nogil
-    cdef void _set_num_channels(self, int value) noexcept nogil
+    cdef int _set_num_channels(self, int value) except -1 nogil
     cdef int _get_num_samples(self) noexcept nogil
-    cdef void _set_num_samples(self, int value) noexcept nogil
+    cdef int _set_num_samples(self, int value) except -1 nogil
     cdef int64_t _get_timecode(self) noexcept nogil
     cdef int64_t _set_timecode(self, int64_t value) noexcept nogil
     cdef int _get_channel_stride(self) noexcept nogil
-    cdef void _set_channel_stride(self, int value) noexcept nogil
+    cdef int _set_channel_stride(self, int value) except -1 nogil
     cdef uint8_t* _get_data(self) noexcept nogil
     cdef void _set_data(self, uint8_t* data) noexcept nogil
     cdef const char* _get_metadata(self) noexcept nogil
