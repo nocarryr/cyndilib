@@ -557,30 +557,41 @@ cdef class Event:
         self._cond = Condition()
         self._flag = False
 
-    cpdef bint is_set(self):
+    def is_set(self) -> bool:
         """Returns ``True`` if the event has been set
         """
         return self._flag
 
-    cpdef set(self):
+    cdef bint _is_set(self) noexcept nogil:
+        return self._flag
+
+    def set(self):
         """Set the internal flag to ``True``, awakening any threads waiting for it
         """
+        self._set()
+
+    cdef int _set(self) except -1:
         self._cond._acquire(True, -1)
         try:
             self._flag = True
             self._cond.notify_all()
         finally:
             self._cond._release()
+        return 0
 
-    cpdef clear(self):
+    def clear(self):
         """Reset the internal flag to ``False``.  After this, any threads making
         a call to :meth:`wait` will block until the event is :meth:`set` again
         """
+        self._clear()
+
+    cdef int _clear(self) except -1:
         self._cond._acquire(True, -1)
         self._flag = False
         self._cond._release()
+        return 0
 
-    cpdef bint wait(self, object timeout=None):
+    def wait(self, object timeout=None) -> bool:
         """Block until the internal flag is ``True`` by a call to :meth:`set`
         by another thread. If the flag is already ``True``, return immediately.
 
@@ -592,12 +603,25 @@ cdef class Event:
         Returns:
             bool: ``True`` if the flag was set before a timeout, ``False`` otherwise
         """
+        cdef bint block
+        cdef double _timeout
+
+        if timeout is None:
+            _timeout = -1
+            block = True
+        else:
+            block = False
+            _timeout = <double> timeout
+
+        return self._wait(block, timeout)
+
+    cdef bint _wait(self, bint block, double timeout) except -1:
         cdef bint signaled
         self._cond._acquire(True, -1)
         try:
             signaled = self._flag
             if not signaled:
-                signaled = self._cond.wait(timeout)
+                signaled = self._cond._wait(block, timeout)
             return signaled
         finally:
             self._cond._release()

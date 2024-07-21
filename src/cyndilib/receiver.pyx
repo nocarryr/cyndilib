@@ -579,13 +579,13 @@ cdef class RecvThreadWorker:
 
     cdef int wait_for_evt(self, double timeout) except -1 nogil:
         with gil:
-            self.wait_event.wait(timeout)
-            self.wait_event.clear()
+            self.wait_event._wait(True, timeout)
+            self.wait_event._clear()
         return 0
 
 
     cdef int stop(self) except -1:
-        self.wait_event.set()
+        self.wait_event._set()
         self.running = False
         return 0
 
@@ -654,7 +654,7 @@ class RecvThread(threading.Thread):
 
     def set_wait_event(self):
         cdef RecvThreadWorker w = self.worker
-        w.wait_event.set()
+        w.wait_event._set()
 
 def test():
     from cyndilib.finder import Finder

@@ -174,7 +174,7 @@ cdef class Finder:
         self.finder_thread = FinderThread(self)
         self.is_open = True
         self.finder_thread.start()
-        self.finder_thread_running.wait()
+        self.finder_thread_running._wait(True, -1)
 
     def close(self):
         """Closes the :attr:`finder_thread`
@@ -441,22 +441,22 @@ cdef class FinderThreadWorker:
         self.running = True
         while self.running:
             if first_loop:
-                self.finder.finder_thread_running.set()
+                self.finder.finder_thread_running._set()
                 first_loop = False
             # self.waiting.set()
             changed = self.finder._wait_for_sources(self.timeout_ms)
             if self.finder.num_sources == 0:
                 sleep(.1)
             else:
-                self.sleep_evt.wait(5)
+                self.sleep_evt._wait(True, 5)
             # self.waiting.clear()
-        self.finder.finder_thread_running.clear()
+        self.finder.finder_thread_running._clear()
         self.finder = None
         return 0
 
     def stop(self):
         self.running = False
-        self.sleep_evt.set()
+        self.sleep_evt._set()
 
 
 class FinderThread(threading.Thread):

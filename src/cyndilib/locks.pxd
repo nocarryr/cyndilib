@@ -104,10 +104,10 @@ cdef class Condition:
 
 
 cdef class Event:
-    cdef Condition _cond
-    cdef bint _flag
+    cdef readonly Condition _cond
+    cdef readonly bint _flag
 
-    cpdef bint is_set(self)
-    cpdef set(self)
-    cpdef clear(self)
-    cpdef bint wait(self, object timeout=*)
+    cdef bint _is_set(self) noexcept nogil
+    cdef int _set(self) except -1
+    cdef int _clear(self) except -1
+    cdef bint _wait(self, bint block, double timeout) except -1
