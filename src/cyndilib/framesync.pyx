@@ -101,7 +101,7 @@ cdef class FrameSync:
         self.audio_frame = audio_frame
         return 0
 
-    cdef int _audio_samples_available(self) except? -1 nogil:
+    cdef int _audio_samples_available(self) noexcept nogil:
         return NDIlib_framesync_audio_queue_depth(self.ptr)
 
     cdef int _capture_video(self, FrameFormat fmt = FrameFormat.progressive) except -1:
@@ -232,11 +232,10 @@ cdef class FrameSyncWorker():
             self.callback.trigger_callback()
         return 0
 
-    cdef int time_sleep(self, double timeout) except -1:
+    cdef void time_sleep(self, double timeout) noexcept nogil:
         sleep(timeout)
-        return 0
 
-    cdef double now(self) except? -1:
+    cdef double now(self) noexcept nogil:
         return time()
 
     cdef int wait_for_evt(self, double timeout) except -1:
@@ -247,16 +246,16 @@ cdef class FrameSyncWorker():
     cdef bint has_frame(self) except -1:
         return False
 
-    cdef bint can_capture(self) except -1:
+    cdef bint can_capture(self) noexcept nogil:
         return False
 
     cdef bint do_capture(self) except -1:
         return 0
 
-    cdef int update_fps(self) except -1:
-        return 0
+    cdef void update_fps(self) noexcept nogil:
+        pass
 
-    cdef double calc_next_ts(self, double now) except? -1:
+    cdef double calc_next_ts(self, double now) noexcept nogil:
         if self.target_fps == 9:
             self.update_fps()
         return now + self.target_interval
@@ -272,7 +271,7 @@ cdef class VideoWorker(FrameSyncWorker):
     """
     cdef VideoFrameSync video_frame
 
-    cdef bint can_capture(self) except -1:
+    cdef bint can_capture(self) noexcept nogil:
         return True
 
     cdef bint do_capture(self) except -1:
@@ -288,7 +287,7 @@ cdef class VideoWorker(FrameSyncWorker):
         return False
 
     @cython.cdivision(True)
-    cdef int update_fps(self) except -1:
+    cdef void update_fps(self) noexcept nogil:
         cdef frame_rate_t* fr = self.video_frame._get_frame_rate()
         self.frame_rate.numerator = fr.numerator
         self.frame_rate.denominator = fr.denominator
@@ -298,7 +297,7 @@ cdef class VideoWorker(FrameSyncWorker):
         else:
             self.target_fps = fr.numerator / <double>fr.denominator
             self.target_interval = 1 / self.target_fps
-        return 0
+
 
 cdef class AudioWorker(FrameSyncWorker):
     """Worker used by :class:`FrameSyncThread` for audio frames
@@ -309,7 +308,7 @@ cdef class AudioWorker(FrameSyncWorker):
     def __cinit__(self, *args, **kwargs):
         self.target_nsamples = 800
 
-    cdef bint can_capture(self) except -1:
+    cdef bint can_capture(self) noexcept nogil:
         return self.frame_sync._audio_samples_available() >= self.target_nsamples
 
     cdef bint do_capture(self) except -1:
@@ -326,8 +325,7 @@ cdef class AudioWorker(FrameSyncWorker):
         return False
 
     @cython.cdivision(True)
-    cdef int update_fps(self) except -1:
-        cdef VideoFrameSync video_frame = self.frame_sync.video_frame
+    cdef void update_fps(self) noexcept nogil:
         cdef frame_rate_t* fr
         cdef double fps
         cdef size_t fs = self.audio_frame._get_sample_rate()
@@ -352,7 +350,6 @@ cdef class AudioWorker(FrameSyncWorker):
         self.target_nsamples = nsamp
         self.target_fps = fps
         self.target_interval = 1.0 / fps
-        return 0
 
 
 class FrameSyncThread(threading.Thread):

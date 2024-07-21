@@ -19,7 +19,7 @@ cdef class FrameSync:
 
     cdef int _set_video_frame(self, VideoFrameSync video_frame) except -1
     cdef int _set_audio_frame(self, AudioFrameSync audio_frame) except -1
-    cdef int _audio_samples_available(self) except? -1 nogil
+    cdef int _audio_samples_available(self) noexcept nogil
     cdef int _capture_video(self, FrameFormat fmt=*) except -1
     cdef size_t _capture_available_audio(self) except? -1
     cdef size_t _capture_audio(self, size_t no_samples, bint limit=*, bint truncate=*) except? -1
