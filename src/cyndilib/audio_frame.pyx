@@ -199,7 +199,7 @@ cdef class AudioRecvFrame(AudioFrame):
         return l
 
     @property
-    def read_length(self) -> int:
+    def read_length(self):
         """The total number of samples in the read buffer
         (not multiplied by :attr:`num_channels`)
         """

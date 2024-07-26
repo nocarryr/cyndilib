@@ -46,7 +46,7 @@ cdef class Source:
         return obj
 
     @property
-    def host_name(self) -> str:
+    def host_name(self):
         """The host name portion parsed from the source :attr:`name`
         """
         if not self.valid or self.name is None:
@@ -55,7 +55,7 @@ cdef class Source:
         return s.rstrip(' ')
 
     @property
-    def stream_name(self) -> str:
+    def stream_name(self):
         """The stream name portion parsed from the source :attr:`name`
         """
         if not self.valid or self.name is None:
