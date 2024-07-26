@@ -411,14 +411,14 @@ cdef class Sender:
         return True
 
     def get_num_connections(self, double timeout):
-        cdef uint32_t timeout_ms = lround(timeout)
+        cdef uint32_t timeout_ms = lround(timeout * 1000)
         return self._get_num_connections(timeout_ms)
 
     cdef int _get_num_connections(self, uint32_t timeout_ms) except? -1 nogil:
         return NDIlib_send_get_no_connections(self.ptr, timeout_ms)
 
     def update_tally(self, double timeout):
-        cdef uint32_t timeout_ms = lround(timeout)
+        cdef uint32_t timeout_ms = lround(timeout * 1000)
         return self._update_tally(timeout_ms)
 
     cdef bint _update_tally(self, uint32_t timeout_ms) except -1 nogil:
