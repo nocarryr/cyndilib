@@ -122,7 +122,7 @@ class CyBuildError(CCompilerError):
         return '{}  (try building with "--use-cython")'.format(self.msg)
 
 
-compiler_directives = {'embedsignature':True}
+compiler_directives = {'embedsignature':True, 'embedsignature.format':'python'}
 
 if USE_PROFILE:
     ext_macros = [('CYTHON_TRACE', 1), ('CYTHON_TRACE_NOGIL', 1)]
