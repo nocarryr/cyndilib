@@ -668,6 +668,8 @@ cdef class AudioSendFrame(AudioFrame):
 
     @property
     def attached_to_sender(self):
+        """True if the frame has been added to a :class:`~.sender.Sender`
+        """
         return self.send_status.data.attached_to_sender
 
     @property
@@ -680,6 +682,9 @@ cdef class AudioSendFrame(AudioFrame):
 
     @property
     def shape(self):
+        """The expected shape for data being written to the frame
+        as a tuple of (:attr:`~AudioFrame.num_channels`, :attr:`~AudioFrame.num_samples`)
+        """
         cdef AudioSendFrame_status_s* ptr = &(self.send_status)
         cdef list l = ptr.data.shape
         return tuple(l[:ptr.data.ndim])
@@ -695,6 +700,15 @@ cdef class AudioSendFrame(AudioFrame):
         return self.send_status.data.ndim
 
     cpdef set_max_num_samples(self, size_t n):
+        """Set the :attr:`max_num_samples`, altering the :attr:`shape`
+        expected for data writes
+
+        .. note::
+
+            This method may only be called before calling
+            :meth:`.sender.Sender.set_audio_frame`
+
+        """
         assert not self.attached_to_sender
         self.max_num_samples = n
         self.ptr.no_samples = n
@@ -764,6 +778,23 @@ cdef class AudioSendFrame(AudioFrame):
         frame_status_set_send_ready(&(self.send_status))
 
     def write_data(self, cnp.float32_t[:,:] data):
+        """Write audio data to the internal buffer
+
+        The buffered data will then be sent on the next call to
+        :meth:`.sender.Sender.send_audio`
+
+        Arguments:
+            data: A 2-d array or memoryview of 32-bit floats with shape
+                ``(num_channels, num_samples)``
+
+        .. note::
+
+            This method is available for flexibility, but using
+            :meth:`.sender.Sender.write_audio`
+            may be more desirable as the audio data will be buffered and
+            sent immediately
+
+        """
         cdef AudioSendFrame_item_s* item = self._prepare_memview_write()
         cdef cnp.float32_t[:,:] view = self
 

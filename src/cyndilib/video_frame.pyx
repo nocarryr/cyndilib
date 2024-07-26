@@ -685,6 +685,23 @@ cdef class VideoSendFrame(VideoFrame):
         frame_status_set_send_ready(&(self.send_status))
 
     def write_data(self, cnp.uint8_t[:] data):
+        """Write a frame of video data to the internal buffer
+
+        The buffered data will then be sent on the next call to
+        :meth:`.sender.Sender.send_video` or :meth:`.sender.Sender.send_video_async`
+
+        Arguments:
+            data: A 1-d array or memoryview of unsigned 8-bit integers
+                formatted as described in :class:`.wrapper.ndi_structs.FourCC`
+
+        .. note::
+
+            This method is available for flexibility, but using
+            :meth:`.sender.Sender.write_video` or :meth:`.sender.Sender.write_video_async`
+            may be more desirable as the video data will be buffered and
+            sent immediately
+
+        """
         cdef VideoSendFrame_item_s* item = self._prepare_memview_write()
         cdef cnp.uint8_t[:] view = self
 

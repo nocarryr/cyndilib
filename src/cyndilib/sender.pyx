@@ -296,7 +296,9 @@ cdef class Sender:
 
         .. note::
 
-            This is not an :keyword:`async def` function
+            This is not an :keyword:`async def` function. In this context,
+            "async" only describes how the |NDI| library handles processing
+            and syncronization.
 
         Arguments:
             data: A 1-d array or memoryview of unsigned 8-bit integers
@@ -319,9 +321,41 @@ cdef class Sender:
         return True
 
     def send_video(self):
+        """Send a frame of video data (if available) that was previously
+        written to the :attr:`video_frame` using its
+        :meth:`~.video_frame.VideoSendFram.write_data` method.
+
+        .. note::
+
+            This method is available for flexibility, but using the
+            :meth:`write_video` or :meth:`write_video_async` methods
+            may be more desirable as the video data will be buffered and
+            sent with a single method call.
+
+        """
         return self._send_video()
 
     def send_video_async(self):
+        """Send a frame of video data as described in :meth:`send_video`
+        asynchronously
+
+        This call will return immediately and the required operations on the
+        data will be handled separately by the |NDI| library.
+
+        .. note::
+
+            This method is available for flexibility, but using the
+            :meth:`write_video` or :meth:`write_video_async` methods
+            may be more desirable as the video data will be buffered and
+            sent with a single method call.
+
+        .. note::
+
+            This is not an :keyword:`async def` function. In this context,
+            "async" only describes how the |NDI| library handles processing
+            and syncronization.
+
+        """
         return self._send_video_async()
 
     cdef bint _send_video(self) noexcept nogil:
@@ -375,6 +409,18 @@ cdef class Sender:
         return True
 
     def send_audio(self):
+        """Send audio data (if available) that was previously
+        written to the :attr:`audio_frame` using its
+        :meth:`~.audio_frame.AudioSendFrame.write_data` method.
+
+        .. note::
+
+            This method is available for flexibility, but using the
+            :meth:`write_audio` or :meth:`write_audio_async` methods
+            may be more desirable as the audio data will be buffered and
+            sent with a single method call.
+
+        """
         return self._send_audio()
 
     cdef bint _send_audio(self) noexcept nogil:
