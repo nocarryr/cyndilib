@@ -13,7 +13,7 @@ cdef class Sender:
 
     Attributes:
         ndi_name (str): The |NDI| source name to use
-        ndi_source (Source): A source object representing the sender
+        source (Source): A source object representing the sender
         video_frame (VideoSendFrame):
         audio_frame (AudioSendFrame):
         metadata_frame (MetadataSendFrame):
@@ -457,6 +457,14 @@ cdef class Sender:
         return True
 
     def get_num_connections(self, double timeout):
+        """Get the current number of receivers connected to this source
+
+        This can be used to avoid even rendering when nothing is connected.
+
+        If you specify a timeout that is not 0, this method will block for
+        the given amount of time (in seconds) until there are connections
+        (or the timeout was reached).
+        """
         cdef uint32_t timeout_ms = lround(timeout * 1000)
         return self._get_num_connections(timeout_ms)
 
@@ -464,6 +472,16 @@ cdef class Sender:
         return NDIlib_send_get_no_connections(self.ptr, timeout_ms)
 
     def update_tally(self, double timeout):
+        """Request an update on the current tally state
+
+        The tally state will then be reflected on the
+        :attr:`~.finder.Source.program_tally` and
+        :attr:`~.finder.Source.preview_tally` attributes of the :attr:`source`.
+
+        If *timeout* is non-zero, this method will block for the
+        given amount of time (in seconds) until a change in tally state
+        (or the timeout was reached).
+        """
         cdef uint32_t timeout_ms = lround(timeout * 1000)
         return self._update_tally(timeout_ms)
 
