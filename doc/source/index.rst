@@ -14,6 +14,7 @@ Welcome to cyndilib's documentation!
    overview
    guide/index.rst
    examples
+   development
    reference/index.rst
    reference/glossary.rst
 

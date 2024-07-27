@@ -32,39 +32,73 @@ Links
 Installation
 ************
 
-Installation via ``pip`` is supported using pre-built platform wheels::
+.. highlight:: bash
+
+
+From PyPI
+=========
+
+This project is available on PyPI with pre-built wheels for most
+platforms. Installing via `pip`_ would be the simplest method of
+installation::
 
     pip install cyndilib
 
-All of the necessary headers and Cython files are included in the distribution.
-This will allow for development of applications directly using
-``cimport`` directives.
+All of the necessary headers and Cython ``.pxd`` files will be included
+in the distribution. This will allow for direct integration if using
+Cython in your application using the ``cimport`` statement.
+See the `Cython documentation <https://cython.readthedocs.io/en/latest/src/userguide/sharing_declarations.html>`_
+for more details.
 
 
-Building
-========
+Building from Source
+====================
 
-For Windows, the `NDI® SDK`_ will need to be downloaded and installed before
-building. MacOS and most Linux shouldn't require this.
+This may be necessary if a pre-built wheel is not available for
+your platform or Python version.
 
-Clone or download the repository::
+First clone or download the repository::
 
     git clone https://github.com/nocarryr/cyndilib.git
     cd cyndilib
 
 
-If `pipenv <https://pipenv.pypa.io/en/latest/>`_ is installed on your system,
-the provided Pipfile may be used::
+The project can then be installed with::
 
-    pipenv install --dev
-
-
-If encountering errors, try compiling the extensions manually using::
-
-    python setup.py build_ext --inplace
+    pip install .
 
 
-This should display more useful error messages.
+All of the dependencies for building and installation should be automatically
+detected and installed (assuming your system supports the `build metadata`_
+specifications introduced `PEP 517`_).
+
+.. note::
+
+    The ``.`` in the above command implies that you are in the root directory
+    of the cloned project.  For other uses, the path to the project root may
+    be used instead.
+
+
+Parallel Builds
+^^^^^^^^^^^^^^^
+
+There are quite a few sources to compile and by default, they will be compiled
+one at a time.  There is currently not a direct way to tell pip to use multiple
+threads when compiling.
+
+An environment variable ``CYNDILIB_BUILD_PARALLEL`` may be used to work around
+this however.  Its value can be either a specific number of threads to use
+or ``"auto"`` to use all available cores::
+
+    CYNDILIB_BUILD_PARALLEL=auto pip install .
+
+
+Further Information
+^^^^^^^^^^^^^^^^^^^
+
+More information on compilation and development can be found on the
+`development page <https://cyndilib.readthedocs.io/en/latest/development>`_
+of the project documentation.
 
 
 Usage
@@ -106,3 +140,6 @@ Liability for derivative works, etc falls under the responsibility of their auth
 .. _PyPI: https://pypi.org/
 .. _LICENSE: LICENSE
 .. _libndi_licenses.txt: libndi_licenses.txt
+.. _PEP 517: https://peps.python.org/pep-0517/
+.. _build metadata: https://setuptools.pypa.io/en/latest/build_meta.html
+.. _pip: https://pip.pypa.io/

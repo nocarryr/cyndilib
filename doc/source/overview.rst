@@ -14,3 +14,6 @@ Overview
 .. _PyPI: https://pypi.org/
 .. _LICENSE: LICENSE.html
 .. _libndi_licenses.txt: libndi_licenses.html
+.. _PEP 517: https://peps.python.org/pep-0517/
+.. _build metadata: https://setuptools.pypa.io/en/latest/build_meta.html
+.. _pip: https://pip.pypa.io/
