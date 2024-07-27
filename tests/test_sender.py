@@ -22,10 +22,10 @@ NULL_INDEX = _test_send_frame_status.get_null_idx()
 MAX_FRAME_BUFFERS = _test_send_frame_status.get_max_frame_buffers()
 
 
-def test_send_video(fake_video_frames):
+def test_send_video(request, fake_video_frames):
     width, height, fr, num_frames, fake_frames = fake_video_frames
-
-    sender = Sender('test_send_video')
+    name = request.node.nodeid.split('::')[-1]
+    sender = Sender(name)
     vf = VideoSendFrame()
     vf.set_fourcc(FourCC.RGBA)
     assert vf.get_fourcc() == FourCC.RGBA
