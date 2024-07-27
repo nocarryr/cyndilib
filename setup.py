@@ -169,8 +169,10 @@ class build_ext_subclass(build_ext):
         if self.parallel is None:
             # Do not override self.parallel if already defined by
             # command-line flag (--parallel or -j)
-
-            parallel = os.environ.get("CYNDILIB_BUILD_PARALLEL")
+            if os.environ.get('READTHEDOCS', '').lower() == 'true':
+                parallel = 'auto'
+            else:
+                parallel = os.environ.get("CYNDILIB_BUILD_PARALLEL")
             if parallel == 'auto':
                 self.parallel = os.cpu_count()
             elif parallel:
