@@ -97,7 +97,7 @@ Further Information
 ^^^^^^^^^^^^^^^^^^^
 
 More information on compilation and development can be found on the
-`development page <https://cyndilib.readthedocs.io/en/latest/development>`_
+`development page <https://cyndilib.readthedocs.io/en/latest/development.html>`_
 of the project documentation.
 
 
