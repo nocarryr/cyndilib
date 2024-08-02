@@ -172,15 +172,18 @@ cdef FourCCPackInfo* get_fourcc_pack_info(FourCC fourcc, size_t xres, size_t yre
     return p
 
 
-cdef int calc_fourcc_pack_info(FourCCPackInfo* p) except -1 nogil:
+cdef int calc_fourcc_pack_info(FourCCPackInfo* p, size_t frame_line_stride=0) except -1 nogil:
     cdef size_t xres = p.xres, yres = p.yres
     cdef size_t bytes_per_pixel
 
     if p.fourcc == FourCC.UYVY:
         p.num_planes = 1
         bytes_per_pixel = sizeof(uint8_t) * 2
-        p.line_strides[0] = bytes_per_pixel * xres
-        p.total_size = bytes_per_pixel * xres * yres
+        if frame_line_stride:
+            p.line_strides[0] = sizeof(uint8_t) * frame_line_stride
+        else:
+            p.line_strides[0] = bytes_per_pixel * xres
+        p.total_size = p.line_strides[0] * yres
     elif p.fourcc == FourCC.UYVA:
         p.num_planes = 2
         bytes_per_pixel = sizeof(uint8_t) * 3           # YUVY + alpha plane
@@ -223,7 +226,10 @@ cdef int calc_fourcc_pack_info(FourCCPackInfo* p) except -1 nogil:
     elif p.fourcc == FourCC.BGRA or p.fourcc == FourCC.BGRX or p.fourcc == FourCC.RGBA or p.fourcc == FourCC.RGBX:
         p.num_planes = 1
         bytes_per_pixel = sizeof(uint8_t) * 4           # BGRX_BGRA, RGBX_RGBA
-        p.line_strides[0] = sizeof(uint8_t) * 4 * xres
+        if frame_line_stride:
+            p.line_strides[0] = sizeof(uint8_t) * frame_line_stride
+        else:
+            p.line_strides[0] = sizeof(uint8_t) * xres * 4
         p.total_size = p.line_strides[0] * yres
     else:
         raise_withgil(PyExc_ValueError, 'Unknown FourCC type')

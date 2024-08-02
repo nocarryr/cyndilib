@@ -224,8 +224,10 @@ cdef class VideoFrame:
         if self.pack_info.xres == 0 or self.pack_info.yres == 0:
             return 0
         if changed:
-            calc_fourcc_pack_info(&(self.pack_info))
-            self.ptr.line_stride_in_bytes = self.pack_info.bytes_per_pixel * self.ptr.xres
+            calc_fourcc_pack_info(&(self.pack_info), self.ptr.line_stride_in_bytes)
+            # only overwrite our line_stride_in_bytes if it was left unspecified in the NDI video frame.
+            if not self.ptr.line_stride_in_bytes:
+                self.ptr.line_stride_in_bytes = self.pack_info.bytes_per_pixel * self.ptr.xres
         return 0
 
 
