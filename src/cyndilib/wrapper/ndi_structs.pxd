@@ -318,7 +318,7 @@ cdef FourCCPackInfo* fourcc_pack_info_create() except NULL nogil
 cdef void fourcc_pack_info_init(FourCCPackInfo* fourcc) noexcept nogil
 cdef int fourcc_pack_info_destroy(FourCCPackInfo* p) except -1 nogil
 cdef FourCCPackInfo* get_fourcc_pack_info(FourCC fourcc, size_t xres, size_t yres) except NULL nogil
-cdef int calc_fourcc_pack_info(FourCCPackInfo* p) except -1 nogil
+cdef int calc_fourcc_pack_info(FourCCPackInfo* p, size_t frame_line_stride=*) except -1 nogil
 
 cpdef enum FrameFormat:
     progressive = NDIlib_frame_format_type_progressive

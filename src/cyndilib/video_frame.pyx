@@ -211,9 +211,12 @@ cdef class VideoFrame:
     cpdef size_t get_data_size(self):
         return self._get_data_size()
 
-    cdef int _recalc_pack_info(self) except -1 nogil:
+    cdef int _recalc_pack_info(self, bint use_ptr_stride=True) except -1 nogil:
         cdef FourCC fcc = self._get_fourcc()
         cdef bint changed = False
+        cdef size_t line_stride = 0
+        if use_ptr_stride:
+            line_stride = self.ptr.line_stride_in_bytes
         if self.pack_info.fourcc != fcc:
             self.pack_info.fourcc = fcc
             changed = True
@@ -224,8 +227,10 @@ cdef class VideoFrame:
         if self.pack_info.xres == 0 or self.pack_info.yres == 0:
             return 0
         if changed:
-            calc_fourcc_pack_info(&(self.pack_info))
-            self.ptr.line_stride_in_bytes = self.pack_info.bytes_per_pixel * self.ptr.xres
+            calc_fourcc_pack_info(&(self.pack_info), line_stride)
+            # only overwrite our line_stride_in_bytes if it was left unspecified in the NDI video frame.
+            if not use_ptr_stride:
+                self.ptr.line_stride_in_bytes = self.pack_info.bytes_per_pixel * self.ptr.xres
         return 0
 
 
@@ -726,6 +731,9 @@ cdef class VideoSendFrame(VideoFrame):
             raise_withgil(PyExc_RuntimeError, 'no write frame available')
         self.send_status.data.write_index = idx
         return &(self.send_status.items[idx])
+
+    cdef int _recalc_pack_info(self, bint use_ptr_stride=False) except -1 nogil:
+        return VideoFrame._recalc_pack_info(self, use_ptr_stride)
 
     cdef bint _send_frame_available(self) noexcept nogil:
         cdef Py_ssize_t idx = frame_status_get_next_read_index(&(self.send_status))
