@@ -46,7 +46,7 @@ cdef class VideoFrame:
     cdef void _set_timestamp(self, int64_t value) noexcept nogil
     cdef size_t _get_data_size(self) noexcept nogil
     cpdef size_t get_data_size(self)
-    cdef int _recalc_pack_info(self) except -1 nogil
+    cdef int _recalc_pack_info(self, bint use_ptr_stride=*) except -1 nogil
 
 cdef class VideoRecvFrame(VideoFrame):
     cdef readonly size_t max_buffers
