@@ -4,7 +4,13 @@
 from libc.stdint cimport *
 cimport numpy as cnp
 
-from .wrapper cimport *
+
+from .wrapper.ndi_send cimport (
+    NDIlib_send_create_t,
+    NDIlib_send_instance_t,
+)
+from .wrapper.ndi_find cimport NDIlib_source_t
+
 from .finder cimport Source
 from .send_frame_status cimport (
     VideoSendFrame_status_s, VideoSendFrame_item_s,

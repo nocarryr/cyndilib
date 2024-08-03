@@ -1,3 +1,4 @@
+from .common cimport mem_alloc, mem_free, raise_mem_err
 
 __all__ = ('RecvBandwidth', 'RecvColorFormat')
 

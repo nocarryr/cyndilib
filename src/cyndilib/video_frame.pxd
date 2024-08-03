@@ -7,10 +7,18 @@ from libcpp.deque cimport deque as cpp_deque
 from libcpp.set cimport set as cpp_set
 cimport numpy as cnp
 
-from .wrapper cimport *
-from .buffertypes cimport *
+from .wrapper.types cimport *
+from .wrapper.ndi_structs cimport (
+    NDIlib_video_frame_v2_t,
+    FrameFormat,
+    FourCC,
+    FourCCPackInfo,
+)
+from .wrapper.ndi_recv cimport NDIlib_recv_instance_t
+from .wrapper.ndi_framesync cimport NDIlib_framesync_instance_t
+from .buffertypes cimport video_bfr_p
 from .locks cimport RLock, Condition
-from .send_frame_status cimport *
+from .send_frame_status cimport VideoSendFrame_status_s, VideoSendFrame_item_s
 
 
 cdef class VideoFrame:

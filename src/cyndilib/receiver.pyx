@@ -3,6 +3,32 @@ cimport cython
 import threading
 
 from .clock cimport time, sleep
+from .wrapper.ndi_structs cimport (
+    NDIlib_frame_type_none,
+    NDIlib_frame_type_video,
+    NDIlib_frame_type_audio,
+    NDIlib_frame_type_metadata,
+    NDIlib_frame_type_error,
+    NDIlib_frame_type_status_change,
+
+)
+from .wrapper.ndi_recv cimport (
+    NDIlib_recv_create_v3,
+    NDIlib_recv_capture_v3,
+    NDIlib_recv_destroy,
+    NDIlib_recv_connect,
+    NDIlib_recv_get_no_connections,
+    NDIlib_recv_get_performance,
+    NDIlib_recv_set_tally,
+    NDIlib_recv_free_video_v2,
+    NDIlib_recv_free_audio_v3,
+    NDIlib_recv_free_metadata,
+    recv_bandwidth_cast,
+    recv_format_cast,
+    recv_t_create_default,
+    recv_t_destroy,
+    recv_t_copy,
+)
 
 
 __all__ = ('Receiver', 'RecvThreadWorker', 'RecvThread')

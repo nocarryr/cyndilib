@@ -3,7 +3,15 @@
 
 from libc.stdint cimport *
 
-from .wrapper cimport *
+from .wrapper.types cimport *
+from .wrapper.ndi_structs cimport (
+    NDIlib_video_frame_v2_t,
+    NDIlib_audio_frame_v3_t,
+    FrameFormat,
+)
+from .wrapper.ndi_framesync cimport (
+    NDIlib_framesync_instance_t,
+)
 
 from .locks cimport Event
 from .callback cimport Callback

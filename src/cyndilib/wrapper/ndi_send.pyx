@@ -1,3 +1,4 @@
+from .common cimport mem_alloc, mem_free, raise_mem_err
 
 cdef NDIlib_send_create_t* send_t_create(
     const char* ndi_name,

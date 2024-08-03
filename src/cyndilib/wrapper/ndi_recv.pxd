@@ -5,8 +5,15 @@ from libc.stdint cimport *
 
 from .ndi_lib cimport *
 from .types cimport *
-from .common cimport *
-from .ndi_structs cimport *
+from .ndi_structs cimport (
+    NDIlib_video_frame_v2_t,
+    NDIlib_audio_frame_v2_t,
+    NDIlib_audio_frame_v3_t,
+    NDIlib_metadata_frame_t,
+    NDIlib_source_t,
+    NDIlib_tally_t,
+    NDIlib_frame_type_e,
+)
 
 cdef extern from "Processing.NDI.Recv.h" nogil:
 

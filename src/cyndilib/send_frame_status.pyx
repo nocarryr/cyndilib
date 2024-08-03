@@ -1,5 +1,18 @@
 cimport cython
 
+from .wrapper.common cimport (
+    mem_alloc, mem_free, raise_mem_err,
+    raise_exception, raise_withgil, PyExc_ValueError,
+)
+from .wrapper.ndi_structs cimport (
+    video_frame_create_default,
+    audio_frame_create_default,
+    video_frame_copy,
+    audio_frame_copy,
+    video_frame_destroy,
+    audio_frame_destroy,
+)
+
 cdef int frame_status_init(SendFrame_status_s_ft* ptr) except -1 nogil:
     ptr.data.num_buffers = MAX_FRAME_BUFFERS
     ptr.data.write_index = 0
