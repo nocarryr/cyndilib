@@ -23,7 +23,7 @@ RecvThread
 ReceiveFrameType
 ----------------
 
-.. class:: ReceiveFrameType(enum.IntFlag)
+.. autoclass:: ReceiveFrameType
 
     Frame type flags used to receive specific frame types and indicate results.
     Members and be combined using bit-wise operators.
@@ -54,7 +54,8 @@ ReceiveFrameType
 
     .. attribute:: recv_buffers_full
 
-        Indicates a :class:`VideoRecvFrame` or :class:`AudioRecvFrame` buffer
+        Indicates a :class:`~.video_frame.VideoRecvFrame` or
+        :class:`~.audio_frame.AudioRecvFrame` buffer
         was full when trying to read (results only)
 
     .. attribute:: recv_all

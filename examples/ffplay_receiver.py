@@ -15,9 +15,7 @@ from cyndilib.video_frame import VideoFrameSync
 from cyndilib.receiver import Receiver
 from cyndilib.finder import Finder
 if TYPE_CHECKING:
-    from fractions import Fraction
     from cyndilib.finder import Source
-    from cyndilib.framesync import FrameSync
 
 
 FF_PLAY = '{ffplay} -video_size {xres}x{yres} -pixel_format {pix_fmt} -f rawvideo -i pipe:'
@@ -94,7 +92,8 @@ def wait_for_first_frame(receiver: Receiver) -> None:
     non-empty one
     """
     vf = receiver.frame_sync.video_frame
-    frame_rate: Fraction = vf.get_frame_rate()
+    assert vf is not None
+    frame_rate = vf.get_frame_rate()
     wait_time = float(1 / frame_rate)
     click.echo('waiting for frame...')
     while receiver.is_connected():
@@ -120,7 +119,7 @@ def play(options: Options) -> None:
             bandwidth=options.recv_bandwidth.value,
         )
         vf = VideoFrameSync()
-        frame_sync: FrameSync = receiver.frame_sync
+        frame_sync = receiver.frame_sync
         frame_sync.set_video_frame(vf)
 
         # Set the receiver source and wait for it to connect
@@ -141,7 +140,7 @@ def play(options: Options) -> None:
             # At this point we should have received a frame, so the pixel format,
             # resolution and frame rate should be populated.
             fourcc = vf.get_fourcc()
-            frame_rate: Fraction = vf.get_frame_rate()
+            frame_rate = vf.get_frame_rate()
             wait_time = float(1 / frame_rate)
             xres, yres = vf.get_resolution()
 
