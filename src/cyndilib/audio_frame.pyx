@@ -219,6 +219,12 @@ cdef class AudioRecvFrame(AudioFrame):
         """Get all available data in the read buffer as a 2-d array
 
         The shape of the result will be (:attr:`~AudioFrame.num_channels`, :attr:`read_length`)
+
+        Returns a tuple of
+
+        * ``data``: The sample data
+        * ``timestamps``: An array of :term:`timestamps <ndi-timestamp>` for each
+            column in ``data``
         """
         cdef size_t bfr_len
         cdef cnp.ndarray[cnp.float32_t, ndim=2] result
