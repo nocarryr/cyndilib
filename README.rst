@@ -32,8 +32,6 @@ Links
 Installation
 ************
 
-.. highlight:: bash
-
 
 From PyPI
 =========

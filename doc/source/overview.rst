@@ -1,6 +1,8 @@
 Overview
 ########
 
+.. highlight:: bash
+
 .. include:: ../../README.rst
     :start-line: 2
     :end-before: .. _NDI®
