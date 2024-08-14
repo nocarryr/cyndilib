@@ -3,14 +3,10 @@ import threading
 
 from types import MethodType
 
-from cyndilib.wrapper import FrameFormat
-from cyndilib.audio_frame import AudioFrameSync
-from cyndilib.video_frame import VideoFrameSync
-from cyndilib.receiver import Receiver, ReceiveFrameType
-
-# __reduce_cython__: _cython_3_0_10.cython_function_or_method
-# __setstate_cython__: _cython_3_0_10.cython_function_or_method
-# __test__: dict
+from .wrapper import FrameFormat
+from .audio_frame import AudioFrameSync
+from .video_frame import VideoFrameSync
+from .receiver import Receiver, ReceiveFrameType
 
 
 class FrameSync:

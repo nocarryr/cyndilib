@@ -1,39 +1,26 @@
 # import _cython_3_0_10
-import enum
-import threading
-from _typeshed import Incomplete
-from typing import Any, Callable, ClassVar
+from typing import Any, TypedDict
 from types import MethodType
 
-from cyndilib.wrapper import RecvColorFormat, RecvBandwidth
-from cyndilib.locks import RLock, Condition
-from cyndilib.framesync import FrameSync
-from cyndilib.finder import Source
-from cyndilib.audio_frame import AudioRecvFrame
-from cyndilib.video_frame import VideoRecvFrame
-from cyndilib.metadata_frame import MetadataRecvFrame
+import enum
+import threading
 
-# __pyx_capi__: dict
-# __reduce_cython__: _cython_3_0_10.cython_function_or_method
-# __setstate_cython__: _cython_3_0_10.cython_function_or_method
-# __test__: dict
-# nothing: ReceiveFrameType
-# recv_all: ReceiveFrameType
-# recv_audio: ReceiveFrameType
-# recv_buffers_full: ReceiveFrameType
-# recv_error: ReceiveFrameType
-# recv_metadata: ReceiveFrameType
-# recv_status_change: ReceiveFrameType
-# recv_video: ReceiveFrameType
-# test: _cython_3_0_10.cython_function_or_method
+from .wrapper import RecvColorFormat, RecvBandwidth
+from .wrapper.ndi_structs import NDIlib_tally_t
+from .locks import RLock, Condition
+from .framesync import FrameSync
+from .finder import Source
+from .audio_frame import AudioRecvFrame
+from .video_frame import VideoRecvFrame
+from .metadata_frame import MetadataRecvFrame
+
+class RecvPerformance_t(TypedDict):
+    frames_total: int
+    frames_dropped: int
+    dropped_percent: float
+
 
 class ReceiveFrameType(enum.IntFlag):
-    # __new__: ClassVar[Callable] = ...
-    # _generate_next_value_: ClassVar[Callable] = ...
-    # _member_map_: ClassVar[dict] = ...
-    # _member_names_: ClassVar[list] = ...
-    # _member_type_: ClassVar[type[int]] = ...
-    # _value2member_map_: ClassVar[dict] = ...
     nothing = ...
     recv_all = ...
     recv_audio = ...
@@ -45,6 +32,21 @@ class ReceiveFrameType(enum.IntFlag):
 
 class Receiver:
     # __pyx_vtable__: ClassVar[PyCapsule] = ...
+    audio_frame: AudioRecvFrame|None
+    audio_stats: RecvPerformance_t
+    connection_lock: RLock
+    connection_notify: Condition
+    frame_sync: FrameSync
+    has_audio_frame: bool
+    has_metadata_frame: bool
+    has_video_frame: bool
+    metadata_frame: MetadataRecvFrame|None
+    metadata_stats: RecvPerformance_t
+    source: Source|None
+    source_name: str|None
+    source_tally: NDIlib_tally_t
+    video_frame: VideoRecvFrame|None
+    video_stats: RecvPerformance_t
     def __init__(
         self,
         source_name: str = ...,
@@ -54,26 +56,10 @@ class Receiver:
         allow_video_fields: bool = ...,
         recv_name: str = ...
     ) -> None: ...
-    audio_frame: AudioRecvFrame|None
-    audio_stats: Incomplete
-    connection_lock: RLock
-    connection_notify: Condition
-    frame_sync: FrameSync
-    has_audio_frame: bool
-    has_metadata_frame: bool
-    has_video_frame: bool
-    metadata_frame: MetadataRecvFrame|None
-    metadata_stats: Incomplete
     @property
     def preview_tally(self) -> bool: ...
     @property
     def program_tally(self) -> bool: ...
-    source: Source|None
-    source_name: str|None
-    source_tally: Incomplete
-    video_frame: VideoRecvFrame|None
-    video_stats: Incomplete
-    # def __init__(self, *args, **kwargs) -> None: ...
     def connect_to(self, src: Source) -> Any: ...
     def disconnect(self) -> Any: ...
     def get_num_connections(self) -> Any: ...
@@ -105,8 +91,6 @@ class RecvCreate:
         recv_name: str = ...
     ) -> None: ...
     def __reduce__(self): ...
-    # def __reduce_cython__(self) -> Any: ...
-    # def __setstate_cython__(self, __pyx_state) -> Any: ...
 
 class RecvThread(threading.Thread):
     def __init__(self, receiver: Receiver, timeout_ms: int, recv_frame_type: int = ..., wait_time: float = ...) -> None: ...
@@ -117,7 +101,6 @@ class RecvThread(threading.Thread):
 
 class RecvThreadWorker:
     # __pyx_vtable__: ClassVar[PyCapsule] = ...
-    # def __init__(self, *args, **kwargs) -> None: ...
     def __init__(
         self,
         receiver: Receiver,
@@ -126,5 +109,3 @@ class RecvThreadWorker:
         wait_time: float = ...
     ) -> None: ...
     def __reduce__(self): ...
-    # def __reduce_cython__(self) -> Any: ...
-    # def __setstate_cython__(self, __pyx_state) -> Any: ...
