@@ -1,9 +1,13 @@
 
-from . import ndi_recv, ndi_structs
 
-from .ndi_recv import *
-from .ndi_structs import *
+from .ndi_recv import RecvBandwidth, RecvColorFormat
+from .ndi_structs import (
+    FrameType, FourCC, FrameFormat, get_ndi_version,
+)
 
 ndi_version = get_ndi_version()
 
-__all__ = ndi_recv.__all__ + ndi_structs.__all__ + ('ndi_version',)
+__all__ = (
+    'RecvBandwidth', 'RecvColorFormat',
+    'FrameType', 'FourCC', 'FrameFormat', 'get_ndi_version', 'ndi_version'
+)

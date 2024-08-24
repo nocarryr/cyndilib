@@ -7,10 +7,15 @@ from libcpp.deque cimport deque as cpp_deque
 from libcpp.set cimport set as cpp_set
 cimport numpy as cnp
 
-from .wrapper cimport *
-from .buffertypes cimport *
+from .wrapper.types cimport *
+from .wrapper.ndi_structs cimport (
+    NDIlib_audio_frame_v3_t
+)
+from .wrapper.ndi_recv cimport NDIlib_recv_instance_t
+from .wrapper.ndi_framesync cimport NDIlib_framesync_instance_t
+from .buffertypes cimport audio_bfr_p
 from .locks cimport RLock, Condition
-from .send_frame_status cimport *
+from .send_frame_status cimport AudioSendFrame_status_s, AudioSendFrame_item_s
 
 
 cdef class AudioFrame:

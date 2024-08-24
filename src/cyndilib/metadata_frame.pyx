@@ -7,6 +7,12 @@ from libc.string cimport strcpy
 # import xml.etree.ElementTree as ET
 import re
 
+from .wrapper.common cimport mem_alloc, mem_free
+from .wrapper.ndi_structs cimport (
+    metadata_frame_create,
+    metadata_frame_destroy,
+)
+from .wrapper.ndi_recv cimport NDIlib_recv_free_metadata
 
 __all__ = ('MetadataFrame', 'MetadataRecvFrame', 'MetadataSendFrame')
 

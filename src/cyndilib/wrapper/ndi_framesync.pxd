@@ -4,8 +4,13 @@
 from libc.stdint cimport *
 
 from .ndi_lib cimport *
-from .ndi_structs cimport *
-from .ndi_recv cimport *
+from .ndi_structs cimport (
+    NDIlib_video_frame_v2_t,
+    NDIlib_audio_frame_v2_t,
+    NDIlib_audio_frame_v3_t,
+    NDIlib_frame_format_type_e,
+)
+from .ndi_recv cimport NDIlib_recv_instance_t
 
 cdef extern from "Processing.NDI.FrameSync.h" nogil:
 

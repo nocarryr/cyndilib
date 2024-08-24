@@ -3,7 +3,14 @@ from cython.operator cimport dereference
 import threading
 
 from .clock cimport time, sleep
-
+from .wrapper.common cimport raise_mem_err
+from .wrapper.ndi_find cimport (
+    NDIlib_find_create_t,
+    NDIlib_find_create_v2,
+    NDIlib_find_destroy,
+    NDIlib_find_get_current_sources,
+    NDIlib_find_wait_for_sources,
+)
 
 __all__ = ('Source', 'Finder', 'FinderThreadWorker', 'FinderThread')
 
