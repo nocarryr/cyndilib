@@ -117,6 +117,24 @@ cdef class VideoFrame:
         self._recalc_pack_info()
         return 0
 
+    @property
+    def bits_per_pixel(self):
+        """Bits per pixel for the current :attr:`fourcc`
+        """
+        return self._get_bits_per_pixel()
+
+    @property
+    def padded_bits_per_pixel(self):
+        """Padded bits per pixel for the current :attr:`fourcc`
+        """
+        return self._get_padded_bits_per_pixel()
+
+    cdef uint8_t _get_bits_per_pixel(self) noexcept nogil:
+        return self.pack_info.bits_per_pixel
+
+    cdef uint8_t _get_padded_bits_per_pixel(self) noexcept nogil:
+        return self.pack_info.padded_bits_per_pixel
+
     def get_frame_rate(self) -> Fraction:
         """Get the video frame rate
         """
@@ -207,7 +225,7 @@ cdef class VideoFrame:
     #     return ndi_time_to_posix(self.ptr.timestamp)
 
     cdef size_t _get_data_size(self) noexcept nogil:
-        return self.pack_info.total_size
+        return self._get_buffer_size()
     cpdef size_t get_data_size(self):
         return self._get_data_size()
 
@@ -230,7 +248,7 @@ cdef class VideoFrame:
             calc_fourcc_pack_info(&(self.pack_info), line_stride)
             # only overwrite our line_stride_in_bytes if it was left unspecified in the NDI video frame.
             if not use_ptr_stride:
-                self.ptr.line_stride_in_bytes = self.pack_info.bytes_per_pixel * self.ptr.xres
+                self.ptr.line_stride_in_bytes = self.pack_info.line_strides[0]
         return 0
 
 
@@ -788,7 +806,7 @@ cdef class VideoSendFrame(VideoFrame):
     cdef int _rebuild_array(self) except -1 nogil:
         cdef VideoSendFrame_status_s* s_ptr = &(self.send_status)
         frame_status_copy_frame_ptr(s_ptr, self.ptr)
-        s_ptr.data.shape[0] = self.pack_info.total_size
+        s_ptr.data.shape[0] = self._get_buffer_size()
         s_ptr.data.strides[0] = sizeof(uint8_t)
         frame_status_alloc_p_data(s_ptr)
         return 0

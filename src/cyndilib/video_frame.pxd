@@ -27,6 +27,8 @@ cdef class VideoFrame:
     cdef int _set_yres(self, int value) except -1 nogil
     cdef FourCC _get_fourcc(self) noexcept nogil
     cdef int _set_fourcc(self, FourCC value) except -1 nogil
+    cdef uint8_t _get_bits_per_pixel(self) noexcept nogil
+    cdef uint8_t _get_padded_bits_per_pixel(self) noexcept nogil
     cdef frame_rate_t* _get_frame_rate(self) noexcept nogil
     cdef int _set_frame_rate(self, frame_rate_ft fr) noexcept nogil
     cdef float _get_aspect(self) noexcept nogil
