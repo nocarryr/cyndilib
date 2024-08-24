@@ -230,7 +230,7 @@ cdef class VideoFrame:
             calc_fourcc_pack_info(&(self.pack_info), line_stride)
             # only overwrite our line_stride_in_bytes if it was left unspecified in the NDI video frame.
             if not use_ptr_stride:
-                self.ptr.line_stride_in_bytes = self.pack_info.bytes_per_pixel * self.ptr.xres
+                self.ptr.line_stride_in_bytes = self.pack_info.line_strides[0]
         return 0
 
 

@@ -308,9 +308,11 @@ cdef struct FourCCPackInfo:
     size_t xres
     size_t yres
     FourCC fourcc
-    size_t bytes_per_pixel
+    uint8_t bits_per_pixel
+    uint8_t padded_bits_per_pixel
     size_t num_planes
     size_t total_size
+    uint32_t total_bits
     size_t[4] line_strides
     size_t[4] stride_offsets
 
