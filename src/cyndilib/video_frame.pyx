@@ -207,7 +207,7 @@ cdef class VideoFrame:
     #     return ndi_time_to_posix(self.ptr.timestamp)
 
     cdef size_t _get_data_size(self) noexcept nogil:
-        return self.pack_info.total_size
+        return self._get_buffer_size()
     cpdef size_t get_data_size(self):
         return self._get_data_size()
 
@@ -788,7 +788,7 @@ cdef class VideoSendFrame(VideoFrame):
     cdef int _rebuild_array(self) except -1 nogil:
         cdef VideoSendFrame_status_s* s_ptr = &(self.send_status)
         frame_status_copy_frame_ptr(s_ptr, self.ptr)
-        s_ptr.data.shape[0] = self.pack_info.total_size
+        s_ptr.data.shape[0] = self._get_buffer_size()
         s_ptr.data.strides[0] = sizeof(uint8_t)
         frame_status_alloc_p_data(s_ptr)
         return 0
