@@ -117,6 +117,24 @@ cdef class VideoFrame:
         self._recalc_pack_info()
         return 0
 
+    @property
+    def bits_per_pixel(self):
+        """Bits per pixel for the current :attr:`fourcc`
+        """
+        return self._get_bits_per_pixel()
+
+    @property
+    def padded_bits_per_pixel(self):
+        """Padded bits per pixel for the current :attr:`fourcc`
+        """
+        return self._get_padded_bits_per_pixel()
+
+    cdef uint8_t _get_bits_per_pixel(self) noexcept nogil:
+        return self.pack_info.bits_per_pixel
+
+    cdef uint8_t _get_padded_bits_per_pixel(self) noexcept nogil:
+        return self.pack_info.padded_bits_per_pixel
+
     def get_frame_rate(self) -> Fraction:
         """Get the video frame rate
         """
