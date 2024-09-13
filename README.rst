@@ -99,6 +99,34 @@ More information on compilation and development can be found on the
 of the project documentation.
 
 
+Extra
+=====
+
+External dependencies might be required for interacting with NDI. View the
+official documentation on
+'NDI SDK dependencies <https://docs.ndi.video/docs/sdk/platform-considerations>'.
+
+
+Linux
+-----
+
+Linux requires Avahi, which provides network discovery for NDI devices.::
+
+   libavahi-common.so.3
+   libavahi-client.so.3
+
+
+Ubuntu
+^^^^^^
+
+Avahi can be installed on Ubuntu by running:
+
+.. code-block::
+
+    sudo apt install avahi-daemon
+    sudo systemctl enable --now avahi-daemon
+
+
 Usage
 *****
 
