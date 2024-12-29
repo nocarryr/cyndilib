@@ -10,10 +10,9 @@ test-requires = [
     "pytest-xdist",
     "pytest-doctestplus",
     "psutil",
-    "cython>=0.29.32",
 ]
 before-test = [
-    "pip install setuptools",
+    "pip install setuptools numpy cython>=0.29.32",
     "python {project}/build_tests.py",
     "pip uninstall setuptools",
 ]
