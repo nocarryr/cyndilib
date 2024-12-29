@@ -7,7 +7,6 @@ import shlex
 import json
 import multiprocessing
 from pathlib import Path
-from distutils.sysconfig import get_python_inc
 from pkg_resources import resource_filename
 import numpy
 from Cython.Build import cythonize, Cythonize
