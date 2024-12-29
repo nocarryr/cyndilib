@@ -7,7 +7,7 @@ else:
     import importlib.resources as importlib_resources
 
 if sys.platform == 'win32':
-    dll_dir = importlib_resources.files('cyndilib.wrapper.bin')
+    dll_dir = importlib_resources.files('cyndilib') / 'wrapper' / 'bin'
     os.add_dll_directory(dll_dir)
 
 def get_include() -> str:
