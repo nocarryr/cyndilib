@@ -1,14 +1,17 @@
 import os
 import sys
 from pathlib import Path
-from pkg_resources import resource_filename
+if sys.version_info < (3, 9):
+    import importlib_resources
+else:
+    import importlib.resources as importlib_resources
 
 if sys.platform == 'win32':
-    dll_dir = Path(resource_filename(__name__, '')) / 'wrapper' / 'bin'
+    dll_dir = importlib_resources.files('cyndilib.wrapper.bin')
     os.add_dll_directory(dll_dir)
 
 def get_include() -> str:
-    return resource_filename('cyndilib.wrapper.include', '')
+    return str(importlib_resources.files('cyndilib.wrapper.include'))
 
 
 from .wrapper import *

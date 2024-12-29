@@ -7,7 +7,6 @@ import shlex
 import json
 import multiprocessing
 from pathlib import Path
-from pkg_resources import resource_filename
 import numpy
 from Cython.Build import cythonize, Cythonize
 
@@ -83,7 +82,8 @@ def get_cython_metadata(src_file: Path):
     return json.loads(s)
 
 def get_ndi_metadata():
-    src_file = Path(resource_filename('cyndilib.wrapper', 'ndi_structs.cpp'))
+    wrapper_dir = Path(cyndilib.get_include()).parent
+    src_file = wrapper_dir / 'ndi_structs.cpp'
     if not src_file.exists():
         raise RuntimeError('cyndilib must be compiled first')
     metadata = get_cython_metadata(src_file)
