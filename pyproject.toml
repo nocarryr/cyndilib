@@ -10,13 +10,12 @@ test-requires = [
     "pytest-xdist",
     "pytest-doctestplus",
     "psutil",
-]
-before-test = [
-    "pip install setuptools numpy cython>=0.29.32",
-    "python {project}/build_tests.py",
-    "pip uninstall setuptools",
+    "cython>=0.29.32",
 ]
 test-command = [
+    "pip install setuptools",
+    "python {project}/build_tests.py",
+    "pip uninstall setuptools",
     "py.test {project}/tests/",
 ]
 test-skip = "cp38-macosx*"
