@@ -5,6 +5,36 @@ from cpython.buffer cimport PyObject_GetBuffer, PyBuffer_Release
 cimport numpy as cnp
 import numpy as np
 
+from .wrapper.common cimport (
+    mem_alloc, mem_free, raise_mem_err, raise_withgil, raise_exception,
+    PyExc_ValueError, PyExc_IndexError, PyExc_RuntimeError,
+)
+from .wrapper.ndi_structs cimport (
+    audio_frame_create_default,
+    audio_frame_destroy,
+)
+from .wrapper.ndi_recv cimport (
+    NDIlib_recv_free_audio_v3
+)
+from .wrapper.ndi_framesync cimport (
+    NDIlib_framesync_free_audio_v2
+)
+from .buffertypes cimport (
+    audio_frame_bfr_create,
+    av_frame_bfr_destroy,
+)
+from .send_frame_status cimport (
+    NULL_INDEX,
+    frame_status_init,
+    frame_status_free,
+    frame_status_get_next_write_index,
+    frame_status_get_next_read_index,
+    frame_status_set_send_ready,
+    frame_status_set_send_complete,
+    frame_status_copy_frame_ptr,
+    frame_status_alloc_p_data,
+)
+
 
 __all__ = ('AudioFrame', 'AudioRecvFrame', 'AudioFrameSync', 'AudioSendFrame')
 

@@ -5,6 +5,24 @@ import threading
 
 from .clock cimport time, sleep
 
+from .wrapper.ndi_structs cimport (
+    NDIlib_frame_format_type_e,
+    frame_format_cast,
+)
+from .wrapper.ndi_recv cimport (
+    NDIlib_recv_instance_t,
+
+)
+from .wrapper.ndi_framesync cimport (
+    NDIlib_framesync_create,
+    NDIlib_framesync_destroy,
+    NDIlib_framesync_audio_queue_depth,
+    NDIlib_framesync_capture_video,
+    NDIlib_framesync_capture_audio_v2,
+    NDIlib_framesync_free_video,
+    NDIlib_framesync_free_audio_v2,
+)
+
 
 __all__ = (
     'FrameSync', 'FrameSyncThread',

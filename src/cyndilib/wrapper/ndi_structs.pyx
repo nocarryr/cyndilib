@@ -1,4 +1,7 @@
 from libc.math cimport llround
+from .common cimport (
+    mem_alloc, mem_free, raise_mem_err, raise_withgil, PyExc_ValueError,
+)
 
 __all__ = ('FrameType', 'FourCC', 'FrameFormat', 'get_ndi_version')
 

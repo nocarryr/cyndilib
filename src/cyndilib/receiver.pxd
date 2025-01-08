@@ -3,7 +3,24 @@
 
 from libc.stdint cimport *
 
-from .wrapper cimport *
+from .wrapper.ndi_structs cimport (
+    NDIlib_frame_type_e,
+    NDIlib_video_frame_v2_t,
+    NDIlib_audio_frame_v3_t,
+    NDIlib_metadata_frame_t,
+    NDIlib_tally_t,
+
+)
+from .wrapper.ndi_recv cimport (
+    NDIlib_recv_create_v3_t,
+    NDIlib_recv_instance_t,
+    NDIlib_recv_performance_t,
+    RecvBandwidth,
+    RecvColorFormat,
+)
+from .wrapper.ndi_find cimport (
+    NDIlib_source_t,
+)
 
 from .locks cimport RLock, Condition, Event
 from .finder cimport Source

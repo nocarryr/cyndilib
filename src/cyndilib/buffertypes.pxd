@@ -3,7 +3,7 @@
 
 from libc.stdint cimport *
 
-from .wrapper cimport *
+from .wrapper.ndi_structs cimport FourCC, FrameFormat
 
 
 cdef struct audio_bfr_t:
