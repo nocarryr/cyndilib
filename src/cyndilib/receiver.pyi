@@ -1,6 +1,5 @@
 # import _cython_3_0_10
-from typing import Any, TypedDict
-from types import MethodType
+from typing import Any, TypedDict, TYPE_CHECKING
 
 import enum
 import threading
@@ -13,6 +12,9 @@ from .finder import Source
 from .audio_frame import AudioRecvFrame
 from .video_frame import VideoRecvFrame
 from .metadata_frame import MetadataRecvFrame
+if TYPE_CHECKING:
+    from .callback import _CallbackType
+
 
 class RecvPerformance_t(TypedDict):
     frames_total: int
@@ -95,7 +97,7 @@ class RecvCreate:
 class RecvThread(threading.Thread):
     def __init__(self, receiver: Receiver, timeout_ms: int, recv_frame_type: int = ..., wait_time: float = ...) -> None: ...
     def run(self) -> None: ...
-    def set_callback(self, cb: MethodType) -> None: ...
+    def set_callback(self, cb: _CallbackType) -> None: ...
     def set_wait_event(self) -> None: ...
     def stop(self) -> None: ...
 

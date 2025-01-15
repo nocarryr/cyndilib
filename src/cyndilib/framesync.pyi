@@ -1,12 +1,15 @@
 # import _cython_3_0_10
 import threading
 
-from types import MethodType
+from typing import TYPE_CHECKING
 
 from .wrapper import FrameFormat
 from .audio_frame import AudioFrameSync
 from .video_frame import VideoFrameSync
 from .receiver import Receiver, ReceiveFrameType
+
+if TYPE_CHECKING:
+    from .callback import _CallbackType
 
 
 class FrameSync:
@@ -27,7 +30,7 @@ class FrameSyncThread(threading.Thread):
     def __init__(self, frame_sync: FrameSync, ft: ReceiveFrameType) -> None: ...
     def remove_callback(self) -> None: ...
     def run(self) -> None: ...
-    def set_callback(self, cb: MethodType) -> None: ...
+    def set_callback(self, cb: _CallbackType) -> None: ...
     def stop(self) -> None: ...
 
 class FrameSyncWorker:
