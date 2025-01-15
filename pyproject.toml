@@ -27,7 +27,3 @@ before-all = "yum install -y avahi-libs"
 [[tool.cibuildwheel.overrides]]
 select = "*-musllinux*"
 before-all = "apk add avahi-libs"
-
-[[tool.cibuildwheel.overrides]]
-select = "*-macosx*"
-dependency-versions = "./constraints-macosx.txt"
