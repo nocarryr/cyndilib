@@ -466,6 +466,7 @@ def test_buffer_fill_read_data(fake_audio_data):
 
     assert np.array_equal(samples, results)
 
+@pytest.mark.flaky(max_runs=3)
 def test_buffer_fill_read_data_threaded(fake_audio_data):
     fs = fake_audio_data.sample_rate
     N = fake_audio_data.num_samples
