@@ -100,7 +100,7 @@ jobs:
 
       - uses: actions/setup-python@v5
         with:
-          python-version: 3.8
+          python-version: 3.12
         if: runner.os == 'macOS' && runner.arch == 'ARM64'
 
       - name: Set cibuildwheel env
