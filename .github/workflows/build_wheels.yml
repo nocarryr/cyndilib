@@ -127,7 +127,6 @@ jobs:
           CIBW_BUILD: ${{ matrix.python-version }}-*
           CIBW_ARCHS: ${{ matrix.arch }}
           CIBW_TEST_SKIP: ${{ steps.cibuildwheel_env.outputs.test_skip }}
-          CIBW_REPAIR_WHEEL_COMMAND_MACOS: "delocate-listdeps {wheel} --all --depending && delocate-wheel --require-archs {delocate_archs} -w {dest_dir} -v {wheel}"
         if: ${{ inputs.os_type }} != "" && (${{ inputs.os_type }} == matrix.os || ${{ inputs.os_type }} == "all")
         #    ...
         # with:
