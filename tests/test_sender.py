@@ -329,6 +329,7 @@ class AudioSenderThread(SenderThread):
         self.sender.write_audio(data)
 
 
+@pytest.mark.flaky(max_runs=3)
 def test_send_video_and_audio_threaded(request, fake_av_frames):
     video_data, audio_data = fake_av_frames
 

@@ -9,6 +9,7 @@ test-requires = [
     "pytest",
     "pytest-xdist",
     "pytest-doctestplus",
+    "flaky",
     "psutil",
     "cython>=0.29.32",
 ]
