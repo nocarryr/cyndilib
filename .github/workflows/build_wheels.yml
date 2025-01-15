@@ -2,7 +2,7 @@ name: Build Wheels
 
 on:
   push:
-    branches: [ main ]
+    branches: [ main, cibw-upgrade ]
   pull_request:
     branches: [ main ]
   workflow_dispatch:
