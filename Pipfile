@@ -19,6 +19,8 @@ furo = "*"
 psutil = "*"
 pytest-doctestplus = "*"
 sphinx-codeautolink = "*"
+pytest-xdist = "*"
+flaky = "*"
 
 [requires]
 python_version = "3.10"
