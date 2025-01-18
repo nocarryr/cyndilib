@@ -6,7 +6,7 @@ cdef int frame_status_init(SendFrame_status_s_ft* ptr) except -1 nogil:
     ptr.data.read_index = NULL_INDEX
     ptr.data.ndim = 0
     ptr.data.attached_to_sender = False
-    cdef Py_ssize_t i
+    cdef size_t i
     for i in range(3):
         ptr.data.shape[i] = 0
         ptr.data.strides[i] = 0
@@ -95,7 +95,7 @@ cdef int frame_status_alloc_p_data(SendFrame_status_s_ft* ptr) except -1 nogil:
     if ptr.data.ndim < 1 or ptr.data.ndim > 3:
         raise_withgil(PyExc_ValueError, 'ndim must be between 1 and 3')
 
-    cdef Py_ssize_t total_size = ptr.data.strides[ptr.data.ndim-1]
+    cdef size_t total_size = ptr.data.strides[ptr.data.ndim-1]
     cdef size_t i
 
     for i in range(ptr.data.ndim):
@@ -110,9 +110,9 @@ cdef int frame_status_alloc_p_data(SendFrame_status_s_ft* ptr) except -1 nogil:
 
 cdef int frame_status_item_alloc_p_data(
     SendFrame_item_s_ft* ptr,
-    Py_ssize_t total_size,
-    Py_ssize_t[3] shape,
-    Py_ssize_t[3] strides,
+    size_t total_size,
+    size_t[3] shape,
+    size_t[3] strides,
 ) except -1 nogil:
 
     cdef size_t i
@@ -137,16 +137,16 @@ cdef void frame_status_item_free_p_data(SendFrame_item_s_ft* ptr) noexcept nogil
     ptr.data.alloc_size = 0
 
 cdef void frame_status_set_send_ready(SendFrame_status_s_ft* ptr) noexcept nogil:
-    cdef Py_ssize_t idx = ptr.data.write_index
+    cdef size_t idx = ptr.data.write_index
     ptr.items[idx].data.write_available = False
     ptr.items[idx].data.read_available = True
     ptr.data.read_index = idx
     ptr.data.write_index = frame_status_get_next_write_index(ptr)
 
-cdef Py_ssize_t frame_status_get_next_write_index(
+cdef size_t frame_status_get_next_write_index(
     SendFrame_status_s_ft* ptr,
 ) noexcept nogil:
-    cdef Py_ssize_t next_idx = ptr.data.write_index, i = 0
+    cdef size_t next_idx = ptr.data.write_index, i = 0
     while True:
         if ptr.items[next_idx].data.write_available:
             return next_idx
@@ -159,7 +159,7 @@ cdef Py_ssize_t frame_status_get_next_write_index(
 
 cdef void frame_status_set_send_complete(
     SendFrame_status_s_ft* ptr,
-    Py_ssize_t idx,
+    size_t idx,
 ) noexcept nogil:
 
     ptr.items[idx].data.write_available = True
@@ -168,11 +168,11 @@ cdef void frame_status_set_send_complete(
         ptr.data.read_index = frame_status_get_next_read_index(ptr)
 
 
-cdef Py_ssize_t frame_status_get_next_read_index(
+cdef size_t frame_status_get_next_read_index(
     SendFrame_status_s_ft* ptr,
 ) noexcept nogil:
 
-    cdef Py_ssize_t idx = ptr.data.read_index, i = 0
+    cdef size_t idx = ptr.data.read_index, i = 0
     if idx == NULL_INDEX:
         with cython.cdivision(True):
             idx = (ptr.data.write_index - 1) % MAX_FRAME_BUFFERS

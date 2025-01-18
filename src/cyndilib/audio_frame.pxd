@@ -50,9 +50,9 @@ cdef class AudioRecvFrame(AudioFrame):
     cdef readonly cnp.ndarray current_frame_data
     cdef readonly uint32_t current_timecode
     cdef readonly uint32_t current_timestamp
-    cdef Py_ssize_t[2] bfr_shape
-    cdef Py_ssize_t[2] bfr_strides
-    cdef Py_ssize_t[2] empty_bfr_shape
+    cdef size_t[2] bfr_shape
+    cdef size_t[2] bfr_strides
+    cdef size_t[2] empty_bfr_shape
     cdef readonly size_t view_count
 
     cpdef size_t get_buffer_depth(self)
@@ -85,8 +85,8 @@ cdef class AudioRecvFrame(AudioFrame):
 
 cdef class AudioFrameSync(AudioFrame):
     cdef NDIlib_framesync_instance_t fs_ptr
-    cdef readonly Py_ssize_t[2] shape
-    cdef readonly Py_ssize_t[2] strides
+    cdef readonly size_t[2] shape
+    cdef readonly size_t[2] strides
     cdef size_t view_count
 
     cdef int _process_incoming(self, NDIlib_framesync_instance_t fs_ptr) except -1 nogil
