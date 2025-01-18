@@ -1,4 +1,5 @@
 from __future__ import annotations
+from typing import TypeVar, Generic, Sequence, Callable
 import time
 from pprint import pprint
 from functools import partial
@@ -13,16 +14,19 @@ from conftest import AudioParams, IS_CI_BUILD
 from cyndilib.locks import RLock, Condition
 from cyndilib.audio_frame import AudioRecvFrame, AudioFrameSync, AudioSendFrame
 
-from _test_audio_frame import (
+from _test_audio_frame import (         # type: ignore[missing-imports]
     fill_audio_frame, fill_audio_frame_sync, audio_frame_process_events,
 )
-from _test_send_frame_status import (
+from _test_send_frame_status import (   # type: ignore[missing-imports]
     set_send_frame_sender_status, set_send_frame_send_complete,
     check_audio_send_frame, get_max_frame_buffers, get_null_idx,
 )
 
 NULL_INDEX = get_null_idx()
 MAX_FRAME_BUFFERS = get_max_frame_buffers()
+
+_StateT = TypeVar('_StateT', bound=Sequence[str])
+
 
 class State:
     def __init__(self, group: 'StateGroup', name: str, index_: int):
@@ -32,7 +36,7 @@ class State:
         self.group = group
         self.active_cond = Condition(group._lock)
         self.inactive_cond = Condition(group._lock)
-        self._handler = None
+        self._handler: Callable[[], bool]|None = None
     @property
     def name(self) -> str:
         return self.__name
@@ -46,7 +50,7 @@ class State:
     def active(self, value: bool):
         self.set_active(value)
 
-    def set_handler(self, cb):
+    def set_handler(self, cb: Callable[[], bool]):
         assert self._handler is None
         assert callable(cb)
         self._handler = cb
@@ -93,10 +97,10 @@ class State:
             name = self.name
         return f'"{name}" (active={self.active})'
 
-class StateGroup:
+class StateGroup(Generic[_StateT]):
     def __init__(
         self,
-        state_names: list[str],
+        state_names: _StateT,
         lock: RLock|None = None,
         name: str|None = None,
         state_continue_timeout: float = .01,
@@ -227,15 +231,16 @@ class StateGroup:
         return str(self.states)
 
 
-class StateThread(threading.Thread):
+class StateThread(threading.Thread, Generic[_StateT]):
     def __init__(
         self,
-        state_group: StateGroup,
+        state_group: StateGroup[_StateT],
         num_iterations: int = 1,
         iter_duration: float|None = None,
         exc_cond: Condition|None = None,
     ):
         super().__init__()
+        self.daemon = True
         self.state_group = state_group
         self.num_iterations = num_iterations
         self.iter_duration = iter_duration
@@ -249,7 +254,7 @@ class StateThread(threading.Thread):
         if exc_cond is None:
             exc_cond = Condition()
         self.exc_cond = exc_cond
-        self.exc = None
+        self.exc: Exception|None = None
     @property
     def cur_iteration(self) -> int:
         return self._cur_iteration

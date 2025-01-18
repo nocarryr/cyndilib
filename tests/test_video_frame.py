@@ -2,11 +2,11 @@ import time
 import numpy as np
 from cyndilib.video_frame import VideoRecvFrame, VideoSendFrame
 from cyndilib.wrapper import FourCC
-from _test_video_frame import (
+from _test_video_frame import (         # type: ignore[missing-imports]
     build_test_frame, build_test_frames,
     buffer_into_video_frame, video_frame_process_events,
 )
-from _test_send_frame_status import (
+from _test_send_frame_status import (   # type: ignore[missing-imports]
     set_send_frame_sender_status, set_send_frame_send_complete,
     check_video_send_frame, get_null_idx, get_max_frame_buffers,
 )
@@ -58,7 +58,8 @@ def test_frame_builder():
 
 
 def test_video_send_frame(fake_video_frames):
-    width, height, fr, num_frames, fake_frames = fake_video_frames
+    width, height, fr, num_frames, _, _, _ = fake_video_frames
+    fake_frames = fake_video_frames.frames
 
     vf = VideoSendFrame()
     vf.set_fourcc(FourCC.RGBA)

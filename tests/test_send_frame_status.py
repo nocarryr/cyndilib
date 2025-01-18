@@ -5,7 +5,7 @@ from cyndilib.wrapper import *
 from cyndilib.audio_frame import AudioSendFrame
 from cyndilib.video_frame import VideoSendFrame
 
-import _test_send_frame_status
+import _test_send_frame_status  # type: ignore[missing-imports]
 from conftest import AudioParams, IS_CI_BUILD
 
 NULL_INDEX = _test_send_frame_status.get_null_idx()
@@ -24,7 +24,7 @@ def test_indexing():
     _test_send_frame_status.test_indexing()
 
 def test_video(fake_video_frames):
-    width, height, fr, num_frames, fake_frames = fake_video_frames
+    width, height, fr, num_frames, fake_frames, _, _ = fake_video_frames
 
     vf = VideoSendFrame()
     vf.set_fourcc(FourCC.RGBA)

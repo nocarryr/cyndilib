@@ -1,4 +1,5 @@
 from __future__ import annotations
+from typing import TypeVar, Generic
 import pytest
 import threading
 import time
@@ -14,16 +15,17 @@ from cyndilib.locks import RLock, Condition
 
 from conftest import IS_CI_BUILD, AudioParams, VideoParams
 
-import _test_sender
-import _test_audio_frame
-import _test_send_frame_status
+import _test_sender             # type: ignore[missing-imports]
+import _test_audio_frame        # type: ignore[missing-imports]
+import _test_send_frame_status  # type: ignore[missing-imports]
 
 NULL_INDEX = _test_send_frame_status.get_null_idx()
 MAX_FRAME_BUFFERS = _test_send_frame_status.get_max_frame_buffers()
 
+T = TypeVar('T')
 
 def test_send_video(request, fake_video_frames):
-    width, height, fr, num_frames, fake_frames = fake_video_frames
+    width, height, fr, num_frames, fake_frames, _, _ = fake_video_frames
     name = request.node.nodeid.split('::')[-1]
     sender = Sender(name)
     vf = VideoSendFrame()
@@ -98,7 +100,7 @@ def setup_sender(
 
     return sender
 
-def test_send_video_and_audio_cy(request, fake_av_frames):
+def test_send_video_and_audio_cy(request, fake_av_frames: tuple[VideoParams, AudioParams]):
     video_data, audio_data = fake_av_frames
 
     sender = setup_sender(request, video_data, audio_data)
@@ -129,7 +131,7 @@ def test_send_video_and_audio_cy(request, fake_av_frames):
     print('sender closed')
 
 
-def test_send_video_and_audio_py(request, fake_av_frames):
+def test_send_video_and_audio_py(request, fake_av_frames: tuple[VideoParams, AudioParams]):
     video_data, audio_data = fake_av_frames
 
     sender = setup_sender(request, video_data, audio_data)
@@ -151,6 +153,7 @@ def test_send_video_and_audio_py(request, fake_av_frames):
         with sender:
             # time.sleep(.5)
             assert sender._running is True
+            assert sender.source is not None
             print(f'{sender.source.name=}')
             print('loop_start')
             # time.sleep(.5)
@@ -211,11 +214,11 @@ def test_send_video_and_audio_py(request, fake_av_frames):
     del sender
     time.sleep(1)
 
-class SenderThread(threading.Thread):
+class SenderThread(threading.Thread, Generic[T]):
     def __init__(
         self,
         sender: Sender,
-        data: VideoParams|AudioParams,
+        data: T,
         wait_time: float,
         num_frame_repeats: int,
         go_cond: threading.Condition,
@@ -227,15 +230,14 @@ class SenderThread(threading.Thread):
         self.wait_time = wait_time
         self.num_frame_repeats = num_frame_repeats
         self.frame_times = np.zeros(num_frame_repeats*self.num_frames, dtype=np.float64)
-        self.duration = None
+        self.duration: float = 0
         self.running = False
         self.ready = threading.Event()
         self.go = go_cond
         self.sync_rlock = sync_rlock
         self.sync_cond = Condition(sync_rlock)
         self.current_frame_count = 0
-        self.dependent_cond = None
-        self.dependent_thread = None
+        self.dependent_thread: SenderThread|None = None
         self.stopped = threading.Event()
         self.exc = None
 
@@ -243,7 +245,7 @@ class SenderThread(threading.Thread):
     def num_frames(self) -> int:
         return self.get_num_frames()
 
-    def set_dependent_thread(self, oth_thread: 'SenderThread'):
+    def set_dependent_thread(self, oth_thread: SenderThread|None):
         if oth_thread is None:
             self.dependent_thread = None
         else:
@@ -308,7 +310,7 @@ class SenderThread(threading.Thread):
     def send(self, i: int):
         raise NotImplementedError()
 
-class VideoSenderThread(SenderThread):
+class VideoSenderThread(SenderThread[VideoParams]):
     def get_num_frames(self) -> int:
         return self.data.num_frames
 
@@ -319,7 +321,7 @@ class VideoSenderThread(SenderThread):
         else:
             self.sender.write_video_async(data)
 
-class AudioSenderThread(SenderThread):
+class AudioSenderThread(SenderThread[AudioParams]):
     def get_num_frames(self) -> int:
         return self.data.num_segments
 
@@ -329,7 +331,7 @@ class AudioSenderThread(SenderThread):
         self.sender.write_audio(data)
 
 
-def test_send_video_and_audio_threaded(request, fake_av_frames):
+def test_send_video_and_audio_threaded(request, fake_av_frames: tuple[VideoParams, AudioParams]):
     video_data, audio_data = fake_av_frames
 
     sender = setup_sender(request, video_data, audio_data)
