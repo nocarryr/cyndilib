@@ -310,6 +310,7 @@ cdef struct FourCCPackInfo:
     FourCC fourcc
     uint8_t bits_per_pixel
     uint8_t padded_bits_per_pixel
+    int16_t padded_bytes_per_line
     size_t num_planes
     size_t total_size
     uint32_t total_bits
