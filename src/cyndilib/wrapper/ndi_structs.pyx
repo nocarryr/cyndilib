@@ -152,6 +152,7 @@ cdef void fourcc_pack_info_init(FourCCPackInfo* p) noexcept nogil:
     p.yres = 0
     p.bits_per_pixel = 16
     p.padded_bits_per_pixel = 16
+    p.padded_bytes_per_line = 0
     p.total_bits = 0
     p.num_planes = 0
     p.total_size = 0
@@ -178,6 +179,8 @@ cdef int calc_fourcc_pack_info(FourCCPackInfo* p, size_t frame_line_stride=0) ex
     cdef size_t xres = p.xres, yres = p.yres
     cdef uint32_t chroma_width, chroma_height
     cdef uint8_t padded_bits_per_pixel = 0
+    cdef int16_t padded_bytes_per_line = 0
+    cdef size_t expected_line_stride = 0
     cdef size_t total_size = 0, i
 
     for i in range(4):
@@ -190,12 +193,12 @@ cdef int calc_fourcc_pack_info(FourCCPackInfo* p, size_t frame_line_stride=0) ex
         p.bits_per_pixel = 16
         chroma_width = xres >> 1
         chroma_height = yres
+        expected_line_stride = sizeof(uint8_t) * xres + (sizeof(uint8_t) * chroma_width) * 2
         if frame_line_stride:
-            p.line_strides[0] = sizeof(uint8_t) * frame_line_stride
+            padded_bytes_per_line = frame_line_stride - expected_line_stride
+            p.line_strides[0] = frame_line_stride
         else:
-            p.line_strides[0] = (
-                sizeof(uint8_t) * xres + (sizeof(uint8_t) * chroma_width) * 2
-            )
+            p.line_strides[0] = expected_line_stride
         p.total_size = p.line_strides[0] * yres
 
     # 4:2:2:4 YUVA + alpha plane
@@ -204,8 +207,13 @@ cdef int calc_fourcc_pack_info(FourCCPackInfo* p, size_t frame_line_stride=0) ex
         p.bits_per_pixel = 24
         chroma_width = xres >> 1
         chroma_height = yres
-        p.line_strides[0] = sizeof(uint8_t) * (xres + chroma_width * 2)
-        p.line_strides[1] = sizeof(uint8_t) * xres
+        expected_line_stride = sizeof(uint8_t) * (xres + chroma_width * 2)
+        if frame_line_stride:
+            padded_bytes_per_line = frame_line_stride - expected_line_stride
+            p.line_strides[0] = frame_line_stride
+        else:
+            p.line_strides[0] = expected_line_stride
+        p.line_strides[1] = sizeof(uint8_t) * xres + padded_bytes_per_line
         p.stride_offsets[1] = p.line_strides[0] * yres
         p.total_size = p.stride_offsets[1] + p.line_strides[1] * yres
 
@@ -215,8 +223,13 @@ cdef int calc_fourcc_pack_info(FourCCPackInfo* p, size_t frame_line_stride=0) ex
         p.bits_per_pixel = 24
         chroma_width = xres >> 1
         chroma_height = yres
-        p.line_strides[0] = sizeof(uint16_t) * xres
-        p.line_strides[1] = sizeof(uint16_t) * chroma_width * 2
+        expected_line_stride = sizeof(uint16_t) * xres
+        if frame_line_stride:
+            padded_bytes_per_line = frame_line_stride - expected_line_stride
+            p.line_strides[0] = frame_line_stride
+        else:
+            p.line_strides[0] = expected_line_stride
+        p.line_strides[1] = sizeof(uint16_t) * chroma_width * 2 + padded_bytes_per_line
         p.stride_offsets[1] = p.line_strides[0] * yres
         p.total_size = p.stride_offsets[1] + p.line_strides[1] * chroma_height
 
@@ -226,9 +239,14 @@ cdef int calc_fourcc_pack_info(FourCCPackInfo* p, size_t frame_line_stride=0) ex
         p.bits_per_pixel = 48
         chroma_width = xres >> 1
         chroma_height = yres
-        p.line_strides[0] = sizeof(uint16_t) * xres
-        p.line_strides[1] = sizeof(uint16_t) * chroma_width * 2
-        p.line_strides[2] = sizeof(uint16_t) * xres
+        expected_line_stride = sizeof(uint16_t) * xres
+        if frame_line_stride:
+            padded_bytes_per_line = frame_line_stride - expected_line_stride
+            p.line_strides[0] = frame_line_stride
+        else:
+            p.line_strides[0] = expected_line_stride
+        p.line_strides[1] = sizeof(uint16_t) * chroma_width * 2 + padded_bytes_per_line
+        p.line_strides[2] = sizeof(uint16_t) * xres + padded_bytes_per_line
         p.stride_offsets[1] = p.line_strides[0] * yres
         p.stride_offsets[2] = p.stride_offsets[1] + p.line_strides[1] * chroma_height
         p.total_size = p.stride_offsets[2] + p.line_strides[2] * yres
@@ -240,9 +258,14 @@ cdef int calc_fourcc_pack_info(FourCCPackInfo* p, size_t frame_line_stride=0) ex
         p.bits_per_pixel = 12
         chroma_width = xres >> 1
         chroma_height = yres >> 1
-        p.line_strides[0] = sizeof(uint8_t) * xres
-        p.line_strides[1] = sizeof(uint8_t) * chroma_width
-        p.line_strides[2] = sizeof(uint8_t) * chroma_width
+        expected_line_stride = sizeof(uint8_t) * xres
+        if frame_line_stride:
+            padded_bytes_per_line = frame_line_stride - expected_line_stride
+            p.line_strides[0] = frame_line_stride
+        else:
+            p.line_strides[0] = expected_line_stride
+        p.line_strides[1] = sizeof(uint8_t) * chroma_width + padded_bytes_per_line
+        p.line_strides[2] = sizeof(uint8_t) * chroma_width + padded_bytes_per_line
         p.stride_offsets[1] = p.line_strides[0] * yres
         p.stride_offsets[2] = p.stride_offsets[1] + p.line_strides[1] * chroma_height
         p.total_size = p.stride_offsets[2] + p.line_strides[2] * chroma_height
@@ -253,8 +276,13 @@ cdef int calc_fourcc_pack_info(FourCCPackInfo* p, size_t frame_line_stride=0) ex
         p.bits_per_pixel = 12
         chroma_width = xres >> 1
         chroma_height = yres >> 1
-        p.line_strides[0] = sizeof(uint8_t) * xres
-        p.line_strides[1] = sizeof(uint8_t) * chroma_width * 2
+        expected_line_stride = sizeof(uint8_t) * xres
+        if frame_line_stride:
+            padded_bytes_per_line = frame_line_stride - expected_line_stride
+            p.line_strides[0] = frame_line_stride
+        else:
+            p.line_strides[0] = expected_line_stride
+        p.line_strides[1] = sizeof(uint8_t) * chroma_width * 2 + padded_bytes_per_line
         p.stride_offsets[1] = p.line_strides[0] * yres
         p.total_size = p.stride_offsets[1] + p.line_strides[1] * chroma_height
 
@@ -266,10 +294,12 @@ cdef int calc_fourcc_pack_info(FourCCPackInfo* p, size_t frame_line_stride=0) ex
         else:
             p.bits_per_pixel = 24
             padded_bits_per_pixel = 32
+        expected_line_stride = sizeof(uint8_t) * xres * 4
         if frame_line_stride:
-            p.line_strides[0] = sizeof(uint8_t) * frame_line_stride
+            padded_bytes_per_line = frame_line_stride - expected_line_stride
+            p.line_strides[0] = frame_line_stride
         else:
-            p.line_strides[0] = sizeof(uint8_t) * xres * 4
+            p.line_strides[0] = expected_line_stride
         p.total_size = p.line_strides[0] * yres
     else:
         raise_withgil(PyExc_ValueError, 'Unknown FourCC type')
@@ -277,5 +307,6 @@ cdef int calc_fourcc_pack_info(FourCCPackInfo* p, size_t frame_line_stride=0) ex
     if padded_bits_per_pixel == 0:
         padded_bits_per_pixel = p.bits_per_pixel
     p.padded_bits_per_pixel = padded_bits_per_pixel
+    p.padded_bytes_per_line = padded_bytes_per_line
     p.total_bits = p.padded_bits_per_pixel * xres * yres
     return 0
