@@ -464,10 +464,10 @@ cdef class AudioRecvFrame(AudioFrame):
         buffer.obj = self
         buffer.readonly = 1
         if is_empty:
-            buffer.shape = self.empty_bfr_shape
+            buffer.shape = <Py_ssize_t*>self.empty_bfr_shape
         else:
-            buffer.shape = self.bfr_shape
-        buffer.strides = self.bfr_strides
+            buffer.shape = <Py_ssize_t*>self.bfr_shape
+        buffer.strides = <Py_ssize_t*>self.bfr_strides
         buffer.suboffsets = NULL
 
     def __releasebuffer__(self, Py_buffer *buffer):
@@ -733,8 +733,8 @@ cdef class AudioSendFrame(AudioFrame):
         buffer.ndim = self.send_status.data.ndim
         buffer.obj = self
         buffer.readonly = 0
-        buffer.shape = s_ptr.data.shape
-        buffer.strides = s_ptr.data.strides
+        buffer.shape = <Py_ssize_t*>s_ptr.data.shape
+        buffer.strides = <Py_ssize_t*>s_ptr.data.strides
         buffer.suboffsets = NULL
         buffer.internal = <void*>item
 
@@ -757,7 +757,7 @@ cdef class AudioSendFrame(AudioFrame):
         return self._write_available()
 
     cdef bint _write_available(self) noexcept nogil:
-        cdef Py_ssize_t idx = frame_status_get_next_write_index(&(self.send_status))
+        cdef size_t idx = frame_status_get_next_write_index(&(self.send_status))
         return idx != NULL_INDEX
 
     cdef void _set_shape_from_memview(
@@ -821,18 +821,18 @@ cdef class AudioSendFrame(AudioFrame):
         self._set_buffer_write_complete(item)
 
     cdef AudioSendFrame_item_s* _get_next_write_frame(self) except NULL nogil:
-        cdef Py_ssize_t idx = frame_status_get_next_write_index(&(self.send_status))
+        cdef size_t idx = frame_status_get_next_write_index(&(self.send_status))
         if idx == NULL_INDEX:
             raise_withgil(PyExc_RuntimeError, 'no write frame available')
         self.send_status.data.write_index = idx
         return &(self.send_status.items[idx])
 
     cdef bint _send_frame_available(self) noexcept nogil:
-        cdef Py_ssize_t idx = frame_status_get_next_read_index(&(self.send_status))
+        cdef size_t idx = frame_status_get_next_read_index(&(self.send_status))
         return idx != NULL_INDEX
 
     cdef AudioSendFrame_item_s* _get_send_frame(self) except NULL nogil:
-        cdef Py_ssize_t idx = frame_status_get_next_read_index(&(self.send_status))
+        cdef size_t idx = frame_status_get_next_read_index(&(self.send_status))
         if idx == NULL_INDEX:
             raise_withgil(PyExc_IndexError, 'no read index available')
         return &(self.send_status.items[idx])
@@ -844,7 +844,7 @@ cdef class AudioSendFrame(AudioFrame):
         :meth:`_send_frame_available` must be checked before calling this
         or bad things could happen
         """
-        cdef Py_ssize_t idx = frame_status_get_next_read_index(&(self.send_status))
+        cdef size_t idx = frame_status_get_next_read_index(&(self.send_status))
         return &(self.send_status.items[idx])
 
     cdef void _on_sender_write(self, AudioSendFrame_item_s* s_ptr) noexcept nogil:
