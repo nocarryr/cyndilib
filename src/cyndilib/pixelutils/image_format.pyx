@@ -174,15 +174,13 @@ cdef int fill_image_format(
     cdef const PixelFormatDef* pix_fmt = pixel_format_def_get(fourcc)
     cdef uint32_t size_in_bytes
     cdef uint8_t max_comp_depth = 0
-    cdef PixelComponentDef* comp
     for i in range(pix_fmt.num_components):
-        comp = &(pix_fmt.comp[i])
-        if comp.depth > max_comp_depth:
-            max_comp_depth = comp.depth
+        if pix_fmt.comp[i].depth > max_comp_depth:
+            max_comp_depth = pix_fmt.comp[i].depth
     if max_comp_depth != 8 and max_comp_depth != 16:
         raise_withgil(PyExc_Exception, 'error calculating max_comp_depth')
     image_format.is_16bit = max_comp_depth == 16
-    image_format.pix_fmt = pix_fmt
+    image_format.pix_fmt = <PixelFormatDef*>pix_fmt
     image_format.width = width
     image_format.height = height
     image_format.chroma_width = _get_chroma_width(image_format)
