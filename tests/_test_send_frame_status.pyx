@@ -15,6 +15,7 @@ from cyndilib.wrapper cimport *
 from cyndilib.send_frame_status cimport *
 from cyndilib.audio_frame cimport AudioSendFrame
 from cyndilib.video_frame cimport VideoSendFrame
+from cyndilib.pixelutils.image_format cimport ImageFormat_s, fill_image_format
 
 def get_max_frame_buffers():
     return MAX_FRAME_BUFFERS
@@ -78,7 +79,7 @@ def get_video_frame_data(VideoSendFrame vf, cnp.uint8_t[:] dest_arr):
     assert vf._send_frame_available()
     cdef VideoSendFrame_item_s* item = vf._get_send_frame()
     assert item is not NULL
-    assert dest_arr.shape[0] == vf.pack_info.total_size
+    assert dest_arr.shape[0] == vf.image_reader.size_in_bytes
     unpack_video(&(item.frame_ptr.p_data), dest_arr)
 
 
@@ -211,20 +212,15 @@ cdef _check_send_frame(SendFrame_status_s_ft* s_ptr, NDIlib_frame_type_ft* sourc
     cdef Py_ssize_t[3] shape = [0, 0, 0]
     cdef Py_ssize_t[3] strides = [0, 0, 0]
     cdef size_t i, j
-    cdef FourCCPackInfo pack_info
-    fourcc_pack_info_init(&pack_info)
+    cdef ImageFormat_s image_format
 
     if SendFrame_status_s_ft is VideoSendFrame_status_s and NDIlib_frame_type_ft is NDIlib_video_frame_v2_t:
-        pack_info.xres = source_frame.xres
-        pack_info.yres = source_frame.yres
-        pack_info.fourcc = fourcc_type_uncast(source_frame.FourCC)
-        calc_fourcc_pack_info(&pack_info)
-        assert_equal(s_ptr.data.ndim, pack_info.num_planes)
-        assert_equal(s_ptr.data.ndim, 1)                     # <- not testing 4:2:0 yet
-        shape[0] = pack_info.total_size
+        fill_image_format(&image_format, fourcc_type_uncast(source_frame.FourCC), source_frame.xres, source_frame.yres)
+        assert_equal(s_ptr.data.ndim, image_format.pix_fmt.num_planes)
+        shape[0] = image_format.size_in_bytes
         strides[0] = sizeof(uint8_t)
-        assert_equal(pack_info.xres*pack_info.yres*4, pack_info.total_size)
-        assert_equal(source_frame.line_stride_in_bytes, pack_info.xres*4)
+        assert_equal(image_format.width * image_format.height * sizeof(uint8_t) * 4, image_format.size_in_bytes)
+        assert_equal(source_frame.line_stride_in_bytes, image_format.width*4)
 
     elif SendFrame_status_s_ft is AudioSendFrame_status_s and NDIlib_frame_type_ft is NDIlib_audio_frame_v3_t:
         assert_equal(s_ptr.data.ndim, source_frame.no_channels)

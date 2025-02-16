@@ -4,6 +4,7 @@ from libc.string cimport memcpy
 
 from fractions import Fraction
 import numpy as np
+from .pixelutils.helpers cimport ImageFormat
 
 
 __all__ = ('VideoFrame', 'VideoRecvFrame', 'VideoFrameSync', 'VideoSendFrame')
@@ -11,6 +12,9 @@ __all__ = ('VideoFrame', 'VideoRecvFrame', 'VideoFrameSync', 'VideoSendFrame')
 
 cdef class VideoFrame:
     """Base class for video frames
+
+    Attributes:
+        image_reader (cyndilib.pixelutils.helpers.ImageReader):
     """
     def __cinit__(self, *args, **kwargs):
         self.ptr = video_frame_create_default()
@@ -18,6 +22,13 @@ cdef class VideoFrame:
             raise MemoryError()
 
     def __init__(self, *args, **kwargs):
+        self.image_reader = ImageReader(
+           fourcc=self.fourcc,
+           width=self.ptr.xres,
+           height=self.ptr.yres,
+           planar=True,
+           expand_chroma=True,
+        )
         self.frame_rate.numerator = self.ptr.frame_rate_N
         self.frame_rate.denominator = self.ptr.frame_rate_D
 
@@ -130,10 +141,10 @@ cdef class VideoFrame:
         return self._get_padded_bits_per_pixel()
 
     cdef uint8_t _get_bits_per_pixel(self) noexcept nogil:
-        return self.pack_info.bits_per_pixel
+        return self.image_reader._fmt.bits_per_pixel
 
     cdef uint8_t _get_padded_bits_per_pixel(self) noexcept nogil:
-        return self.pack_info.padded_bits_per_pixel
+        return self.image_reader._fmt.padded_bits_per_pixel
 
     def get_frame_rate(self) -> Fraction:
         """Get the video frame rate
@@ -188,7 +199,7 @@ cdef class VideoFrame:
         return self._get_buffer_size()
 
     cdef size_t _get_buffer_size(self) noexcept nogil:
-        return self.pack_info.total_size
+        return self.image_reader._fmt.size_in_bytes
 
     cdef uint8_t* _get_data(self) noexcept nogil:
         return self.ptr.p_data
@@ -246,9 +257,12 @@ cdef class VideoFrame:
             return 0
         if changed:
             calc_fourcc_pack_info(&(self.pack_info), line_stride)
-            # only overwrite our line_stride_in_bytes if it was left unspecified in the NDI video frame.
-            if not use_ptr_stride:
-                self.ptr.line_stride_in_bytes = self.pack_info.line_strides[0]
+            self.image_reader._set_line_stride(line_stride, use_ptr_stride)
+            self.image_reader._update_format(
+                fourcc=fcc, width=self.ptr.xres, height=self.ptr.yres,
+                planar=self.image_reader._planar,
+            )
+            self.ptr.line_stride_in_bytes = self.image_reader._fmt.line_stride
         return 0
 
 
