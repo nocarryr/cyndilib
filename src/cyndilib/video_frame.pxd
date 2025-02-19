@@ -16,7 +16,6 @@ from .pixelutils.helpers cimport ImageReader
 
 cdef class VideoFrame:
     cdef NDIlib_video_frame_v2_t* ptr
-    cdef FourCCPackInfo pack_info
     cdef readonly ImageReader image_reader
     cdef frame_rate_t frame_rate
 

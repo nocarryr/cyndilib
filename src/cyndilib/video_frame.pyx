@@ -5,6 +5,7 @@ from libc.string cimport memcpy
 from fractions import Fraction
 import numpy as np
 from .pixelutils.helpers cimport ImageFormat
+from .pixelutils.image_format cimport ImageFormat_s
 
 
 __all__ = ('VideoFrame', 'VideoRecvFrame', 'VideoFrameSync', 'VideoSendFrame')
@@ -244,19 +245,16 @@ cdef class VideoFrame:
         cdef FourCC fcc = self._get_fourcc()
         cdef bint changed = False
         cdef size_t line_stride = 0
+        cdef ImageFormat_s* fmt = &(self.image_reader._fmt)
         if use_ptr_stride:
             line_stride = self.ptr.line_stride_in_bytes
-        if self.pack_info.fourcc != fcc:
-            self.pack_info.fourcc = fcc
+        if fmt.pix_fmt.fourcc != fcc:
             changed = True
-        if self.ptr.xres != self.pack_info.xres or self.ptr.yres != self.pack_info.yres:
-            self.pack_info.xres = self.ptr.xres
-            self.pack_info.yres = self.ptr.yres
+        if self.ptr.xres != fmt.width or self.ptr.yres != fmt.height:
             changed = True
-        if self.pack_info.xres == 0 or self.pack_info.yres == 0:
+        if self.ptr.xres == 0 or self.ptr.yres == 0:
             return 0
         if changed:
-            calc_fourcc_pack_info(&(self.pack_info), line_stride)
             self.image_reader._set_line_stride(line_stride, use_ptr_stride)
             self.image_reader._update_format(
                 fourcc=fcc, width=self.ptr.xres, height=self.ptr.yres,
