@@ -5,12 +5,14 @@ import sys
 import glob
 import shlex
 import json
+import argparse
 import multiprocessing
 from pathlib import Path
 import numpy
 from Cython.Build import cythonize, Cythonize
 
 import cyndilib
+from tests import yuv_builder
 
 WIN32 = sys.platform == 'win32'
 MACOS = sys.platform == 'darwin'
@@ -159,9 +161,25 @@ def do_cythonize(pyx_file, opts=None):
     cython_compile(pyx_file, parsed)
 
 def main():
+    p = argparse.ArgumentParser()
+    p.add_argument('--unpack-yuv-data', action='store_true')
+    p.add_argument('--build-yuv-data', action='store_true')
+    args = p.parse_args()
     pattern = os.path.join(TESTS_PATH, '*.pyx')
     opts = build_opts()
     do_cythonize(pattern, opts)
+    if args.build_yuv_data and args.unpack_yuv_data:
+        raise ValueError('Cannot build and unpack YUV data at the same time')
+    if args.build_yuv_data:
+        print('Building YUV data...')
+        yuv_builder.build_all(build_previews=False)
+        print('YUV data built, compressing...')
+        arch_file = yuv_builder.compress_files()
+        print(f'YUV data archive: {arch_file}')
+    elif args.unpack_yuv_data:
+        print('Unpacking YUV data...')
+        yuv_builder.decompress_files()
+
 
 if __name__ == '__main__':
     main()

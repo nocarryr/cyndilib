@@ -20,3 +20,4 @@ Reference
    metadata_frame
    locks
    wrapper/index.rst
+   pixelutils/index.rst

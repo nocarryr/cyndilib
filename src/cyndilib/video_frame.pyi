@@ -7,6 +7,7 @@ import numpy as np
 
 from .wrapper import FourCC
 from .locks import RLock, Condition
+from .pixelutils.helpers import ImageReader
 
 _UintArray = npt.NDArray[np.uint8]
 
@@ -14,6 +15,7 @@ _UintArray = npt.NDArray[np.uint8]
 class VideoFrame:
     # __pyx_vtable__: ClassVar[PyCapsule] = ...
     fourcc: FourCC
+    image_reader: ImageReader
     def __init__(self, *args, **kwargs) -> None: ...
     @property
     def xres(self) -> int: ...

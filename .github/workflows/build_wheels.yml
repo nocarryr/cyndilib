@@ -52,7 +52,7 @@ jobs:
       - name: Compile tests
         run: |
           pip install cython>=0.29.32
-          python build_tests.py
+          python build_tests.py --unpack-yuv-data
       - name: Run tests
         run: py.test
 
