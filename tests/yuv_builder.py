@@ -8,7 +8,7 @@ if TYPE_CHECKING:
         from typing import Self             # type: ignore[missing-imports]
     except ImportError:
         from typing_extensions import Self  # type: ignore[missing-imports]
-from pathlib import Path
+from pathlib import Path, PurePosixPath
 import argparse
 import subprocess
 import shlex
@@ -652,6 +652,7 @@ def compress_files(arch_file: Path = IMAGE_ARCHIVE_FILE) -> Path:
         for fn in DataFiles.iter_files():
             assert not fn.is_absolute()
             rel_fn = fn.resolve().relative_to(arch_root)
+            rel_fn = PurePosixPath(*rel_fn.parts)
             tar.add(fn, arcname=rel_fn)
     return arch_file
 
@@ -663,6 +664,7 @@ def decompress_files(arch_file: Path = IMAGE_ARCHIVE_FILE) -> Path:
         for fn in DataFiles.iter_files():
             assert not fn.is_absolute()
             rel_fn = fn.resolve().relative_to(arch_root)
+            rel_fn = PurePosixPath(*rel_fn.parts)
             inf = tar.getmember(str(rel_fn))
             tar.extract(inf, path=arch_root)
     return arch_root
