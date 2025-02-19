@@ -1,6 +1,7 @@
 from __future__ import annotations
 from typing import (
-    TypeVar, Generic, Literal, Iterable, Iterator, overload, cast, TYPE_CHECKING,
+    TypeVar, Generic, Literal, Iterable, Iterator, Union, Optional, 
+    overload, cast, TYPE_CHECKING,
 )
 if TYPE_CHECKING:
     try:
@@ -38,7 +39,7 @@ RAW_SRC_FMT = '-f rawvideo -pixel_format {pix_fmt} -video_size {width}x{height} 
 # numpy type aliases
 INT_8 = np.uint8
 INT_16 = np.uint16
-INT = INT_8 | INT_16
+INT = Union[INT_8, INT_16]
 _IntT = TypeVar('_IntT', bound=INT)
 IntArray1d = npt.NDArray[_IntT]
 IntArray2d = npt.NDArray[_IntT]
@@ -74,10 +75,10 @@ PlaneNames: list[PlaneSpec] = ['y', 'u', 'v']
 
 def build_ff_cmd(
     input_args: str,
-    outfile: str|Path,
+    outfile: Union[str, Path],
     filter_args: str,
     overwrite: bool = True,
-    vframes: int|None = 1
+    vframes: int = 1
 ) -> str:
     """Build an ffmpeg command string
 
@@ -95,10 +96,10 @@ def build_ff_cmd(
 
 def run_ffmpeg(
     input_args: str,
-    outfile: str|Path,
+    outfile: Union[str, Path],
     filter_args: str = '',
     overwrite: bool = True,
-    vframes: int|None = 1
+    vframes: int = 1
 ) -> None:
     """Run an ffmpeg command formatted by :func:`build_ff_cmd`
     """
@@ -139,7 +140,7 @@ class DataFile(Generic[_IntT]):
     def get_preview_dir(cls, fourcc: FourCC) -> Path:
         return IMAGE_ROOT / 'previews'
 
-    def get_preview_filename(self, comp: PlaneSpec|None = None) -> Path:
+    def get_preview_filename(self, comp: Optional[PlaneSpec] = None) -> Path:
         root = self.get_preview_dir(self.fourcc)
         if comp is not None:
             fn = self.get_plane_filename(comp)
@@ -374,9 +375,9 @@ class DataFileContainer:
     @classmethod
     def create(
         cls,
-        fourccs: Iterable[FourCC]|None = None,
-        resolutions: Iterable[Resolution]|None = None,
-        patterns: Iterable[TestSrc]|None = None,
+        fourccs: Optional[Iterable[FourCC]] = None,
+        resolutions: Optional[Iterable[Resolution]] = None,
+        patterns: Optional[Iterable[TestSrc]] = None,
     ) -> Self:
         fourccs = fourccs or FourCC
         resolutions = resolutions or RESOLUTIONS
@@ -413,7 +414,7 @@ class DataFileContainer:
     def by_resolution(
         self,
         resolution: Resolution,
-        data_files: Iterable[DataFile]|None = None
+        data_files: Optional[Iterable[DataFile]] = None
     ) -> Iterator[DataFile]:
         data_files = data_files or self
         for df in data_files:
@@ -423,7 +424,7 @@ class DataFileContainer:
     def by_fourcc(
         self,
         fourcc: FourCC,
-        data_files: Iterable[DataFile]|None = None
+        data_files: Optional[Iterable[DataFile]] = None
     ) -> Iterator[DataFile]:
         data_files = data_files or self
         for df in data_files:
@@ -433,7 +434,7 @@ class DataFileContainer:
     def by_testsrc(
         self,
         testsrc: TestSrc,
-        data_files: Iterable[DataFile]|None = None
+        data_files: Optional[Iterable[DataFile]] = None
     ) -> Iterator[DataFile]:
         data_files = data_files or self
         for df in data_files:
@@ -443,7 +444,7 @@ class DataFileContainer:
     def by_has_alpha(
         self,
         has_alpha: bool,
-        data_files: Iterable[DataFile]|None = None
+        data_files: Optional[Iterable[DataFile]] = None
     ) -> Iterator[DataFile]:
         data_files = data_files or self
         for df in data_files:
@@ -556,7 +557,7 @@ def build_alpha_plane(
     width: int,
     height: int,
     depth: BitDepth
-) -> IntArray1d[INT_8]|IntArray1d[INT_16]:
+) -> Union[IntArray1d[INT_8], IntArray1d[INT_16]]:
     # We don't really have a great source for alpha, so just use a simple gradient
     max_int = (1 << depth) - 1
     x = np.linspace(0, max_int / 2, width)
