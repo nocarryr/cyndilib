@@ -1,8 +1,12 @@
 from __future__ import annotations
 from typing import (
-    TypeVar, Generic, Literal, Iterable, Iterator, overload, cast,
+    TypeVar, Generic, Literal, Iterable, Iterator, overload, cast, TYPE_CHECKING,
 )
-from typing_extensions import Self
+if TYPE_CHECKING:
+    try:
+        from typing import Self             # type: ignore[missing-imports]
+    except ImportError:
+        from typing_extensions import Self  # type: ignore[missing-imports]
 from pathlib import Path
 import argparse
 import subprocess
