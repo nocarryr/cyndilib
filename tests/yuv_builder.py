@@ -21,7 +21,7 @@ import numpy.typing as npt
 
 from cyndilib.wrapper.ndi_structs import FourCC
 
-HERE = Path(__file__).parent.relative_to(Path.cwd())
+HERE = Path(__file__).parent.resolve()
 DATA = HERE / 'data'
 IMAGE_ROOT = DATA / 'images'
 IMAGE_ARCHIVE_FILE = DATA / 'images.tar.xz'
@@ -650,7 +650,6 @@ def compress_files(arch_file: Path = IMAGE_ARCHIVE_FILE) -> Path:
     arch_root = DATA.resolve()
     with tarfile.open(arch_file, 'w:xz') as tar:
         for fn in DataFiles.iter_files():
-            assert not fn.is_absolute()
             rel_fn = fn.resolve().relative_to(arch_root)
             rel_fn = PurePosixPath(*rel_fn.parts)
             tar.add(fn, arcname=rel_fn)
@@ -662,7 +661,6 @@ def decompress_files(arch_file: Path = IMAGE_ARCHIVE_FILE) -> Path:
     assert arch_file.resolve().parent == arch_root
     with tarfile.open(arch_file, 'r:xz') as tar:
         for fn in DataFiles.iter_files():
-            assert not fn.is_absolute()
             rel_fn = fn.resolve().relative_to(arch_root)
             rel_fn = PurePosixPath(*rel_fn.parts)
             inf = tar.getmember(str(rel_fn))
