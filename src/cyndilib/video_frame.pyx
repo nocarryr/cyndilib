@@ -202,6 +202,14 @@ cdef class VideoFrame:
         cdef bytes result = self.ptr.p_metadata
         return result
 
+    def set_metadata(self, bytes metadata):
+        """Set the video metadata. The lifetime of the metadata must be as long as the VideoFrame.
+        """
+        self._set_metadata(metadata)
+    cdef int _set_metadata(self, bytes metadata) noexcept:
+        self.ptr.p_metadata = metadata
+        return 0
+
     cdef int64_t _get_timestamp(self) noexcept nogil:
         return self.ptr.timestamp
     cdef void _set_timestamp(self, int64_t value) noexcept nogil:
