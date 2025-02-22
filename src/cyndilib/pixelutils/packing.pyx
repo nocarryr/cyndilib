@@ -38,7 +38,6 @@ cdef uint16_t image_read_line_component(
     cdef PixelComponentDef* comp = &(desc.comp[comp_index])
     cdef ImageComponent_s* image_comp = &(image_format.comp[comp_index])
     cdef uint8_t step = comp.step
-    cdef size_t dest_shape_0 = dest.shape[0]
     cdef int num_requested = max_count - x
     cdef int num_avail = image_comp.width - x
 
@@ -109,7 +108,6 @@ cdef int image_read_line(
     bint expand_chroma
 ) noexcept nogil:
     cdef PixelFormatDef* desc = image_format.pix_fmt
-    cdef size_t comp_axis = 0, pixel_axis = 1
     cdef uint8_t i, num_components = desc.num_components
     cdef ImageComponent_s* image_comp
     cdef uint16_t n
@@ -152,7 +150,7 @@ cdef int _unpack_rgb(
     cdef uint8_t num_components = desc.num_components, step = 4
     cdef uint16_t height = image_format.height, width = image_format.width
     cdef uint16_t linestep = width * step
-    cdef size_t i, j, k, data_ix = 0, end_ix
+    cdef size_t i, j, k, data_ix = 0
     for k in range(num_components):
         comp = &(desc.comp[k])
         offsets[k] = comp.offset
@@ -160,14 +158,14 @@ cdef int _unpack_rgb(
     if as_planar:
         for i in range(height):
             for j in range(width):
+                data_ix = i * linestep + j * step
                 for k in range(num_components):
-                    data_ix = i * linestep + j * step
                     dest[k,i,j] = data[data_ix+offsets[k]]
     else:
         for i in range(height):
             for j in range(width):
+                data_ix = i * linestep + j * step
                 for k in range(num_components):
-                    data_ix = i * linestep + j * step
                     dest[i,j,k] = data[data_ix+offsets[k]]
     return 0
 
@@ -197,16 +195,11 @@ cdef int image_read(
     """
     cdef PixelFormatDef* desc = image_format.pix_fmt
     cdef uint16_t width = image_format.width, height = image_format.height
-    cdef uint8_t num_components = desc.num_components
     cdef uint16_t read_shape[3]
     get_image_read_shape(image_format, read_shape, as_planar)
 
     cdef bint is_420 = desc.log2_chroma_h != 0
-    cdef bint is_422 = desc.log2_chroma_w != 0
-    cdef uint16_t chroma_height = image_format.chroma_height
-    cdef uint16_t i, j, comp_width, chroma_index = 0
     cdef uint16_t comp_widths[4]
-    cdef ImageComponent_s* image_comp
     cdef bint is_rgb = desc.flags & FormatFlags.FormatFlags_is_rgb != 0
     if data.shape[0] < image_format.size_in_bytes:
         raise_withgil(PyExc_Exception, 'invalid src shape')
@@ -215,12 +208,12 @@ cdef int image_read(
         if dest.shape[i] < read_shape[i]:
             raise_withgil(PyExc_Exception, 'invalid dest shape')
 
-    if uint_ft is uint8_t:
-        if is_rgb:
-            _unpack_rgb(image_format, dest, data, as_planar)
-            return 0
-
     with nogil(True):
+        if uint_ft is uint8_t:
+            if is_rgb:
+                _unpack_rgb(image_format, dest, data, as_planar)
+                return 0
+
         if as_planar:
             for i in range(height):
                 image_read_line(
@@ -251,8 +244,7 @@ cdef void _expand_chroma_height(
 ) noexcept nogil:
     cdef uint16_t width = image_format.width, height = image_format.height
     cdef uint16_t chroma_height = image_format.chroma_height
-    cdef size_t i, j, k, chroma_index, c_start, c_end
-    cdef uint_ft val
+    cdef size_t i, j, k, chroma_index
 
     i = chroma_height
     if as_planar:
@@ -288,7 +280,7 @@ cdef int _pack_rgb(
     cdef uint16_t height = image_format.height, width = image_format.width
     cdef uint16_t linestep = width * step
     cdef bint fill_alpha = num_components == 3
-    cdef size_t i, j, k, data_ix = 0, end_ix
+    cdef size_t i, j, k, data_ix = 0
     for k in range(num_components):
         comp = &(desc.comp[k])
         offsets[k] = comp.offset
@@ -297,8 +289,8 @@ cdef int _pack_rgb(
 
     for i in range(height):
         for j in range(width):
+            data_ix = (i * linestep + j * step)
             for k in range(4):
-                data_ix = (i * linestep + j * step) + offsets[k]
                 if fill_alpha and k == 3:
                     value = 255
                 else:
@@ -306,7 +298,7 @@ cdef int _pack_rgb(
                         value = src[k,i,j]
                     else:
                         value = src[i,j,k]
-                dest[data_ix] = value
+                dest[data_ix + offsets[k]] = value
     return 0
 
 
@@ -405,17 +397,12 @@ cdef int image_write(
             width/height of the image format (4:2:2 / 4:2:0).
     """
     cdef PixelFormatDef* desc = image_format.pix_fmt
-    cdef uint16_t width = image_format.width, height = image_format.height
+    cdef uint16_t height = image_format.height
     cdef uint8_t num_components = desc.num_components
     cdef uint16_t read_shape[3]
     get_image_read_shape(image_format, read_shape, src_is_planar)
 
-    cdef bint is_420 = desc.log2_chroma_h != 0
-    cdef bint is_422 = desc.log2_chroma_w != 0
-    cdef uint16_t chroma_height = image_format.chroma_height
-
     cdef bint is_rgb = desc.flags & FormatFlags.FormatFlags_is_rgb != 0
-    cdef bint has_alpha = num_components == 4
     if dest.shape[0] < image_format.size_in_bytes:
         raise_withgil(PyExc_Exception, 'invalid src shape')
 
