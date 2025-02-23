@@ -13,7 +13,6 @@ class ImageFormat:
         fourcc: FourCC,
         width: int,
         height: int,
-        planar: bool,
         expand_chroma: bool,
         line_stride: int = 0,
     ) -> None: ...
@@ -62,11 +61,6 @@ class ImageFormat:
 
     @property
     def is_16bit(self) -> bool: ...
-
-    @property
-    def planar(self) -> bool: ...
-    @planar.setter
-    def planar(self, value: bool): ...
 
     @property
     def expand_chroma(self) -> bool: ...

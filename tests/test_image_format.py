@@ -17,9 +17,6 @@ def data_file(request) -> DataFile:
     return request.param
 
 
-@pytest.fixture(params=[False, True], ids=['packed', 'planar'])
-def planar(request) -> bool:
-    return request.param
 
 
 @pytest.fixture(params=[False, True], ids=['no_expand', 'expand'])
@@ -33,35 +30,31 @@ def dest_dtype(request):
 
 
 
-def test_image_format_attrs(data_file, planar):
+def test_image_format_attrs(data_file):
     w, h = data_file.width, data_file.height
     img_fmt = ImageFormat(
         fourcc=data_file.fourcc,
-        width=w, height=h, planar=planar, expand_chroma=True,
+        width=w, height=h, expand_chroma=True,
     )
     assert img_fmt.fourcc == data_file.fourcc
     assert img_fmt.width == w
     assert img_fmt.height == h
-    assert img_fmt.planar == planar
     assert img_fmt.resolution == data_file.resolution
     assert img_fmt.chroma_width == data_file.chroma_width
     assert img_fmt.chroma_height == data_file.chroma_height
     assert img_fmt.is_16bit == data_file.is_16_bit
     assert img_fmt.num_components == data_file.num_components
-    if planar:
-        assert img_fmt.shape == (data_file.num_components, h, w)
-    else:
-        assert img_fmt.shape == (h, w, data_file.num_components)
+    assert img_fmt.shape == (h, w, data_file.num_components)
     assert img_fmt.size_in_bytes == data_file.get_packed_size()
 
 
-def test_unpack(data_file, planar, expand_chroma, dest_dtype):
+def test_unpack(data_file, expand_chroma, dest_dtype):
     w, h = data_file.resolution
     data_arr = data_file.get_src_array()
 
     unpacker = ImageReader(
         fourcc=data_file.fourcc,
-        width=w, height=h, planar=planar, expand_chroma=expand_chroma,
+        width=w, height=h, expand_chroma=expand_chroma,
     )
     unpacked_arr = np.zeros(unpacker.shape, dtype=dest_dtype)
     unpacker.unpack_into(src=data_arr, dest=unpacked_arr)
@@ -81,16 +74,12 @@ def test_unpack(data_file, planar, expand_chroma, dest_dtype):
         if not data_file.has_alpha:
             rgb_data = rgb_data[...,:3]
 
-        if planar:
-            # Change shape to ``(component, h, w)``
-            rgb_data = np.moveaxis(rgb_data, -1, 0)
-
         assert rgb_data.shape == unpacker.shape
         assert unpacked_arr.shape == rgb_data.shape
         assert np.array_equal(unpacked_arr, rgb_data)
         return
 
-    yuv_data = data_file.get_plane_arrays(expand_chroma=expand_chroma, planar=planar)
+    yuv_data = data_file.get_plane_arrays(expand_chroma=expand_chroma)
     assert unpacked_arr.shape == yuv_data.shape
 
     if data_file.is_16_bit and dest_dtype is np.uint8:
@@ -103,23 +92,19 @@ def test_unpack(data_file, planar, expand_chroma, dest_dtype):
         # compare components separately since chroma resolution is smaller
         cw, ch = data_file.chroma_resolution
         has_alpha = data_file.has_alpha
-        if not planar:
-            unpacked_arr = np.moveaxis(unpacked_arr, -1, 0)
-            yuv_data = np.moveaxis(yuv_data, -1, 0)
-        uv_slice = np.s_[1:3, :ch, :cw]
-        ya_slice = np.s_[0::3] if has_alpha else np.s_[0]
+        uv_slice = np.s_[:ch, :cw, 1:3]
+        ya_slice = np.s_[...,0::3] if has_alpha else np.s_[...,0]
         assert np.array_equal(unpacked_arr[uv_slice], yuv_data[uv_slice])
         assert np.array_equal(unpacked_arr[ya_slice], yuv_data[ya_slice])
 
 
-def test_pack(data_file, planar, expand_chroma):
+def test_pack(data_file, expand_chroma):
     w, h = data_file.width, data_file.height
     fourcc = data_file.fourcc
     src_dtype = data_file.dtype
 
     packer = ImageReader(
-        fourcc=fourcc, width=w, height=h,
-        planar=planar, expand_chroma=expand_chroma,
+        fourcc=fourcc, width=w, height=h, expand_chroma=expand_chroma,
     )
 
     data_arr = data_file.get_src_array()

@@ -27,7 +27,6 @@ cdef class VideoFrame:
            fourcc=self.fourcc,
            width=self.ptr.xres,
            height=self.ptr.yres,
-           planar=True,
            expand_chroma=True,
         )
         self.frame_rate.numerator = self.ptr.frame_rate_N
@@ -258,7 +257,6 @@ cdef class VideoFrame:
             self.image_reader._set_line_stride(line_stride, use_ptr_stride)
             self.image_reader._update_format(
                 fourcc=fcc, width=self.ptr.xres, height=self.ptr.yres,
-                planar=self.image_reader._planar,
             )
             self.ptr.line_stride_in_bytes = self.image_reader._fmt.line_stride
         return 0

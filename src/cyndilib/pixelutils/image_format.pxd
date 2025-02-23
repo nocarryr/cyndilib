@@ -59,5 +59,4 @@ cdef int fill_image_format(
 cdef void get_image_read_shape(
     ImageFormat_s* image_format,
     uint16_t shape[3],
-    bint as_planar
 ) noexcept nogil

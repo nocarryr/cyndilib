@@ -213,22 +213,15 @@ cdef int fill_image_format(
 cdef void get_image_read_shape(
     ImageFormat_s* image_format,
     uint16_t shape[3],
-    bint as_planar
 ) noexcept nogil:
     """Get the expected shape for an :c:struct:`ImageFormat_s`
 
-    If *as_planar* is ``True``, the shape will be ``(<comp>, <height>, <width>)``.
-    Otherwise, the shape will be ``(<height>, <width>, <comp>)`` (packed).
+    The shape will be ``(<height>, <width>, <comp>)``.
     """
     cdef uint8_t num_components = image_format.pix_fmt.num_components
-    if as_planar:
-        shape[0] = num_components
-        shape[1] = image_format.height
-        shape[2] = image_format.width
-    else:
-        shape[0] = image_format.height
-        shape[1] = image_format.width
-        shape[2] = num_components
+    shape[0] = image_format.height
+    shape[1] = image_format.width
+    shape[2] = num_components
 
 
 cdef uint16_t _get_chroma_height(

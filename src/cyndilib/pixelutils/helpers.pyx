@@ -24,7 +24,6 @@ cdef class ImageFormat:
         fourcc (FourCC): The initial :attr:`fourcc` value
         width (int): The initial :attr:`width` value
         height (int): The initial :attr:`height` value
-        planar (bool): The initial :attr:`planar` value
         expand_chroma (bool): The initial :attr:`expand_chroma` value
         line_stride (int): The initial :attr:`line_stride` value. If ``0``, the
             line stride will be calculated based on the image format.
@@ -35,7 +34,6 @@ cdef class ImageFormat:
         FourCC fourcc,
         uint16_t width,
         uint16_t height,
-        bint planar,
         bint expand_chroma,
         uint32_t line_stride = 0
         # bint force_line_stride = False
@@ -43,9 +41,8 @@ cdef class ImageFormat:
         self._force_line_stride = line_stride != 0
         fill_image_format(&self._fmt, fourcc, width, height, line_stride)
         self._line_stride = self._fmt.line_stride
-        self._planar = planar
         self._expand_chroma = expand_chroma
-        get_image_read_shape(&self._fmt, self._shape, self._planar)
+        get_image_read_shape(&self._fmt, self._shape)
 
     @property
     def width(self):
@@ -176,19 +173,6 @@ cdef class ImageFormat:
         return self._fmt.is_16bit
 
     @property
-    def planar(self):
-        """If ``True``, components lie on the first axis of unpacked arrays
-        ``(<comp>, <height>, <width>)``. Otherwise, they will be on the last axis
-        ``(<height>, <width>, <comp>)``.
-        """
-        return self._planar
-    @planar.setter
-    def planar(self, bint value):
-        if value == self._planar:
-            return
-        self._set_planar(value)
-
-    @property
     def expand_chroma(self):
         """If ``True``, the chroma components will be expanded (copied) to fill
         the width and height for 4:2:2 and 4:2:0 formats. Otherwise, they will
@@ -203,7 +187,10 @@ cdef class ImageFormat:
 
     @property
     def shape(self):
-        """The shape of the unpacked image array
+        """The expected shape for unpacked image arrays
+
+        This will be ``(<height>, <width>, <comp>)`` where ``<comp>`` is the
+        component (YUVA, RGBA, etc).
         """
         return self._shape[0], self._shape[1], self._shape[2]
 
@@ -232,34 +219,24 @@ cdef class ImageFormat:
         FourCC fourcc,
         uint16_t width,
         uint16_t height,
-        bint planar
     ) except -1 nogil:
         cdef uint32_t line_stride = 0
         if self._force_line_stride:
             line_stride = self._line_stride
-        self._planar = planar
         fill_image_format(&self._fmt, fourcc, width, height, line_stride)
         if not self._force_line_stride:
             self._line_stride = self._fmt.line_stride
-        get_image_read_shape(&self._fmt, self._shape, self._planar)
+        get_image_read_shape(&self._fmt, self._shape)
         return 0
 
     cdef int _set_fourcc(self, FourCC fourcc) except -1 nogil:
         if fourcc == self._fmt.pix_fmt.fourcc:
             return 0
-        self._update_format(fourcc, self._fmt.width, self._fmt.height, self._planar)
+        self._update_format(fourcc, self._fmt.width, self._fmt.height)
         return 0
 
     cdef int _set_resolution(self, uint16_t width, uint16_t height) except -1 nogil:
-        self._update_format(self._fmt.pix_fmt.fourcc, width, height, self._planar)
-        return 0
-
-    cdef int _set_planar(self, bint planar) except -1 nogil:
-        if planar == self._planar:
-            return 0
-        self._update_format(
-            self._fmt.pix_fmt.fourcc, self._fmt.width, self._fmt.height, planar,
-        )
+        self._update_format(self._fmt.pix_fmt.fourcc, width, height)
         return 0
 
     cdef int _set_line_stride(self, uint32_t line_stride, bint force) except -1 nogil:
@@ -271,14 +248,14 @@ cdef class ImageFormat:
         self._line_stride = line_stride
         self._update_format(
             fourcc=self._fmt.pix_fmt.fourcc, width=self._fmt.width,
-            height=self._fmt.height, planar=self._planar
+            height=self._fmt.height,
         )
         return 0
 
     cdef int _unpack(self, const uint8_t[:] src, uint_ft[:,:,:] dest) except -1 nogil:
         image_read(
             image_format=&self._fmt, dest=dest, data=src,
-            as_planar=self._planar, expand_chroma=self._expand_chroma,
+            expand_chroma=self._expand_chroma,
         )
         return 0
 
@@ -290,7 +267,7 @@ cdef class ImageFormat:
     cdef int _pack(self, const uint_ft[:,:,:] src, uint8_t[:] dest) except -1 nogil:
         image_write(
             image_format=&self._fmt, src=src, dest=dest,
-            src_is_planar=self._planar, src_is_444=self._expand_chroma,
+            src_is_444=self._expand_chroma,
         )
         return 0
 
@@ -351,10 +328,9 @@ cdef class ImageReader(ImageFormat):
         FourCC fourcc,
         uint16_t width,
         uint16_t height,
-        bint planar,
         bint expand_chroma,
     ):
-        ImageFormat.__init__(self, fourcc, width, height, planar, expand_chroma)
+        ImageFormat.__init__(self, fourcc, width, height, expand_chroma)
         self.c_buffer = CarrayBuffer()
 
     cdef int read_from_ndi_video_frame(
@@ -399,7 +375,7 @@ cdef class ImageReader(ImageFormat):
 
         image_read(
             image_format=&self._fmt, dest=dest, data=src_view,
-            as_planar=self._planar, expand_chroma=self._expand_chroma,
+            expand_chroma=self._expand_chroma,
         )
         return 0
 
@@ -414,7 +390,7 @@ cdef class ImageReader(ImageFormat):
 
         image_write(
             image_format=&self._fmt, src=src, dest=dest_view,
-            src_is_planar=self._planar, src_is_444=self._expand_chroma,
+            src_is_444=self._expand_chroma,
         )
         return 0
 

@@ -104,7 +104,6 @@ cdef int image_read_line(
     uint16_t x,
     uint16_t y,
     uint16_t max_count,
-    bint as_planar,
     bint expand_chroma
 ) noexcept nogil:
     cdef PixelFormatDef* desc = image_format.pix_fmt
@@ -121,20 +120,12 @@ cdef int image_read_line(
         if y >= image_comp.height or x >= image_comp.width:
             comp_widths[i] = 0
             continue
-        if as_planar:
-            n = image_read_line_component(
-                image_format,
-                dest=dest[i], data=data,
-                x=x, y=y, max_count=max_count, comp_index=i,
-                expand_chroma=expand_chroma,
-            )
-        else:
-            n = image_read_line_component(
-                image_format,
-                dest=dest[:,i], data=data,
-                x=x, y=y, max_count=max_count, comp_index=i,
-                expand_chroma=expand_chroma,
-            )
+        n = image_read_line_component(
+            image_format,
+            dest=dest[:,i], data=data,
+            x=x, y=y, max_count=max_count, comp_index=i,
+            expand_chroma=expand_chroma,
+        )
         comp_widths[i] = n
     return 0
 
@@ -142,7 +133,6 @@ cdef int _unpack_rgb(
     ImageFormat_s* image_format,
     uint8_t[:,:,:] dest,
     const uint8_t[:] data,
-    bint as_planar,
 ) noexcept nogil:
     cdef PixelFormatDef* desc = image_format.pix_fmt
     cdef PixelComponentDef* comp
@@ -155,18 +145,11 @@ cdef int _unpack_rgb(
         comp = &(desc.comp[k])
         offsets[k] = comp.offset
 
-    if as_planar:
-        for i in range(height):
-            for j in range(width):
-                data_ix = i * linestep + j * step
-                for k in range(num_components):
-                    dest[k,i,j] = data[data_ix+offsets[k]]
-    else:
-        for i in range(height):
-            for j in range(width):
-                data_ix = i * linestep + j * step
-                for k in range(num_components):
-                    dest[i,j,k] = data[data_ix+offsets[k]]
+    for i in range(height):
+        for j in range(width):
+            data_ix = i * linestep + j * step
+            for k in range(num_components):
+                dest[i,j,k] = data[data_ix+offsets[k]]
     return 0
 
 
@@ -174,7 +157,6 @@ cdef int image_read(
     ImageFormat_s* image_format,
     uint_ft[:,:,:] dest,
     const uint8_t[:] data,
-    bint as_planar = False,
     bint expand_chroma = True
 ) except -1 nogil:
     """Fill *dest* array from raw *data*
@@ -185,9 +167,6 @@ cdef int image_read(
             :c:func:`get_image_read_shape` and type should match the largest
             component of the pixel format.
         data: The source data to read from as an array/memoryview of ``uint8_t``
-        as_planar: If ``True`` the components will be placed on the first axis of
-            *dest* (``(<comp>, <height>, <width>)``).  Otherwise, they will
-            be on the last axis (``(<height>, <width>, <comp>)``).
         expand_chroma: If ``True``, the chroma components will be expanded
             (copied) to fill the width and height (for 4:2:2 and 4:2:0 formats).
             Otherwise, they will remain in their original states.
@@ -196,7 +175,7 @@ cdef int image_read(
     cdef PixelFormatDef* desc = image_format.pix_fmt
     cdef uint16_t width = image_format.width, height = image_format.height
     cdef uint16_t read_shape[3]
-    get_image_read_shape(image_format, read_shape, as_planar)
+    get_image_read_shape(image_format, read_shape)
 
     cdef bint is_420 = desc.log2_chroma_h != 0
     cdef uint16_t comp_widths[4]
@@ -211,58 +190,39 @@ cdef int image_read(
     with nogil(True):
         if uint_ft is uint8_t:
             if is_rgb:
-                _unpack_rgb(image_format, dest, data, as_planar)
+                _unpack_rgb(image_format, dest, data)
                 return 0
 
-        if as_planar:
-            for i in range(height):
-                image_read_line(
-                    image_format, comp_widths, dest=dest[:,i,:], data=data,
-                    x=0, y=i, max_count=width, expand_chroma=expand_chroma,
-                    as_planar=as_planar,
-                )
-        else:
-            for i in range(height):
-                image_read_line(
-                    image_format, comp_widths, dest[i], data,
-                    x=0, y=i, max_count=width, expand_chroma=expand_chroma,
-                    as_planar=as_planar,
-                )
+        for i in range(height):
+            image_read_line(
+                image_format, comp_widths, dest[i], data,
+                x=0, y=i, max_count=width, expand_chroma=expand_chroma,
+            )
 
         if is_420 and expand_chroma:
             # Copy each line's u/v values to their following rows
             # starting with chroma_height (height//2) so it can be done in-place
             # without overwritting any data
-            _expand_chroma_height(image_format, dest, as_planar)
+            _expand_chroma_height(image_format, dest)
     return 0
 
 
 cdef void _expand_chroma_height(
     ImageFormat_s* image_format,
     uint_ft[:,:,:] dest,
-    bint as_planar
 ) noexcept nogil:
     cdef uint16_t width = image_format.width, height = image_format.height
     cdef uint16_t chroma_height = image_format.chroma_height
     cdef size_t i, j, k, chroma_index
 
     i = chroma_height
-    if as_planar:
-        while i > 0:
-            chroma_index = i * 2
-            for j in range(width):
-                for k in range(1, 3):
-                    dest[k,chroma_index-1,j] = dest[k,i-1,j]
-                    dest[k,chroma_index-2,j] = dest[k,i-1,j]
-            i -= 1
-    else:
-        while i > 0:
-            chroma_index = i * 2
-            for j in range(width):
-                for k in range(1, 3):
-                    dest[chroma_index-1,j,k] = dest[i-1,j,k]
-                    dest[chroma_index-2,j,k] = dest[i-1,j,k]
-            i -= 1
+    while i > 0:
+        chroma_index = i * 2
+        for j in range(width):
+            for k in range(1, 3):
+                dest[chroma_index-1,j,k] = dest[i-1,j,k]
+                dest[chroma_index-2,j,k] = dest[i-1,j,k]
+        i -= 1
 
 
 
@@ -270,7 +230,6 @@ cdef int _pack_rgb(
     ImageFormat_s* image_format,
     const uint8_t[:,:,:] src,
     uint8_t[:] dest,
-    const bint src_is_planar,
 ) noexcept nogil:
     cdef PixelFormatDef* desc = image_format.pix_fmt
     cdef PixelComponentDef* comp
@@ -294,10 +253,7 @@ cdef int _pack_rgb(
                 if fill_alpha and k == 3:
                     value = 255
                 else:
-                    if src_is_planar:
-                        value = src[k,i,j]
-                    else:
-                        value = src[i,j,k]
+                    value = src[i,j,k]
                 dest[data_ix + offsets[k]] = value
     return 0
 
@@ -308,7 +264,6 @@ cdef int image_write_line_component(
     uint8_t[:] dest,
     const uint16_t y,
     const uint8_t comp_index,
-    const bint src_is_planar,
     const bint src_is_444
 ) except -1 nogil:
     cdef PixelFormatDef* desc = image_format.pix_fmt
@@ -348,15 +303,9 @@ cdef int image_write_line_component(
         if dest_shape_0 <= data_ix:
             raise_withgil(PyExc_IndexError, 'index error')
         if need_uv_avg_w:
-            if src_is_planar:
-                val = src[comp_index, chroma_y, i*2]
-            else:
-                val = src[chroma_y, i*2, comp_index]
+            val = src[chroma_y, i*2, comp_index]
         else:
-            if src_is_planar:
-                val = src[comp_index, y, i]
-            else:
-                val = src[y, i, comp_index]
+            val = src[y, i, comp_index]
 
         # note: we're assuming big-endian here
         if uint_ft is uint8_t:
@@ -381,7 +330,6 @@ cdef int image_write(
     ImageFormat_s* image_format,
     const uint_ft[:,:,:] src,
     uint8_t[:] dest,
-    bint src_is_planar,
     bint src_is_444
 ) except -1 nogil:
     """Pack data from *src* into the raw *dest* array
@@ -390,8 +338,6 @@ cdef int image_write(
         image_format (ImageFormat_s*): The image format pointer
         src: The image data
         dest: Array/memoryview of ``uint8_t`` to write the raw data into
-        src_is_planar: If the components are on the first axis of *src*, this
-            should be ``True``.  Otherwise this should be set to ``False`` (last axis).
         src_is_444: If ``True`` the chroma components in *src* should fill the
             resolution.  Otherwise, they are assumed to match the expected
             width/height of the image format (4:2:2 / 4:2:0).
@@ -400,7 +346,7 @@ cdef int image_write(
     cdef uint16_t height = image_format.height
     cdef uint8_t num_components = desc.num_components
     cdef uint16_t read_shape[3]
-    get_image_read_shape(image_format, read_shape, src_is_planar)
+    get_image_read_shape(image_format, read_shape)
 
     cdef bint is_rgb = desc.flags & FormatFlags.FormatFlags_is_rgb != 0
     if dest.shape[0] < image_format.size_in_bytes:
@@ -416,14 +362,13 @@ cdef int image_write(
     with nogil:
         if uint_ft is uint8_t:
             if is_rgb:
-                _pack_rgb(image_format, src, dest, src_is_planar)
+                _pack_rgb(image_format, src, dest)
                 return 0
 
         for i in range(height):
             for j in range(num_components):
                 image_write_line_component(
                     image_format=image_format, src=src, dest=dest,
-                    y=i, comp_index=j, src_is_planar=src_is_planar,
-                    src_is_444=src_is_444
+                    y=i, comp_index=j, src_is_444=src_is_444
                 )
     return 0

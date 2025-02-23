@@ -18,7 +18,6 @@ cdef class ImageFormat:
     cdef uint16_t _shape[3]
     cdef uint32_t _line_stride
     cdef bint _force_line_stride
-    cdef bint _planar
     cdef bint _expand_chroma
 
     cdef int _update_format(
@@ -26,12 +25,10 @@ cdef class ImageFormat:
         FourCC fourcc,
         uint16_t width,
         uint16_t height,
-        bint planar
     ) except -1 nogil
     cdef int _set_line_stride(self, uint32_t line_stride, bint force) except -1 nogil
     cdef int _set_fourcc(self, FourCC fourcc) except -1 nogil
     cdef int _set_resolution(self, uint16_t width, uint16_t height) except -1 nogil
-    cdef int _set_planar(self, bint planar) except -1 nogil
     cdef int _unpack(self, const uint8_t[:] src, uint_ft[:,:,:] dest) except -1 nogil
     cdef int _pack(self, const uint_ft[:,:,:] src, uint8_t[:] dest) except -1 nogil
     cdef object unpack_8_bit(self, const uint8_t[:] src)

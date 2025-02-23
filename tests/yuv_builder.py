@@ -329,16 +329,16 @@ class DataFile(Generic[_IntT]):
         w, h = self.get_component_resolution(comp)
         return arr.reshape((h, w))
 
-    def get_plane_arrays(self, expand_chroma: bool, planar: bool = True) -> IntArray3d[_IntT]:
+    def get_plane_arrays(self, expand_chroma: bool) -> IntArray3d[_IntT]:
         """Get the unpacked data for all components as a 3-d numpy array
+
+        The array shape will be in packed format (height, width, components).
 
         Arguments:
             expand_chroma: Whether to expand the chroma planes to full width
                 and height. If ``False``, the chroma planes will only fill their
                 respective regions in the array. In both cases however, the
                 the array shape will be the full :attr:`resolution`.
-            planar: Whether to return the array in planar format
-                ``(h, w, comp)`` or packed ``(comp, h, w)``
 
         """
         assert not self.is_rgb
@@ -360,8 +360,7 @@ class DataFile(Generic[_IntT]):
                     tmp[:ch, :cw] = arr
                     arr = tmp
             arrs.append(arr)
-        stack_axis = 0 if planar else -1
-        return np.stack(arrs, axis=stack_axis)
+        return np.stack(arrs, axis=-1)
 
 
 
