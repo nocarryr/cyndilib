@@ -11,26 +11,26 @@ cdef extern from *:
     """
     cdef const size_t MAX_FRAME_BUFFERS
     cdef const Py_intptr_t NULL_ID
-    cdef const Py_ssize_t NULL_INDEX
+    cdef const size_t NULL_INDEX
 
 
 cdef struct SendFrame_item_s:
-    Py_ssize_t idx
-    Py_ssize_t view_count
-    Py_ssize_t alloc_size
+    size_t idx
+    size_t view_count
+    size_t alloc_size
     bint write_available
     bint read_available
-    Py_ssize_t[3] shape
-    Py_ssize_t[3] strides
+    size_t[3] shape
+    size_t[3] strides
 
 
 cdef struct SendFrame_status_s:
-    Py_ssize_t num_buffers
-    Py_ssize_t write_index
-    Py_ssize_t read_index
-    Py_ssize_t ndim
-    Py_ssize_t[3] shape
-    Py_ssize_t[3] strides
+    size_t num_buffers
+    size_t write_index
+    size_t read_index
+    size_t ndim
+    size_t[3] shape
+    size_t[3] strides
     bint attached_to_sender
 
 cdef struct VideoSendFrame_item_s:
@@ -69,11 +69,11 @@ cdef int frame_status_alloc_p_data(SendFrame_status_s_ft* ptr) except -1 nogil
 cdef void frame_status_set_send_ready(SendFrame_status_s_ft* ptr) noexcept nogil
 cdef void frame_status_set_send_complete(
     SendFrame_status_s_ft* ptr,
-    Py_ssize_t idx,
+    size_t idx,
 ) noexcept nogil
-cdef Py_ssize_t frame_status_get_next_write_index(
+cdef size_t frame_status_get_next_write_index(
     SendFrame_status_s_ft* ptr,
 ) noexcept nogil
-cdef Py_ssize_t frame_status_get_next_read_index(
+cdef size_t frame_status_get_next_read_index(
     SendFrame_status_s_ft* ptr,
 ) noexcept nogil

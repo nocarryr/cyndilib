@@ -63,8 +63,8 @@ cdef class VideoRecvFrame(VideoFrame):
     cdef readonly Condition write_ready
     cdef cnp.ndarray all_frame_data
     cdef readonly cnp.ndarray current_frame_data
-    cdef Py_ssize_t[1] bfr_shape
-    cdef Py_ssize_t[1] bfr_strides
+    cdef size_t[1] bfr_shape
+    cdef size_t[1] bfr_strides
     cdef size_t view_count
 
     cdef int _check_read_array_size(self) except -1
@@ -78,8 +78,8 @@ cdef class VideoRecvFrame(VideoFrame):
 
 cdef class VideoFrameSync(VideoFrame):
     cdef NDIlib_framesync_instance_t fs_ptr
-    cdef readonly Py_ssize_t[1] shape
-    cdef readonly Py_ssize_t[1] strides
+    cdef readonly size_t[1] shape
+    cdef readonly size_t[1] strides
     cdef size_t view_count
 
     cdef int _process_incoming(self, NDIlib_framesync_instance_t fs_ptr) except -1 nogil
