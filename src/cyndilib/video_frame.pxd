@@ -14,6 +14,7 @@ from .send_frame_status cimport *
 
 
 cdef class VideoFrame:
+    cdef readonly bytes _metadata_bytes
     cdef NDIlib_video_frame_v2_t* ptr
     cdef FourCCPackInfo pack_info
     cdef frame_rate_t frame_rate
@@ -44,7 +45,7 @@ cdef class VideoFrame:
     cdef void _set_data(self, uint8_t* data) noexcept nogil
     cdef const char* _get_metadata(self) noexcept nogil
     cdef bytes _get_metadata_bytes(self)
-    cdef int _set_metadata(self, bytes metadata) noexcept
+    cdef int _set_metadata(self, bytes metadata) except -1
     cdef int64_t _get_timestamp(self) noexcept nogil
     cdef void _set_timestamp(self, int64_t value) noexcept nogil
     cdef size_t _get_data_size(self) noexcept nogil
