@@ -284,8 +284,8 @@ cdef class Sender:
         with nogil:
             vid_memview[...] = data
             self.video_frame._set_buffer_write_complete(item)
-            vid_ptr.p_data = item.frame_ptr.p_data
-            NDIlib_send_send_video_v2(self.ptr, vid_ptr)
+            item.frame_ptr.p_metadata = vid_ptr.p_metadata
+            NDIlib_send_send_video_v2(self.ptr, item.frame_ptr)
             self._clear_async_video_status()
             self.video_frame._on_sender_write(item)
         return True
@@ -319,8 +319,8 @@ cdef class Sender:
         with nogil:
             vid_memview[...] = data
             self.video_frame._set_buffer_write_complete(item)
-            vid_ptr.p_data = item.frame_ptr.p_data
-            NDIlib_send_send_video_async_v2(self.ptr, vid_ptr)
+            item.frame_ptr.p_metadata = vid_ptr.p_metadata
+            NDIlib_send_send_video_async_v2(self.ptr, item.frame_ptr)
             self._set_async_video_sender(item)
         return True
 
