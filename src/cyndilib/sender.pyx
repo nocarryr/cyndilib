@@ -277,12 +277,14 @@ cdef class Sender:
     cdef bint _write_video(self, cnp.uint8_t[:] data) except -1:
         if not self._check_running():
             return False
+        cdef NDIlib_video_frame_v2_t* vid_ptr = self.video_frame.ptr
         cdef VideoSendFrame_item_s* item = self.video_frame._prepare_buffer_write()
         cdef cnp.uint8_t[:] vid_memview = self.video_frame
 
         with nogil:
             vid_memview[...] = data
             self.video_frame._set_buffer_write_complete(item)
+            item.frame_ptr.p_metadata = vid_ptr.p_metadata
             NDIlib_send_send_video_v2(self.ptr, item.frame_ptr)
             self._clear_async_video_status()
             self.video_frame._on_sender_write(item)
@@ -310,12 +312,14 @@ cdef class Sender:
     cdef bint _write_video_async(self, cnp.uint8_t[:] data) except -1:
         if not self._check_running():
             return False
+        cdef NDIlib_video_frame_v2_t* vid_ptr = self.video_frame.ptr
         cdef VideoSendFrame_item_s* item = self.video_frame._prepare_buffer_write()
         cdef cnp.uint8_t[:] vid_memview = self.video_frame
 
         with nogil:
             vid_memview[...] = data
             self.video_frame._set_buffer_write_complete(item)
+            item.frame_ptr.p_metadata = vid_ptr.p_metadata
             NDIlib_send_send_video_async_v2(self.ptr, item.frame_ptr)
             self._set_async_video_sender(item)
         return True
