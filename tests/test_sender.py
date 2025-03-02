@@ -33,6 +33,7 @@ def test_send_video(request, fake_video_frames):
 
     vf.set_frame_rate(fr)
     vf.set_resolution(width, height)
+    vf.set_metadata(b'<some_xml_tag />')
     sender.set_video_frame(vf)
 
     one_frame = 1 / fr
@@ -48,6 +49,7 @@ def test_send_video(request, fake_video_frames):
         for i in range(num_frames):
             start_ts = time.time()
             print(f'send frame {i}')
+            vf.set_metadata(b'<some_other_xml_tag />')
             r = sender.write_video_async(fake_frames[i])
             assert r is True
             elapsed = time.time() - start_ts
@@ -135,6 +137,9 @@ def test_send_video_and_audio_py(request, fake_av_frames):
     sender = setup_sender(request, video_data, audio_data)
     vf = sender.video_frame
     af = sender.audio_frame
+
+    if vf:
+        vf.set_metadata(b'<some_xml_tag />')
 
     num_frame_repeats = 2
     num_full_repeats = 1
