@@ -1,6 +1,5 @@
 # cython: wraparound=False, boundscheck=False
 
-DEF MAX_BFR_DIMS = 8
 
 cimport cython
 cimport numpy as cnp
@@ -36,7 +35,7 @@ cdef class ImageFormat:
     """
     def __cinit__(self, *args, **kwargs):
         cdef size_t i
-        for i in range(MAX_BFR_DIMS):
+        for i in range(CARR_BFR_MAX_DIMS):
             self.bfr_shape[i] = 0
 
     def __init__(
@@ -411,7 +410,7 @@ cdef class CarrayBuffer:
         self.view_count = 0
         self.view_active = False
         cdef size_t i
-        for i in range(MAX_BFR_DIMS):
+        for i in range(CARR_BFR_MAX_DIMS):
             self.shape[i] = 0
             self.strides[i] = 1
         self.ndim = 1
@@ -425,14 +424,14 @@ cdef class CarrayBuffer:
     cdef int set_array_ptr(
         self,
         char *ptr,
-        Py_ssize_t[MAX_BFR_DIMS] shape,
+        Py_ssize_t[CARR_BFR_MAX_DIMS] shape,
         size_t ndim = 1,
         size_t itemsize = 1,
         bint readonly = True
     ) except -1 nogil:
         if self.view_active:
             raise_withgil(PyExc_RuntimeError, 'buffer is in use')
-        if ndim > MAX_BFR_DIMS:
+        if ndim > CARR_BFR_MAX_DIMS:
             raise_withgil(PyExc_ValueError, 'too many axes')
         self.carr_ptr = ptr
         cdef size_t i = ndim - 1, stride = itemsize, size = 0

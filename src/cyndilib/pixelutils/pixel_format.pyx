@@ -6,7 +6,12 @@ This module provides definitions for pixel formats and related utilities
 and is primarily based on FFMpeg's `libavutil/pixdesc.h` and `libavutil/pixdesc.c`.
 """
 
-DEF NUM_FORMATS = 11
+cdef extern from *:
+    """
+    #define PIX_FMT_NUM_FORMATS 11
+    """
+    cdef const size_t PIX_FMT_NUM_FORMATS
+
 
 from libc.string cimport memcpy
 from libcpp.map cimport map as cpp_map
@@ -21,14 +26,14 @@ ctypedef cpp_map[FourCC, const PixelFormatDef*] pix_fmt_map_t
 
 _defs_built = False
 
-cdef PixelFormatDef[NUM_FORMATS] pixel_format_defs
+cdef PixelFormatDef[PIX_FMT_NUM_FORMATS] pixel_format_defs
 cdef pix_fmt_map_t PixelFormatMap
 
 
 # Initialize definitions within a function to avoid
 # multiple module-level executions on import
 cdef _build_pixel_format_defs():
-    cdef PixelFormatDef[NUM_FORMATS] _pixel_format_defs = [
+    cdef PixelFormatDef[PIX_FMT_NUM_FORMATS] _pixel_format_defs = [
         # UYVY: 4:2:2 Packed YUV, 16bpp, (Cb, Y0, Cr, Y1)
         PixelFormatDef(
             num_components=3, num_planes=1, log2_chroma_w=1, log2_chroma_h=0,
@@ -155,7 +160,7 @@ cdef _build_pixel_format_defs():
     cdef size_t i
     cdef void *src
     cdef void *dst
-    for i in range(NUM_FORMATS):
+    for i in range(PIX_FMT_NUM_FORMATS):
         src = &(_pixel_format_defs[i])
         dst = &(pixel_format_defs[i])
         memcpy(dst, src, sizeof(PixelFormatDef))

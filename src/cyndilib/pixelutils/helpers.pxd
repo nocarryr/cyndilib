@@ -1,6 +1,5 @@
 # cython: language_level=3
 # distutils: language = c++
-DEF MAX_BFR_DIMS = 8
 
 
 from libc.stdint cimport *
@@ -13,6 +12,13 @@ from .image_format cimport ImageFormat_s
 from .types cimport uint_ft
 
 
+cdef extern from *:
+    """
+    #define CARR_BFR_MAX_DIMS 8
+    """
+    cdef const size_t CARR_BFR_MAX_DIMS
+
+
 cdef class ImageFormat:
     cdef ImageFormat_s _fmt
     cdef uint16_t _shape[3]
@@ -20,7 +26,7 @@ cdef class ImageFormat:
     cdef bint _force_line_stride
     cdef bint _expand_chroma
     cdef readonly CarrayBuffer c_buffer
-    cdef readonly Py_ssize_t[MAX_BFR_DIMS] bfr_shape
+    cdef readonly Py_ssize_t[CARR_BFR_MAX_DIMS] bfr_shape
 
     cdef int _update_format(
         self,
@@ -64,8 +70,8 @@ cdef class ImageReader(ImageFormat):
 
 cdef class CarrayBuffer:
     cdef char *carr_ptr
-    cdef readonly Py_ssize_t[MAX_BFR_DIMS] shape
-    cdef readonly Py_ssize_t[MAX_BFR_DIMS] strides
+    cdef readonly Py_ssize_t[CARR_BFR_MAX_DIMS] shape
+    cdef readonly Py_ssize_t[CARR_BFR_MAX_DIMS] strides
     cdef readonly size_t ndim
     cdef readonly size_t itemsize
     cdef readonly Py_ssize_t size
@@ -76,7 +82,7 @@ cdef class CarrayBuffer:
     cdef int set_array_ptr(
         self,
         char *ptr,
-        Py_ssize_t[MAX_BFR_DIMS] shape,
+        Py_ssize_t[CARR_BFR_MAX_DIMS] shape,
         size_t ndim = *,
         size_t itemsize = *,
         bint readonly = *
