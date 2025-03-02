@@ -77,19 +77,7 @@ jobs:
           python-version: "cp3{9,10,11,12,13}"
         - os: ubuntu-24.04-arm
           arch: aarch64
-          python-version: "cp39"
-        - os: ubuntu-24.04-arm
-          arch: aarch64
-          python-version: "cp310"
-        - os: ubuntu-24.04-arm
-          arch: aarch64
-          python-version: "cp311"
-        - os: ubuntu-24.04-arm
-          arch: aarch64
-          python-version: "cp312"
-        - os: ubuntu-24.04-arm
-          arch: aarch64
-          python-version: "cp313"
+          python-version: "cp3{9,10,11,12,13}"
 
     steps:
       - uses: actions/checkout@v3
