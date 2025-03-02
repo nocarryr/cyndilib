@@ -34,6 +34,11 @@ cdef class ImageFormat:
             line stride will be calculated based on the image format.
 
     """
+    def __cinit__(self, *args, **kwargs):
+        cdef size_t i
+        for i in range(MAX_BFR_DIMS):
+            self.bfr_shape[i] = 0
+
     def __init__(
         self,
         FourCC fourcc,
@@ -48,6 +53,7 @@ cdef class ImageFormat:
         self._line_stride = self._fmt.line_stride
         self._expand_chroma = expand_chroma
         get_image_read_shape(&self._fmt, self._shape)
+        self.c_buffer = CarrayBuffer()
 
     @property
     def width(self):
@@ -320,24 +326,6 @@ cdef class ImageFormat:
         return arr
 
 
-cdef class ImageReader(ImageFormat):
-    """Helper class to read raw image data from an NDI video frame
-    """
-    def __cinit__(self, *args, **kwargs):
-        cdef size_t i
-        for i in range(MAX_BFR_DIMS):
-            self.bfr_shape[i] = 0
-
-    def __init__(
-        self,
-        FourCC fourcc,
-        uint16_t width,
-        uint16_t height,
-        bint expand_chroma,
-    ):
-        ImageFormat.__init__(self, fourcc, width, height, expand_chroma)
-        self.c_buffer = CarrayBuffer()
-
     cdef int read_from_ndi_video_frame(
         self,
         NDIlib_video_frame_v2_t* ptr,
@@ -398,6 +386,14 @@ cdef class ImageReader(ImageFormat):
             src_is_444=self._expand_chroma,
         )
         return 0
+
+
+cdef class ImageReader(ImageFormat):
+    """Helper class to read raw image data from an NDI video frame
+    """
+    pass
+
+
 
 
 

@@ -19,6 +19,8 @@ cdef class ImageFormat:
     cdef uint32_t _line_stride
     cdef bint _force_line_stride
     cdef bint _expand_chroma
+    cdef readonly CarrayBuffer c_buffer
+    cdef readonly Py_ssize_t[MAX_BFR_DIMS] bfr_shape
 
     cdef int _update_format(
         self,
@@ -33,11 +35,6 @@ cdef class ImageFormat:
     cdef int _pack(self, const uint_ft[:,:,:] src, uint8_t[:] dest) except -1 nogil
     cdef object unpack_8_bit(self, const uint8_t[:] src)
     cdef object unpack_16_bit(self, const uint8_t[:] src)
-
-
-cdef class ImageReader(ImageFormat):
-    cdef readonly CarrayBuffer c_buffer
-    cdef readonly Py_ssize_t[MAX_BFR_DIMS] bfr_shape
 
     cdef int read_from_ndi_video_frame(
         self,
@@ -59,6 +56,10 @@ cdef class ImageReader(ImageFormat):
         const uint_ft[:,:,:] src,
         uint8_t* dest_ptr
     ) except -1 nogil
+
+
+cdef class ImageReader(ImageFormat):
+    pass
 
 
 cdef class CarrayBuffer:
