@@ -11,12 +11,13 @@ from .wrapper cimport *
 from .buffertypes cimport *
 from .locks cimport RLock, Condition
 from .send_frame_status cimport *
+from .pixelutils.helpers cimport ImageFormat
 
 
 cdef class VideoFrame:
     cdef readonly bytes _metadata_bytes
     cdef NDIlib_video_frame_v2_t* ptr
-    cdef FourCCPackInfo pack_info
+    cdef ImageFormat _image_reader
     cdef frame_rate_t frame_rate
 
     cpdef str get_format_string(self)
@@ -50,6 +51,7 @@ cdef class VideoFrame:
     cdef void _set_timestamp(self, int64_t value) noexcept nogil
     cdef size_t _get_data_size(self) noexcept nogil
     cpdef size_t get_data_size(self)
+    cdef void _set_image_reader_expand_chroma(self, bint expand_chroma) noexcept nogil
     cdef int _recalc_pack_info(self, bint use_ptr_stride=*) except -1 nogil
 
 cdef class VideoRecvFrame(VideoFrame):

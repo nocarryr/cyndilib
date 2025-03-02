@@ -4,6 +4,8 @@ from libc.string cimport memcpy
 
 from fractions import Fraction
 import numpy as np
+from .pixelutils.helpers cimport ImageFormat
+from .pixelutils.image_format cimport ImageFormat_s
 
 
 __all__ = ('VideoFrame', 'VideoRecvFrame', 'VideoFrameSync', 'VideoSendFrame')
@@ -18,6 +20,12 @@ cdef class VideoFrame:
             raise MemoryError()
 
     def __init__(self, *args, **kwargs):
+        self._image_reader = ImageFormat(
+           fourcc=self.fourcc,
+           width=self.ptr.xres,
+           height=self.ptr.yres,
+           expand_chroma=True,
+        )
         self.frame_rate.numerator = self.ptr.frame_rate_N
         self.frame_rate.denominator = self.ptr.frame_rate_D
 
@@ -63,6 +71,12 @@ cdef class VideoFrame:
             with cython.cdivision(True):
                 self._set_aspect(self.ptr.xres / <double>(self.ptr.yres))
         return 0
+
+    @property
+    def image_reader(self):
+        """The :class:`~.pixelutils.helpers.ImageFormat` object
+        """
+        return self._image_reader
 
     @property
     def xres(self):
@@ -129,11 +143,21 @@ cdef class VideoFrame:
         """
         return self._get_padded_bits_per_pixel()
 
+    @property
+    def image_reader_expand_chroma(self):
+        """The :attr:`~.pixelutils.helpers.ImageFormat.expand_chroma` setting
+        of the :attr:`image_reader`
+        """
+        return self._image_reader._expand_chroma
+    @image_reader_expand_chroma.setter
+    def image_reader_expand_chroma(self, bint value):
+        self._set_image_reader_expand_chroma(value)
+
     cdef uint8_t _get_bits_per_pixel(self) noexcept nogil:
-        return self.pack_info.bits_per_pixel
+        return self._image_reader._fmt.bits_per_pixel
 
     cdef uint8_t _get_padded_bits_per_pixel(self) noexcept nogil:
-        return self.pack_info.padded_bits_per_pixel
+        return self._image_reader._fmt.padded_bits_per_pixel
 
     def get_frame_rate(self) -> Fraction:
         """Get the video frame rate
@@ -188,7 +212,7 @@ cdef class VideoFrame:
         return self._get_buffer_size()
 
     cdef size_t _get_buffer_size(self) noexcept nogil:
-        return self.pack_info.total_size
+        return self._image_reader._fmt.size_in_bytes
 
     cdef uint8_t* _get_data(self) noexcept nogil:
         return self.ptr.p_data
@@ -236,26 +260,28 @@ cdef class VideoFrame:
     cpdef size_t get_data_size(self):
         return self._get_data_size()
 
+    cdef void _set_image_reader_expand_chroma(self, bint expand_chroma) noexcept nogil:
+        self._image_reader._expand_chroma = expand_chroma
+
     cdef int _recalc_pack_info(self, bint use_ptr_stride=True) except -1 nogil:
         cdef FourCC fcc = self._get_fourcc()
         cdef bint changed = False
         cdef size_t line_stride = 0
+        cdef ImageFormat_s* fmt = &(self._image_reader._fmt)
         if use_ptr_stride:
             line_stride = self.ptr.line_stride_in_bytes
-        if self.pack_info.fourcc != fcc:
-            self.pack_info.fourcc = fcc
+        if fmt.pix_fmt.fourcc != fcc:
             changed = True
-        if self.ptr.xres != self.pack_info.xres or self.ptr.yres != self.pack_info.yres:
-            self.pack_info.xres = self.ptr.xres
-            self.pack_info.yres = self.ptr.yres
+        if self.ptr.xres != fmt.width or self.ptr.yres != fmt.height:
             changed = True
-        if self.pack_info.xres == 0 or self.pack_info.yres == 0:
+        if self.ptr.xres == 0 or self.ptr.yres == 0:
             return 0
         if changed:
-            calc_fourcc_pack_info(&(self.pack_info), line_stride)
-            # only overwrite our line_stride_in_bytes if it was left unspecified in the NDI video frame.
-            if not use_ptr_stride:
-                self.ptr.line_stride_in_bytes = self.pack_info.line_strides[0]
+            self._image_reader._set_line_stride(line_stride, use_ptr_stride)
+            self._image_reader._update_format(
+                fourcc=fcc, width=self.ptr.xres, height=self.ptr.yres,
+            )
+            self.ptr.line_stride_in_bytes = self._image_reader._fmt.line_stride
         return 0
 
 
