@@ -16,6 +16,11 @@ from .packing cimport image_read, image_write
 from .image_format cimport fill_image_format, get_image_read_shape
 
 
+cdef object uint8_dtype = np.uint8
+cdef object uint16_dtype = np.uint16
+cdef object np_zeros = np.zeros
+
+
 
 cdef class ImageFormat:
     """Helper class to pack / unpack raw image data to and from image arrays
@@ -272,13 +277,13 @@ cdef class ImageFormat:
         return 0
 
     cdef object unpack_8_bit(self, const uint8_t[:] src):
-        cdef cnp.ndarray[cnp.uint8_t, ndim=3] arr = np.zeros(self.shape, dtype=np.uint8)
+        arr = np_zeros(self._shape, dtype=uint8_dtype)
         cdef uint8_t[:,:,:] arr_view = arr
         self._unpack(src, arr_view)
         return arr
 
     cdef object unpack_16_bit(self, const uint8_t[:] src):
-        cdef cnp.ndarray[cnp.uint16_t, ndim=3] arr = np.zeros(self.shape, dtype=np.uint16)
+        arr = np_zeros(self._shape, dtype=uint16_dtype)
         cdef uint16_t[:,:,:] arr_view = arr
         self._unpack(src, arr_view)
         return arr
@@ -309,7 +314,7 @@ cdef class ImageFormat:
         Returns:
             numpy.ndarray: The packed raw image data
         """
-        cdef cnp.ndarray[cnp.uint8_t, ndim=1] arr = np.zeros(self._fmt.size_in_bytes, dtype=np.uint8)
+        arr = np_zeros(self._fmt.size_in_bytes, dtype=uint8_dtype)
         cdef uint8_t[:] arr_view = arr
         self._pack(src, arr_view)
         return arr
