@@ -143,6 +143,16 @@ cdef class VideoFrame:
         """
         return self._get_padded_bits_per_pixel()
 
+    @property
+    def image_reader_expand_chroma(self):
+        """The :attr:`~.pixelutils.helpers.ImageFormat.expand_chroma` setting
+        of the :attr:`image_reader`
+        """
+        return self._image_reader._expand_chroma
+    @image_reader_expand_chroma.setter
+    def image_reader_expand_chroma(self, bint value):
+        self._set_image_reader_expand_chroma(value)
+
     cdef uint8_t _get_bits_per_pixel(self) noexcept nogil:
         return self._image_reader._fmt.bits_per_pixel
 
@@ -242,6 +252,9 @@ cdef class VideoFrame:
         return self._get_buffer_size()
     cpdef size_t get_data_size(self):
         return self._get_data_size()
+
+    cdef void _set_image_reader_expand_chroma(self, bint expand_chroma) noexcept nogil:
+        self._image_reader._expand_chroma = expand_chroma
 
     cdef int _recalc_pack_info(self, bint use_ptr_stride=True) except -1 nogil:
         cdef FourCC fcc = self._get_fourcc()
