@@ -40,22 +40,22 @@ cdef class ImageFormat:
         self,
         NDIlib_video_frame_v2_t* ptr,
         uint_ft[:,:,:] dest
-    ) except -1 nogil
+    ) except -1
     cdef int write_to_ndi_video_frame(
         self,
         NDIlib_video_frame_v2_t* ptr,
-        uint_ft[:,:,:] src
-    ) except -1 nogil
+        const uint_ft[:,:,:] src
+    ) except -1
     cdef int read_from_c_pointer(
         self,
         const uint8_t* src_ptr,
         uint_ft[:,:,:] dest
-    ) except -1 nogil
+    ) except -1
     cdef int write_to_c_pointer(
         self,
         const uint_ft[:,:,:] src,
         uint8_t* dest_ptr
-    ) except -1 nogil
+    ) except -1
 
 
 cdef class ImageReader(ImageFormat):

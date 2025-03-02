@@ -330,7 +330,7 @@ cdef class ImageFormat:
         self,
         NDIlib_video_frame_v2_t* ptr,
         uint_ft[:,:,:] dest
-    ) except -1 nogil:
+    ) except -1:
         cdef FourCC ptr_fourcc = fourcc_type_uncast(ptr.FourCC)
         if ptr_fourcc != self._fmt.pix_fmt.fourcc:
             raise_withgil(PyExc_ValueError, 'fourcc mismatch')
@@ -342,8 +342,8 @@ cdef class ImageFormat:
     cdef int write_to_ndi_video_frame(
         self,
         NDIlib_video_frame_v2_t* ptr,
-        uint_ft[:,:,:] src
-    ) except -1 nogil:
+        const uint_ft[:,:,:] src
+    ) except -1:
         # ptr.FourCC = fourcc_type_cast(self._fmt.pix_fmt.fourcc)
         # ptr.xres = self._fmt.width
         # ptr.yres = self._fmt.height
@@ -361,7 +361,7 @@ cdef class ImageFormat:
         self,
         const uint8_t* src_ptr,
         uint_ft[:,:,:] dest
-    ) except -1 nogil:
+    ) except -1:
         self.bfr_shape[0] = self._fmt.size_in_bytes
         self.c_buffer.set_array_ptr(<char*>src_ptr, self.bfr_shape, ndim=1)
         cdef const uint8_t[:] src_view = self.c_buffer
@@ -376,7 +376,7 @@ cdef class ImageFormat:
         self,
         const uint_ft[:,:,:] src,
         uint8_t* dest_ptr
-    ) except -1 nogil:
+    ) except -1:
         self.bfr_shape[0] = self._fmt.size_in_bytes
         self.c_buffer.set_array_ptr(<char*>dest_ptr, self.bfr_shape, ndim=1)
         cdef uint8_t[:] dest_view = self.c_buffer
