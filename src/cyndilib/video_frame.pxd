@@ -11,12 +11,12 @@ from .wrapper cimport *
 from .buffertypes cimport *
 from .locks cimport RLock, Condition
 from .send_frame_status cimport *
-from .pixelutils.helpers cimport ImageReader
+from .pixelutils.helpers cimport ImageFormat
 
 
 cdef class VideoFrame:
     cdef NDIlib_video_frame_v2_t* ptr
-    cdef readonly ImageReader image_reader
+    cdef ImageFormat _image_reader
     cdef frame_rate_t frame_rate
 
     cpdef str get_format_string(self)

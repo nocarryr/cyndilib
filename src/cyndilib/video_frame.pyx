@@ -13,9 +13,6 @@ __all__ = ('VideoFrame', 'VideoRecvFrame', 'VideoFrameSync', 'VideoSendFrame')
 
 cdef class VideoFrame:
     """Base class for video frames
-
-    Attributes:
-        image_reader (cyndilib.pixelutils.helpers.ImageReader):
     """
     def __cinit__(self, *args, **kwargs):
         self.ptr = video_frame_create_default()
@@ -23,7 +20,7 @@ cdef class VideoFrame:
             raise MemoryError()
 
     def __init__(self, *args, **kwargs):
-        self.image_reader = ImageReader(
+        self._image_reader = ImageFormat(
            fourcc=self.fourcc,
            width=self.ptr.xres,
            height=self.ptr.yres,
@@ -74,6 +71,12 @@ cdef class VideoFrame:
             with cython.cdivision(True):
                 self._set_aspect(self.ptr.xres / <double>(self.ptr.yres))
         return 0
+
+    @property
+    def image_reader(self):
+        """The :class:`~.pixelutils.helpers.ImageFormat` object
+        """
+        return self._image_reader
 
     @property
     def xres(self):
@@ -141,10 +144,10 @@ cdef class VideoFrame:
         return self._get_padded_bits_per_pixel()
 
     cdef uint8_t _get_bits_per_pixel(self) noexcept nogil:
-        return self.image_reader._fmt.bits_per_pixel
+        return self._image_reader._fmt.bits_per_pixel
 
     cdef uint8_t _get_padded_bits_per_pixel(self) noexcept nogil:
-        return self.image_reader._fmt.padded_bits_per_pixel
+        return self._image_reader._fmt.padded_bits_per_pixel
 
     def get_frame_rate(self) -> Fraction:
         """Get the video frame rate
@@ -199,7 +202,7 @@ cdef class VideoFrame:
         return self._get_buffer_size()
 
     cdef size_t _get_buffer_size(self) noexcept nogil:
-        return self.image_reader._fmt.size_in_bytes
+        return self._image_reader._fmt.size_in_bytes
 
     cdef uint8_t* _get_data(self) noexcept nogil:
         return self.ptr.p_data
@@ -244,7 +247,7 @@ cdef class VideoFrame:
         cdef FourCC fcc = self._get_fourcc()
         cdef bint changed = False
         cdef size_t line_stride = 0
-        cdef ImageFormat_s* fmt = &(self.image_reader._fmt)
+        cdef ImageFormat_s* fmt = &(self._image_reader._fmt)
         if use_ptr_stride:
             line_stride = self.ptr.line_stride_in_bytes
         if fmt.pix_fmt.fourcc != fcc:
@@ -254,11 +257,11 @@ cdef class VideoFrame:
         if self.ptr.xres == 0 or self.ptr.yres == 0:
             return 0
         if changed:
-            self.image_reader._set_line_stride(line_stride, use_ptr_stride)
-            self.image_reader._update_format(
+            self._image_reader._set_line_stride(line_stride, use_ptr_stride)
+            self._image_reader._update_format(
                 fourcc=fcc, width=self.ptr.xres, height=self.ptr.yres,
             )
-            self.ptr.line_stride_in_bytes = self.image_reader._fmt.line_stride
+            self.ptr.line_stride_in_bytes = self._image_reader._fmt.line_stride
         return 0
 
 
