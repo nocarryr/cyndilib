@@ -75,28 +75,25 @@ jobs:
         - os: windows-latest
           arch: AMD64
           python-version: "cp3{9,10,11,12,13}"
-        - os: ubuntu-latest
+        - os: ubuntu-24.04-arm
           arch: aarch64
           python-version: "cp39"
-        - os: ubuntu-latest
+        - os: ubuntu-24.04-arm
           arch: aarch64
           python-version: "cp310"
-        - os: ubuntu-latest
+        - os: ubuntu-24.04-arm
           arch: aarch64
           python-version: "cp311"
-        - os: ubuntu-latest
+        - os: ubuntu-24.04-arm
           arch: aarch64
           python-version: "cp312"
-        - os: ubuntu-latest
+        - os: ubuntu-24.04-arm
           arch: aarch64
           python-version: "cp313"
 
     steps:
       - uses: actions/checkout@v3
 
-      - name: Set up QEMU
-        if: matrix.os == 'ubuntu-latest'
-        uses: docker/setup-qemu-action@v2
 
       - uses: actions/setup-python@v5
         with:
