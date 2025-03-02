@@ -413,8 +413,8 @@ cdef class CarrayBuffer:
         for i in range(CARR_BFR_MAX_DIMS):
             self.shape[i] = 0
             self.strides[i] = 1
-        self.ndim = 1
-        self.itemsize = 1
+        self.ndim = 0
+        self.itemsize = 0
         self.size = 0
         self.readonly = True
 
@@ -433,13 +433,16 @@ cdef class CarrayBuffer:
             raise_withgil(PyExc_RuntimeError, 'buffer is in use')
         if ndim > CARR_BFR_MAX_DIMS:
             raise_withgil(PyExc_ValueError, 'too many axes')
+        elif ndim == 0:
+            raise_withgil(PyExc_ValueError, 'ndim cannot be zero')
         self.carr_ptr = ptr
-        cdef size_t i = ndim - 1, stride = itemsize, size = 0
+        cdef size_t i = ndim - 1, stride = itemsize, size = 1
         while i >= 0:
             self.shape[i] = shape[i]
+            size *= shape[i]
+            if i != ndim - 1:
+                stride *= shape[i+1]
             self.strides[i] = stride
-            size += shape[i]
-            stride += itemsize * shape[i]
             if i == 0:
                 break
             i -= 1
@@ -453,7 +456,11 @@ cdef class CarrayBuffer:
         # if self.view_count > 0:
         #     raise_withgil(PyExc_RuntimeError, 'buffer is in use')
         self.carr_ptr = NULL
-        self.shape[0] = 0
+        self.ndim = 0
+        cdef size_t i
+        for i in range(CARR_BFR_MAX_DIMS):
+            self.shape[i] = 0
+            self.strides[i] = 1
         return 0
 
     def __getbuffer__(self, Py_buffer *buffer, int flags):
@@ -473,8 +480,8 @@ cdef class CarrayBuffer:
         buffer.ndim = self.ndim
         buffer.obj = self
         buffer.readonly = 1 if self.readonly else 0
-        buffer.shape = <Py_ssize_t*>self.shape
-        buffer.strides = <Py_ssize_t*>self.strides
+        buffer.shape = self.shape
+        buffer.strides = self.strides
         buffer.suboffsets = NULL
         self.view_count += 1
         self.view_active = True
