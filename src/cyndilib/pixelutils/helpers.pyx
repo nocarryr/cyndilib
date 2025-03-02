@@ -363,7 +363,10 @@ cdef class ImageFormat:
         uint_ft[:,:,:] dest
     ) except -1:
         self.bfr_shape[0] = self._fmt.size_in_bytes
-        self.c_buffer.set_array_ptr(<char*>src_ptr, self.bfr_shape, ndim=1)
+        self.c_buffer.set_array_ptr(
+            <char*>src_ptr, shape=self.bfr_shape, ndim=1,
+            itemsize=sizeof(uint8_t), readonly=True,
+        )
         cdef const uint8_t[:] src_view = self.c_buffer
 
         image_read(
@@ -378,7 +381,10 @@ cdef class ImageFormat:
         uint8_t* dest_ptr
     ) except -1:
         self.bfr_shape[0] = self._fmt.size_in_bytes
-        self.c_buffer.set_array_ptr(<char*>dest_ptr, self.bfr_shape, ndim=1)
+        self.c_buffer.set_array_ptr(
+            ptr=<char*>dest_ptr, shape=self.bfr_shape, ndim=1,
+            itemsize=sizeof(uint8_t), readonly=False,
+        )
         cdef uint8_t[:] dest_view = self.c_buffer
 
         image_write(
@@ -411,7 +417,6 @@ cdef class CarrayBuffer:
         self.ndim = 1
         self.itemsize = 1
         self.size = 0
-        self.format = 'B'
         self.readonly = True
 
     def __dealloc__(self):
@@ -441,6 +446,7 @@ cdef class CarrayBuffer:
             i -= 1
         self.size = size
         self.ndim = ndim
+        self.itemsize = itemsize
         self.readonly = readonly
         return 0
 
@@ -456,7 +462,12 @@ cdef class CarrayBuffer:
         if ptr is NULL:
             raise ValueError('buffer is NULL')
         buffer.buf = ptr
-        buffer.format = 'B'
+        if self.itemsize == 1:
+            buffer.format = 'B'
+        elif self.itemsize == 2:
+            buffer.format = 'H'
+        else:
+            raise ValueError('invalid itemsize')
         buffer.internal = NULL
         buffer.itemsize = self.itemsize
         buffer.len = self.size

@@ -69,11 +69,9 @@ cdef class CarrayBuffer:
     cdef readonly size_t ndim
     cdef readonly size_t itemsize
     cdef readonly Py_ssize_t size
-    cdef readonly format
     cdef readonly bint readonly
     cdef readonly int view_count
     cdef readonly bint view_active
-    cdef bint free_ptr_on_release
 
     cdef int set_array_ptr(
         self,
