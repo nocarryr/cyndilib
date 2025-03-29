@@ -4,7 +4,8 @@
 from libc.stdint cimport *
 from libcpp.string cimport string as cpp_string
 
-from .wrapper cimport *
+from .wrapper.ndi_structs cimport NDIlib_metadata_frame_t
+from .wrapper.ndi_recv cimport NDIlib_recv_instance_t
 
 cdef class MetadataFrame:
     cdef NDIlib_metadata_frame_t* ptr

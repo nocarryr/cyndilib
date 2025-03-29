@@ -1,7 +1,14 @@
 # cython: language_level=3
 # distutils: language = c++
 
-from .wrapper cimport *
+from libc.stdint cimport *
+
+from .wrapper.types cimport *
+from .wrapper.ndi_structs cimport (
+    NDIlib_frame_type_ft,
+    NDIlib_video_frame_v2_t,
+    NDIlib_audio_frame_v3_t,
+)
 
 cdef extern from *:
     """

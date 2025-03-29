@@ -4,7 +4,7 @@
 from libc.stdint cimport *
 
 from .ndi_lib cimport *
-from .ndi_structs cimport *
+from .ndi_structs cimport NDIlib_source_t
 
 
 cdef extern from "Processing.NDI.Find.h" nogil:

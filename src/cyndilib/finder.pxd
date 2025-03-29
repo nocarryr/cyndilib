@@ -1,13 +1,21 @@
 # cython: language_level=3
 # distutils: language = c++
 
+from libc.stdint cimport *
 from libcpp.string cimport string as cpp_string
 from libcpp.list cimport list as cpp_list
 from libcpp.set cimport set as cpp_set
 from libcpp.utility cimport pair as cpp_pair
 from libcpp.map cimport map as cpp_map
 
-from .wrapper cimport *
+from .wrapper.ndi_structs cimport (
+    NDIlib_tally_t,
+)
+from .wrapper.ndi_find cimport (
+    NDIlib_find_instance_t,
+    NDIlib_source_t,
+
+)
 from .locks cimport RLock, Condition, Event
 from .callback cimport Callback
 

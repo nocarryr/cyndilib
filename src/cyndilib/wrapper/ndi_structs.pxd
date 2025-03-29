@@ -4,7 +4,6 @@
 from libc.stdint cimport *
 
 from .ndi_lib cimport *
-from .common cimport *
 from .types cimport *
 
 
