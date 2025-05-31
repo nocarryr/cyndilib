@@ -5,6 +5,8 @@ from libc.string cimport memcpy
 from fractions import Fraction
 import numpy as np
 
+from .wrapper.ndi_structs cimport fourcc_pack_info_init
+
 
 __all__ = ('VideoFrame', 'VideoRecvFrame', 'VideoFrameSync', 'VideoSendFrame')
 
@@ -16,6 +18,7 @@ cdef class VideoFrame:
         self.ptr = video_frame_create_default()
         if self.ptr is NULL:
             raise MemoryError()
+        fourcc_pack_info_init(&(self.pack_info))
 
     def __init__(self, *args, **kwargs):
         self.frame_rate.numerator = self.ptr.frame_rate_N
@@ -128,6 +131,12 @@ cdef class VideoFrame:
         """Padded bits per pixel for the current :attr:`fourcc`
         """
         return self._get_padded_bits_per_pixel()
+
+    @property
+    def padded_bytes_per_line(self):
+        """Padded bytes per line for the current :attr:`fourcc`
+        """
+        return self.pack_info.padded_bytes_per_line
 
     cdef uint8_t _get_bits_per_pixel(self) noexcept nogil:
         return self.pack_info.bits_per_pixel
@@ -495,7 +504,7 @@ cdef class VideoRecvFrame(VideoFrame):
 
     cdef int _prepare_incoming(self, NDIlib_recv_instance_t recv_ptr) except -1:
         cdef size_t bfr_idx
-        self._recalc_pack_info()
+        self._recalc_pack_info(use_ptr_stride=True)
         self._check_write_array_size()
         if self.read_indices.size() == self.max_buffers:
             self.read_lock._acquire(True, -1)
@@ -603,7 +612,7 @@ cdef class VideoFrameSync(VideoFrame):
         if self.view_count > 0:
             raise_withgil(PyExc_ValueError, 'cannot write with view active')
 
-        self._recalc_pack_info()
+        self._recalc_pack_info(use_ptr_stride=True)
         cdef NDIlib_video_frame_v2_t* p = self.ptr
         cdef size_t size_in_bytes = self._get_buffer_size()
         self.shape[0] = size_in_bytes
