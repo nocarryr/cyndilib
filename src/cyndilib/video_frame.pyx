@@ -342,8 +342,8 @@ cdef class VideoRecvFrame(VideoFrame):
         buffer.ndim = frame_data.ndim
         buffer.obj = self
         buffer.readonly = 1
-        buffer.shape = self.bfr_shape
-        buffer.strides = self.bfr_strides
+        buffer.shape = <Py_ssize_t*>self.bfr_shape
+        buffer.strides = <Py_ssize_t*>self.bfr_strides
         buffer.suboffsets = NULL
 
     def __releasebuffer__(self, Py_buffer *buffer):
@@ -689,8 +689,8 @@ cdef class VideoSendFrame(VideoFrame):
         buffer.ndim = self.send_status.data.ndim
         buffer.obj = self
         buffer.readonly = 0
-        buffer.shape = item.data.shape
-        buffer.strides = item.data.strides
+        buffer.shape = <Py_ssize_t*>item.data.shape
+        buffer.strides = <Py_ssize_t*>item.data.strides
         buffer.suboffsets = NULL
 
     def __releasebuffer__(self, Py_buffer *buffer):
@@ -704,7 +704,7 @@ cdef class VideoSendFrame(VideoFrame):
         return self._write_available()
 
     cdef bint _write_available(self) noexcept nogil:
-        cdef Py_ssize_t idx = frame_status_get_next_write_index(&(self.send_status))
+        cdef size_t idx = frame_status_get_next_write_index(&(self.send_status))
         return idx != NULL_INDEX
 
     cdef VideoSendFrame_item_s* _prepare_buffer_write(self) except NULL nogil:
@@ -760,7 +760,7 @@ cdef class VideoSendFrame(VideoFrame):
         self._set_buffer_write_complete(item)
 
     cdef VideoSendFrame_item_s* _get_next_write_frame(self) except NULL nogil:
-        cdef Py_ssize_t idx = frame_status_get_next_write_index(&(self.send_status))
+        cdef size_t idx = frame_status_get_next_write_index(&(self.send_status))
         if idx == NULL_INDEX:
             raise_withgil(PyExc_RuntimeError, 'no write frame available')
         self.send_status.data.write_index = idx
@@ -770,11 +770,11 @@ cdef class VideoSendFrame(VideoFrame):
         return VideoFrame._recalc_pack_info(self, use_ptr_stride)
 
     cdef bint _send_frame_available(self) noexcept nogil:
-        cdef Py_ssize_t idx = frame_status_get_next_read_index(&(self.send_status))
+        cdef size_t idx = frame_status_get_next_read_index(&(self.send_status))
         return idx != NULL_INDEX
 
     cdef VideoSendFrame_item_s* _get_send_frame(self) except NULL nogil:
-        cdef Py_ssize_t idx = frame_status_get_next_read_index(&(self.send_status))
+        cdef size_t idx = frame_status_get_next_read_index(&(self.send_status))
         if idx == NULL_INDEX:
             raise_withgil(PyExc_IndexError, 'no read index available')
         return &(self.send_status.items[idx])
@@ -786,7 +786,7 @@ cdef class VideoSendFrame(VideoFrame):
         :meth:`_send_frame_available` must be checked before calling this
         or bad things could happen
         """
-        cdef Py_ssize_t idx = frame_status_get_next_read_index(&(self.send_status))
+        cdef size_t idx = frame_status_get_next_read_index(&(self.send_status))
         return &(self.send_status.items[idx])
 
     cdef void _on_sender_write(self, VideoSendFrame_item_s* s_ptr) noexcept nogil:
