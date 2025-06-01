@@ -123,18 +123,27 @@ cdef class VideoFrame:
     @property
     def bits_per_pixel(self):
         """Bits per pixel for the current :attr:`fourcc`
+
+        .. versionadded:: 0.0.5
+
         """
         return self._get_bits_per_pixel()
 
     @property
     def padded_bits_per_pixel(self):
         """Padded bits per pixel for the current :attr:`fourcc`
+
+        .. versionadded:: 0.0.5
+
         """
         return self._get_padded_bits_per_pixel()
 
     @property
     def padded_bytes_per_line(self):
         """Padded bytes per line for the current :attr:`fourcc`
+
+        .. versionadded:: 0.0.6
+
         """
         return self.pack_info.padded_bytes_per_line
 
@@ -212,6 +221,11 @@ cdef class VideoFrame:
         return result
 
     def set_metadata(self, bytes metadata):
+        """Set the metadata for the video frame
+
+        .. versionadded:: 0.0.6
+
+        """
         self._set_metadata(metadata)
     cdef int _set_metadata(self, bytes metadata) except -1:
         self._metadata_bytes = metadata
