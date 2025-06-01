@@ -3,8 +3,24 @@ name: Build Wheels
 on:
   push:
     branches: [ main ]
+    paths:
+    - "pyproject.toml"
+    - "setup.py"
+    - "setup.cfg"
+    - "src/**"
+    - "tests/**"
+    - ".github/workflows/build_wheels.yml"
+
   pull_request:
     branches: [ main ]
+    paths:
+    - "pyproject.toml"
+    - "setup.py"
+    - "setup.cfg"
+    - "src/**"
+    - "tests/**"
+    - ".github/workflows/build_wheels.yml"
+
   workflow_dispatch:
     inputs:
       skip_tests:
