@@ -393,6 +393,305 @@ cdef class Receiver:
         NDIlib_recv_set_tally(self.ptr, &(self.source_tally))
         return 0
 
+    cpdef is_ptz_supported(self):
+        """Check, if the source accepts PTZ commands
+        """
+        return self._is_ptz_supported()
+
+    cdef bint _is_ptz_supported(self):
+        return NDIlib_recv_ptz_is_supported(self.ptr)
+
+    cpdef set_zoom_level(self, float zoom_level):
+        """Set the PTZ zoom level
+        
+        Expected values:
+        0.0 (max zoomed out) .. 1.0 (max zoomed in)
+        """
+        return self._set_zoom_level(zoom_level)
+
+    cdef bint _set_zoom_level(self, float zoom_level):
+        if zoom_level < 0.0:
+            zoom_level = 0.0
+        elif zoom_level > 1.0:
+            zoom_level = 1.0
+        return NDIlib_recv_ptz_zoom(self.ptr, zoom_level)
+
+    cpdef zoom(self, float zoom_speed):
+        """Zoom the camera with the given speed.
+        The assumption is that this function is called continuously,
+        for example while pressing a button in a GUI or HID.
+        
+        Expected values for the speed:
+        -1.0 (zoom out, max speed) .. 0.0 (no zooming) .. 1.0 (zoom in, max speed)
+        """
+        return self._set_zoom_speed(zoom_speed)
+
+    cdef bint _set_zoom_speed(self, float zoom_speed):
+        if zoom_speed < -1.0:
+            zoom_speed = -1.0
+        elif zoom_speed > 1.0:
+            zoom_speed = 1.0
+        return NDIlib_recv_ptz_zoom_speed(self.ptr, zoom_speed)
+
+    cpdef pan_and_tilt(self, float pan_speed, float tilt_speed):
+        """Pan and tilt the camera.
+        The assumption is that this function is called continuously,
+        for example while pressing a button in a GUI or HID.
+        
+        Expected values for the speed:
+        1.0 (fastest left) .. 0.0 (no movement) .. -1.0 (fastest right)
+        -1.0 (fastest downwards) .. 0.0 (no movement) .. 1.0 (fastest upwards)
+        
+        Attention: 1 is 'to the left', and -1 'is to the right'!
+        """
+        return self._set_pan_and_tilt_speed(pan_speed, tilt_speed)
+
+    cpdef pan(self, float pan_speed):
+        """Pan the camera.
+        The assumption is that this function is called continuously,
+        for example while pressing a button in a GUI or HID.
+        
+        Expected values for the speed:
+        1.0 (fastest left) .. 0.0 (no movement) .. -1.0 (fastest right)
+        
+        Attention: 1 is 'to the left', and -1 'is to the right'!
+        
+        This is the same as pan_and_tilt(pan_speed, 0.0).
+        """
+        return self._set_pan_and_tilt_speed(pan_speed, 0.0)
+
+    cpdef tilt(self, float tilt_speed):
+        """Pan and tilt the camera.
+        The assumption is that this function is called continuously,
+        for example while pressing a button in a GUI or HID.
+        
+        Expected values for the speed:
+        -1.0 (fastest downwards) .. 0.0 (no movement) .. 1.0 (fastest upwards)
+        
+        This is the same as pan_and_tilt(0.0, tilt_speed).
+        """
+        return self._set_pan_and_tilt_speed(0.0, tilt_speed)
+
+    cdef bint _set_pan_and_tilt_speed(self, float pan_speed, float tilt_speed):
+        if pan_speed < -1.0:
+            pan_speed = -1.0
+        elif pan_speed > 1.0:
+            pan_speed = 1.0
+        if tilt_speed < -1.0:
+            tilt_speed = -1.0
+        elif tilt_speed > 1.0:
+            tilt_speed = 1.0
+        return NDIlib_recv_ptz_pan_tilt_speed(self.ptr, pan_speed, tilt_speed)
+
+    cpdef set_pan_and_tilt_values(self, float pan_value, float tilt_value):
+        """Set pan and tilt angles of the camera.
+        
+        Expected values:
+        pan_value: -1.0 (leftmost) .. 0.0 (center) .. 1.0 (right)
+        tilt_value: -1.0 (bottom) .. 0.0 (middle) .. 1.0 (top) 
+        
+        Attention: While invoking pan(-1) moves the camera to the right,
+        here a pan_value of -1 means 'all the way to the left'! 
+        
+        Note: Some cameras (e.g. OBSBOT) only support tilt values from -0.5 to 0.5.
+        """
+        return self._set_pan_and_tilt(pan_value, tilt_value)
+
+    cdef bint _set_pan_and_tilt(self, float pan_value, float tilt_value):
+        if pan_value < -1.0:
+            pan_value = -1.0
+        elif pan_value > 1.0:
+            pan_value = 1.0
+        if tilt_value < -1.0:
+            tilt_value = -1.0
+        elif tilt_value > 1.0:
+            tilt_value = 1.0
+        return NDIlib_recv_ptz_pan_tilt(self.ptr, pan_value, tilt_value)
+
+    cpdef store_preset(self, int preset_no):
+        """Store the current PTZ configuration as preset
+        
+        This includes position, focus, …
+        
+        Expected values: 0 .. 99
+        """
+        return self._store_preset(preset_no)
+
+    cdef bint _store_preset(self, int preset_no):
+        if preset_no < 0:
+            preset_no = 0
+        elif preset_no > 99:
+            preset_no = 99
+        return NDIlib_recv_ptz_store_preset(self.ptr, preset_no)
+
+    cpdef recall_preset(self, int preset_no, float speed):
+        """Recalls a previously stored PTZ preset
+        
+        This includes position, focus, ….
+        The speed indicates how fast the camera moves to the position.
+        
+        Expected values:
+        preset_no: 0 .. 99
+        speed: 0.0 (slowest) .. 1.0 (fastest)
+        """
+        return self._recall_preset(preset_no, speed)
+
+    cdef bint _recall_preset(self, int preset_no, float speed):
+        if preset_no < 0:
+            preset_no = 0
+        elif preset_no > 99:
+            preset_no = 99
+        if speed < 0.0:
+            speed = 0.0
+        elif speed > 1.0:
+            speed = 1.0
+        return NDIlib_recv_ptz_recall_preset(self.ptr, preset_no, speed)
+
+    cpdef autofocus(self):
+        """Re-enables / triggers the autofocus
+        """
+        return self._autofocus()
+
+    cdef bint _autofocus(self):
+        return NDIlib_recv_ptz_auto_focus(self.ptr)
+
+    cpdef set_focus(self, float focus_value):
+        """Sets focus to a specific value
+        
+        Expected values:
+        0.0 (max focus out; infinity) .. 1.0 (max focus in)
+        """
+        return self._set_focus(focus_value)
+
+    cdef bint _set_focus(self, float focus_value):
+        if focus_value < 0.0:
+            focus_value = 0.0
+        elif focus_value > 1.0:
+            focus_value = 1.0
+        return NDIlib_recv_ptz_focus(self.ptr, focus_value)
+
+    cpdef focus(self, float focus_speed):
+        """Controls the focus of the camera
+        The assumption is that this function is called continuously,
+        for example while pressing a button in a GUI or HID.
+        
+        Expected values:
+        -1.0 (focus out) .. 0.0 (no change) .. 1.0 (focus in)
+        """
+        return self._focus(focus_speed)
+
+    cdef bint _focus(self, float focus_speed):
+        if focus_speed < -1.0:
+            focus_speed = -1.0
+        elif focus_speed > 1.0:
+            focus_speed = 1.0
+        return NDIlib_recv_ptz_focus_speed(self.ptr, focus_speed)
+
+    cpdef white_balance_auto(self):
+        """Changes the white balance to auto mode
+        """
+        return self._white_balance_auto()
+
+    cdef bint _white_balance_auto(self):
+        return NDIlib_recv_ptz_white_balance_auto(self.ptr)
+
+    cpdef white_balance_indoor(self):
+        """Changes the white balance to indoor mode
+        """
+        return self._white_balance_indoor()
+
+    cdef bint _white_balance_indoor(self):
+        return NDIlib_recv_ptz_white_balance_indoor(self.ptr)
+
+    cpdef white_balance_outdoor(self):
+        """Changes the white balance to outdoor mode
+        """
+        return self._white_balance_outdoor()
+
+    cdef bint _white_balance_outdoor(self):
+        return NDIlib_recv_ptz_white_balance_outdoor(self.ptr)
+
+    cpdef white_balance_oneshot(self):
+        """Determines the white balance automatically from the center of the current frame.
+        """
+        return self._white_balance_oneshot()
+
+    cdef bint _white_balance_oneshot(self):
+        return NDIlib_recv_ptz_white_balance_oneshot(self.ptr)
+
+    cpdef set_white_balance(self, float red, float blue):
+        """Manually set the white balance values.
+        
+        Expected values:
+        red: 0.0 .. 1.0
+        blue: 0.0 .. 1.0
+        """
+        return self._set_white_balance(red, blue)
+
+    cdef bint _set_white_balance(self, float red, float blue):
+        if red < 0.0:
+            red = 0.0
+        elif red > 1.0:
+            red = 1.0
+        if blue < 0.0:
+            blue = 0.0
+        elif blue > 1.0:
+            blue = 1.0
+        return NDIlib_recv_ptz_white_balance_manual(self.ptr, red, blue)
+
+    cpdef exposure_auto(self):
+        """(Re-)enables the auto exposure mode.
+        """
+        return self._exposure_auto()
+
+    cdef bint _exposure_auto(self):
+        return NDIlib_recv_ptz_exposure_auto(self.ptr)
+
+    cpdef set_exposure_coarse(self, float exposure_level):
+        """Manually set the exposure values.
+        See also set_exposure_fine().
+        
+        Expected values:
+        0.0 (dark) .. 1.0 (bright)
+        
+        Note: Use either this or set_exposure_fine(). There's no value in using both. Prefer set_exposure_fine().
+        """
+        return self._set_exposure_coarse(exposure_level)
+    cdef bint _set_exposure_coarse(self, float exposure_level):
+        if exposure_level < 0.0:
+            exposure_level = 0.0
+        elif exposure_level > 1.0:
+            exposure_level = 1.0
+        return NDIlib_recv_ptz_exposure_manual(self.ptr, exposure_level)
+
+    cpdef set_exposure_fine(self, float iris, float gain, float shutter_speed):
+        """Manually set the exposure values.
+        See also set_exposure_coarse().
+        
+        Expected values:
+        iris: 0.0 (closed) .. 1.0 (open)
+        gain: 0.0 (low) .. 1.0 (high)
+        shutter_speed: 0.0 (slow) .. 1.0 (fast)
+        
+        Note: Use either this or set_exposure_coarse(). There's no value in using both. Prefer this.
+        """
+        return self._set_exposure_fine(iris, gain, shutter_speed)
+
+    cdef bint _set_exposure_fine(self, float iris, float gain, float shutter_speed):
+        if iris < 0.0:
+            iris = 0.0
+        elif iris > 1.0:
+            iris = 1.0
+        if gain < 0.0:
+            gain = 0.0
+        elif gain > 1.0:
+            gain = 1.0
+        if shutter_speed < 0.0:
+            shutter_speed = 0.0
+        elif shutter_speed > 1.0:
+            shutter_speed = 1.0
+        return NDIlib_recv_ptz_exposure_manual_v2(self.ptr, iris, gain, shutter_speed)
+
     cdef int _handle_metadata_frame(self) except -1:
         cdef MetadataRecvFrame mf = self.metadata_frame
         cdef bint pgm, pvw
