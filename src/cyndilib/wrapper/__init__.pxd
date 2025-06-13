@@ -4,6 +4,7 @@ from cyndilib.wrapper.ndi_lib cimport *
 from cyndilib.wrapper.ndi_structs cimport *
 from cyndilib.wrapper.ndi_find cimport *
 from cyndilib.wrapper.ndi_framesync cimport *
+from cyndilib.wrapper.ndi_ptz cimport *
 from cyndilib.wrapper.ndi_recv cimport *
 from cyndilib.wrapper.ndi_send cimport *
 from cyndilib.wrapper.ndi_utilities cimport *
