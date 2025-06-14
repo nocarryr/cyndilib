@@ -263,7 +263,7 @@ cdef class Receiver:
         return 0
 
     def is_connected(self):
-        """Returns True if currently connected
+        """Returns `True` if currently connected
         """
         return self._is_connected()
 
@@ -394,7 +394,9 @@ cdef class Receiver:
         return 0
 
     cpdef is_ptz_supported(self):
-        """Check, if the source accepts PTZ commands
+        """Returns `True` if the source accepts PTZ commands
+        
+        .. versionadded:: 0.0.7
         """
         return self._is_ptz_supported()
 
@@ -404,8 +406,10 @@ cdef class Receiver:
     cpdef set_zoom_level(self, float zoom_level):
         """Set the PTZ zoom level
         
-        Expected values:
-        0.0 (max zoomed out) .. 1.0 (max zoomed in)
+        Arguments:
+            zoom_level (float): `0.0` (max zoomed out) … `1.0` (max zoomed in)
+        
+        .. versionadded:: 0.0.7
         """
         return self._set_zoom_level(zoom_level)
 
@@ -418,11 +422,18 @@ cdef class Receiver:
 
     cpdef zoom(self, float zoom_speed):
         """Zoom the camera with the given speed.
+        
         The assumption is that this function is called continuously,
         for example while pressing a button in a GUI or HID.
         
-        Expected values for the speed:
-        -1.0 (zoom out, max speed) .. 0.0 (no zooming) .. 1.0 (zoom in, max speed)
+        >>> for _ in range(0, 100):
+        ...     time.sleep(0.05)
+        ...     receiver.zoom(.5)
+        
+        Arguments:
+            zoom_speed (float): `-1.0` (zoom out, max speed) … `0.0` (no zooming) … `1.0` (zoom in, max speed)
+        
+        .. versionadded:: 0.0.7
         """
         return self._set_zoom_speed(zoom_speed)
 
@@ -435,40 +446,63 @@ cdef class Receiver:
 
     cpdef pan_and_tilt(self, float pan_speed, float tilt_speed):
         """Pan and tilt the camera.
+        
         The assumption is that this function is called continuously,
         for example while pressing a button in a GUI or HID.
         
-        Expected values for the speed:
-        1.0 (fastest left) .. 0.0 (no movement) .. -1.0 (fastest right)
-        -1.0 (fastest downwards) .. 0.0 (no movement) .. 1.0 (fastest upwards)
+        >>> for _ in range(0, 100):
+        ...     time.sleep(0.05)
+        ...     receiver.pan_and_tilt(.5)
         
-        Attention: 1 is 'to the left', and -1 'is to the right'!
+        Arguments:
+            pan_speed (float): `1.0` (fastest left) … `0.0` (no movement) … `-1.0` (fastest right)
+            tilt_speed (float): `-1.0` (fastest downwards) … `0.0` (no movement) … `1.0` (fastest upwards)
+        
+        .. Attention::
+            `1` is *to the left*, and `-1` *is to the right*!
+        
+        .. versionadded:: 0.0.7
         """
         return self._set_pan_and_tilt_speed(pan_speed, tilt_speed)
 
     cpdef pan(self, float pan_speed):
         """Pan the camera.
+        
         The assumption is that this function is called continuously,
         for example while pressing a button in a GUI or HID.
         
-        Expected values for the speed:
-        1.0 (fastest left) .. 0.0 (no movement) .. -1.0 (fastest right)
+        >>> for _ in range(0, 100):
+        ...     time.sleep(0.05)
+        ...     receiver.pan(.5)
         
-        Attention: 1 is 'to the left', and -1 'is to the right'!
+        Arguments:
+            pan_speed (float): `1.0` (fastest left) … `0.0` (no movement) … `-1.0` (fastest right)
         
-        This is the same as pan_and_tilt(pan_speed, 0.0).
+        .. Attention:
+            `1` is *to the left*, and `-1` *is to the right*!
+        
+        This is the same as `pan_and_tilt(pan_speed, 0.0)`, see :meth:`pan_and_tilt`.
+        
+        .. versionadded:: 0.0.7
         """
         return self._set_pan_and_tilt_speed(pan_speed, 0.0)
 
     cpdef tilt(self, float tilt_speed):
         """Pan and tilt the camera.
+        
         The assumption is that this function is called continuously,
         for example while pressing a button in a GUI or HID.
         
-        Expected values for the speed:
-        -1.0 (fastest downwards) .. 0.0 (no movement) .. 1.0 (fastest upwards)
+        >>> for _ in range(0, 100):
+        ...     time.sleep(0.05)
+        ...     receiver.tilt(.5)
         
-        This is the same as pan_and_tilt(0.0, tilt_speed).
+        Arguments:
+            tilt_speed (float): `-1.0` (fastest downwards) … `0.0` (no movement) … `1.0` (fastest upwards)
+        
+        This is the same as `pan_and_tilt(0.0, tilt_speed)`, see :meth:`pan_and_tilt`.
+        
+        .. versionadded:: 0.0.7
         """
         return self._set_pan_and_tilt_speed(0.0, tilt_speed)
 
@@ -486,14 +520,18 @@ cdef class Receiver:
     cpdef set_pan_and_tilt_values(self, float pan_value, float tilt_value):
         """Set pan and tilt angles of the camera.
         
-        Expected values:
-        pan_value: -1.0 (leftmost) .. 0.0 (center) .. 1.0 (right)
-        tilt_value: -1.0 (bottom) .. 0.0 (middle) .. 1.0 (top) 
+        Arguments:
+            pan_value (float): `-1.0` (leftmost) … `0.0` (center) … `1.0` (right)
+            tilt_value (float): `-1.0` (bottom) … `0.0` (middle) … `1.0` (top) 
         
-        Attention: While invoking pan(-1) moves the camera to the right,
-        here a pan_value of -1 means 'all the way to the left'! 
+        .. Attention:
+            While invoking `pan(-1)` moves the camera to the _right_,
+            here a :attr:pan_value of `-1` means _all the way to the left_! 
         
-        Note: Some cameras (e.g. OBSBOT) only support tilt values from -0.5 to 0.5.
+        .. Note::
+            Some cameras (e.g. OBSBOT) only support tilt values from `-0.5` to `0.5`.
+        
+        .. versionadded:: 0.0.7
         """
         return self._set_pan_and_tilt(pan_value, tilt_value)
 
@@ -509,11 +547,14 @@ cdef class Receiver:
         return NDIlib_recv_ptz_pan_tilt(self.ptr, pan_value, tilt_value)
 
     cpdef store_preset(self, int preset_no):
-        """Store the current PTZ configuration as preset
+        """Store the current PTZ configuration as preset.
         
-        This includes position, focus, …
+        This includes position, focus, ….
         
-        Expected values: 0 .. 99
+        Arguments:
+            preset_no (int): `0` … `99`
+        
+        .. versionadded:: 0.0.7
         """
         return self._store_preset(preset_no)
 
@@ -525,14 +566,16 @@ cdef class Receiver:
         return NDIlib_recv_ptz_store_preset(self.ptr, preset_no)
 
     cpdef recall_preset(self, int preset_no, float speed):
-        """Recalls a previously stored PTZ preset
+        """Recalls a previously stored PTZ preset.
         
         This includes position, focus, ….
         The speed indicates how fast the camera moves to the position.
         
-        Expected values:
-        preset_no: 0 .. 99
-        speed: 0.0 (slowest) .. 1.0 (fastest)
+        Arguments:
+            preset_no (int): `0` … `99`
+            speed (float): `0.0` (slowest) … `1.0` (fastest)
+        
+        .. versionadded:: 0.0.7
         """
         return self._recall_preset(preset_no, speed)
 
@@ -548,7 +591,9 @@ cdef class Receiver:
         return NDIlib_recv_ptz_recall_preset(self.ptr, preset_no, speed)
 
     cpdef autofocus(self):
-        """Re-enables / triggers the autofocus
+        """Re-enables / triggers the autofocus.
+        
+        .. versionadded:: 0.0.7
         """
         return self._autofocus()
 
@@ -556,10 +601,12 @@ cdef class Receiver:
         return NDIlib_recv_ptz_auto_focus(self.ptr)
 
     cpdef set_focus(self, float focus_value):
-        """Sets focus to a specific value
+        """Sets focus to a specific value.
         
-        Expected values:
-        0.0 (max focus out; infinity) .. 1.0 (max focus in)
+        Arguments:
+            focus_value (float): `0.0` (max focus out; infinity) … `1.0` (max focus in)
+        
+        .. versionadded:: 0.0.7
         """
         return self._set_focus(focus_value)
 
@@ -571,12 +618,19 @@ cdef class Receiver:
         return NDIlib_recv_ptz_focus(self.ptr, focus_value)
 
     cpdef focus(self, float focus_speed):
-        """Controls the focus of the camera
+        """Controls the focus of the camera.
+        
         The assumption is that this function is called continuously,
         for example while pressing a button in a GUI or HID.
         
-        Expected values:
-        -1.0 (focus out) .. 0.0 (no change) .. 1.0 (focus in)
+        >>> for _ in range(0, 100):
+        ...     time.sleep(0.05)
+        ...     receiver.focus(.5)
+        
+        Arguments:
+            focus_speed (float): `-1.0` (focus out) … `0.0` (no change) … `1.0` (focus in)
+        
+        .. versionadded:: 0.0.7
         """
         return self._focus(focus_speed)
 
@@ -588,7 +642,9 @@ cdef class Receiver:
         return NDIlib_recv_ptz_focus_speed(self.ptr, focus_speed)
 
     cpdef white_balance_auto(self):
-        """Changes the white balance to auto mode
+        """Changes the white balance to auto mode.
+        
+        .. versionadded:: 0.0.7
         """
         return self._white_balance_auto()
 
@@ -596,7 +652,9 @@ cdef class Receiver:
         return NDIlib_recv_ptz_white_balance_auto(self.ptr)
 
     cpdef white_balance_indoor(self):
-        """Changes the white balance to indoor mode
+        """Changes the white balance to indoor mode.
+        
+        .. versionadded:: 0.0.7
         """
         return self._white_balance_indoor()
 
@@ -604,7 +662,9 @@ cdef class Receiver:
         return NDIlib_recv_ptz_white_balance_indoor(self.ptr)
 
     cpdef white_balance_outdoor(self):
-        """Changes the white balance to outdoor mode
+        """Changes the white balance to outdoor mode.
+        
+        .. versionadded:: 0.0.7
         """
         return self._white_balance_outdoor()
 
@@ -613,6 +673,8 @@ cdef class Receiver:
 
     cpdef white_balance_oneshot(self):
         """Determines the white balance automatically from the center of the current frame.
+        
+        .. versionadded:: 0.0.7
         """
         return self._white_balance_oneshot()
 
@@ -622,9 +684,11 @@ cdef class Receiver:
     cpdef set_white_balance(self, float red, float blue):
         """Manually set the white balance values.
         
-        Expected values:
-        red: 0.0 .. 1.0
-        blue: 0.0 .. 1.0
+        Arguments:
+            red (float): 0.0 … 1.0
+            blue (float): 0.0 … 1.0
+        
+        .. versionadded:: 0.0.7
         """
         return self._set_white_balance(red, blue)
 
@@ -641,6 +705,8 @@ cdef class Receiver:
 
     cpdef exposure_auto(self):
         """(Re-)enables the auto exposure mode.
+        
+        .. versionadded:: 0.0.7
         """
         return self._exposure_auto()
 
@@ -648,13 +714,19 @@ cdef class Receiver:
         return NDIlib_recv_ptz_exposure_auto(self.ptr)
 
     cpdef set_exposure_coarse(self, float exposure_level):
-        """Manually set the exposure values.
-        See also set_exposure_fine().
+        """Manually control the exposure.
         
-        Expected values:
-        0.0 (dark) .. 1.0 (bright)
+        See also :meth:`set_exposure_fine`.
         
-        Note: Use either this or set_exposure_fine(). There's no value in using both. Prefer set_exposure_fine().
+        Arguments:
+            exposure_level (float): `0.0` (dark) … `1.0` (bright)
+        
+        .. Note::
+            Use either this or :meth:`set_exposure_fine`.
+            There's no value in using both.
+            Prefer :meth:`set_exposure_fine`.
+        
+        .. versionadded:: 0.0.7
         """
         return self._set_exposure_coarse(exposure_level)
     cdef bint _set_exposure_coarse(self, float exposure_level):
@@ -665,15 +737,21 @@ cdef class Receiver:
         return NDIlib_recv_ptz_exposure_manual(self.ptr, exposure_level)
 
     cpdef set_exposure_fine(self, float iris, float gain, float shutter_speed):
-        """Manually set the exposure values.
-        See also set_exposure_coarse().
+        """Precisely control the exposure.
         
-        Expected values:
-        iris: 0.0 (closed) .. 1.0 (open)
-        gain: 0.0 (low) .. 1.0 (high)
-        shutter_speed: 0.0 (slow) .. 1.0 (fast)
+        See also :meth:`set_exposure_coarse`.
         
-        Note: Use either this or set_exposure_coarse(). There's no value in using both. Prefer this.
+        Arguments:
+            iris (float): `0.0` (closed) … `1.0` (open)
+            gain (float): `0.0` (low) … `1.0` (high)
+            shutter_speed (float): `0.0` (slow) … `1.0` (fast)
+        
+        .. Note::
+            Use either this or :meth:`set_exposure_coarse`.
+            There's no value in using both.
+            Prefer this method.
+        
+        .. versionadded:: 0.0.7
         """
         return self._set_exposure_fine(iris, gain, shutter_speed)
 
@@ -1006,7 +1084,7 @@ def test():
         nc = receiver.get_num_connections()
         connected = receiver.is_connected()
         print(f'connected: {connected}, num_connections: {nc}')
-        print('receive..')
+        print('receive…')
         frame_type = receiver._receive(recv_type, 100)
         print('frame_type: ', frame_type)
         # if connected:
