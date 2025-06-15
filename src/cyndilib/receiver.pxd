@@ -64,6 +64,7 @@ cdef class Receiver:
     cdef size_t _num_empty_recv
     cdef NDIlib_recv_instance_t ptr
     cdef NDIlib_recv_create_v3_t recv_create
+    cdef readonly PTZ ptz
 
     cpdef set_video_frame(self, VideoRecvFrame vf)
     cpdef set_audio_frame(self, AudioRecvFrame af)
@@ -82,44 +83,6 @@ cdef class Receiver:
     cpdef set_source_tally_preview(self, bint value)
     cdef int _set_source_tally(self, bint program, bint preview) except -1 nogil
     cdef int _send_source_tally(self) except -1 nogil
-    cpdef is_ptz_supported(self)
-    cdef bint _is_ptz_supported(self)
-    cpdef set_zoom_level(self, float zoom_level)
-    cdef bint _set_zoom_level(self, float zoom_level)
-    cpdef zoom(self, float zoom_speed)
-    cdef bint _set_zoom_speed(self, float zoom_speed)
-    cpdef pan_and_tilt(self, float pan_speed, float tilt_speed)
-    cpdef pan(self, float pan_speed)
-    cpdef tilt(self, float tilt_speed)
-    cdef bint _set_pan_and_tilt_speed(self, float pan_speed, float tilt_speed)
-    cpdef set_pan_and_tilt_values(self, float pan_value, float tilt_value)
-    cdef bint _set_pan_and_tilt(self, float pan_value, float tilt_value)
-    cpdef store_preset(self, int preset_no)
-    cdef bint _store_preset(self, int preset_no)
-    cpdef recall_preset(self, int preset_no, float speed)
-    cdef bint _recall_preset(self, int preset_no, float speed)
-    cpdef autofocus(self)
-    cdef bint _autofocus(self)
-    cpdef set_focus(self, float focus_value)
-    cdef bint _set_focus(self, float focus_value)
-    cpdef focus(self, float focus_speed)
-    cdef bint _focus(self, float focus_speed)
-    cpdef white_balance_auto(self)
-    cdef bint _white_balance_auto(self)
-    cpdef white_balance_indoor(self)
-    cdef bint _white_balance_indoor(self)
-    cpdef white_balance_outdoor(self)
-    cdef bint _white_balance_outdoor(self)
-    cpdef white_balance_oneshot(self)
-    cdef bint _white_balance_oneshot(self)
-    cpdef set_white_balance(self, float red, float blue)
-    cdef bint _set_white_balance(self, float red, float blue)
-    cpdef exposure_auto(self)
-    cdef bint _exposure_auto(self)
-    cpdef set_exposure_coarse(self, float exposure_level)
-    cdef bint _set_exposure_coarse(self, float exposure_level)
-    cpdef set_exposure_fine(self, float iris, float gain, float shutter_speed)
-    cdef bint _set_exposure_fine(self, float iris, float gain, float shutter_speed)
     cdef int _handle_metadata_frame(self) except -1
     cpdef ReceiveFrameType receive(
         self, ReceiveFrameType recv_type, uint32_t timeout_ms
@@ -139,3 +102,8 @@ cdef class Receiver:
     cdef void free_video(self, NDIlib_video_frame_v2_t* p) noexcept nogil
     cdef void free_audio(self, NDIlib_audio_frame_v3_t* p) noexcept nogil
     cdef void free_metadata(self, NDIlib_metadata_frame_t* p) noexcept nogil
+
+cdef class PTZ:
+    cdef Receiver receiver
+
+    cdef NDIlib_recv_instance_t _get_ptr(self)
