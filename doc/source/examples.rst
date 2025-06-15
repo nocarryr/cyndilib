@@ -41,7 +41,7 @@ and shows them using `ffplay`_.
 :class:`~cyndilib.finder.Finder` is used to locate the :class:`~cyndilib.finder.Source`
 with the given name.
 
-A :class:`~cyndlib.receiver.Receiver` then created and an instance of
+A :class:`~cyndlib.receiver.Receiver` is then created and an instance of
 :class:`~cyndilib.video_frame.VideoFrameSync` is added to it.
 
 Video frames are then read using the
@@ -61,6 +61,21 @@ subprocess directly from the video frame using the
 
 
 
-
 .. _ffmpeg: https://ffmpeg.org
 .. _ffplay: https://ffmpeg.org/ffplay.html
+
+PTZ
+---
+
+This example showcases the PTZ functions on an |NDI| :class:`~cyndilib.receiver.Receiver`.
+
+:class:`~cyndilib.finder.Finder` is used to locate a :class:`~cyndilib.finder.Source`.
+A :class:`~cyndlib.receiver.Receiver` is then created.
+
+Various PTZ methods are then invoked.
+
+
+.. literalinclude:: ../../examples/ptz.py
+    :language: python
+    :linenos:
+    :name: ptz

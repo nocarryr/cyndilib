@@ -64,6 +64,7 @@ cdef class Receiver:
     cdef size_t _num_empty_recv
     cdef NDIlib_recv_instance_t ptr
     cdef NDIlib_recv_create_v3_t recv_create
+    cdef readonly PTZ ptz
 
     cpdef set_video_frame(self, VideoRecvFrame vf)
     cpdef set_audio_frame(self, AudioRecvFrame af)
@@ -101,3 +102,8 @@ cdef class Receiver:
     cdef void free_video(self, NDIlib_video_frame_v2_t* p) noexcept nogil
     cdef void free_audio(self, NDIlib_audio_frame_v3_t* p) noexcept nogil
     cdef void free_metadata(self, NDIlib_metadata_frame_t* p) noexcept nogil
+
+cdef class PTZ:
+    cdef Receiver receiver
+
+    cdef NDIlib_recv_instance_t _get_ptr(self)
