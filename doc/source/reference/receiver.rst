@@ -13,6 +13,13 @@ Receiver
     :members:
 
 
+PTZ
+---
+
+.. autoclass:: PTZ
+    :members:
+
+
 RecvThread
 ----------
 
