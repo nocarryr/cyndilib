@@ -103,7 +103,7 @@ cdef class Receiver:
         audio_frame (AudioRecvFrame):
         metadata_frame (MetadataRecvFrame):
         frame_sync (FrameSync):
-
+        ptz (PTZ): Access to the PTZ methods.
     """
     def __cinit__(self, *args, **kwargs):
         self.ptr = NULL
@@ -168,8 +168,10 @@ cdef class Receiver:
         if self.ptr is NULL:
             raise MemoryError()
         self.frame_sync = FrameSync(self)
+        self.ptz = PTZ(self)
 
     def __dealloc__(self):
+        self.ptz = None
         self.frame_sync = None
         cdef NDIlib_recv_instance_t p = self.ptr
         if self.ptr is not NULL:
@@ -263,7 +265,7 @@ cdef class Receiver:
         return 0
 
     def is_connected(self):
-        """Returns True if currently connected
+        """Returns `True` if currently connected
         """
         return self._is_connected()
 
@@ -531,6 +533,316 @@ cdef class Receiver:
     cdef void free_metadata(self, NDIlib_metadata_frame_t* p) noexcept nogil:
         NDIlib_recv_free_metadata(self.ptr, p)
 
+    def is_ptz_supported(self):
+        """Returns `True` if the source accepts PTZ commands
+
+        .. versionadded:: 0.0.7
+        """
+        return NDIlib_recv_ptz_is_supported(self.ptr)
+
+
+cdef class PTZ:
+    """PTZ control for a :class:`Receiver`
+    """
+    def __init__(self, receiver: Receiver):
+        self.receiver = receiver
+
+    def __dealloc__(self):
+        self.receiver = None
+
+    cdef NDIlib_recv_instance_t _get_ptr(self):
+        cdef NDIlib_recv_instance_t ptr = self.receiver.ptr
+        if ptr is NULL:
+            raise ValueError("Receiver is not connected")
+        return ptr
+
+    def set_zoom_level(self, float zoom_level):
+        """Set the PTZ zoom level
+
+        Arguments:
+            zoom_level (float): `0.0` (max zoomed out) … `1.0` (max zoomed in)
+
+        .. versionadded:: 0.0.7
+        """
+        if not 0 <= zoom_level <= 1:
+            raise ValueError(f"zoom_level must be between 0.0 and 1.0 inclusive, but was {zoom_level}")
+        return NDIlib_recv_ptz_zoom(self._get_ptr(), zoom_level)
+
+    def zoom(self, float zoom_speed):
+        """Zoom the camera with the given speed.
+
+        The assumption is that this function is called continuously,
+        for example while pressing a button in a GUI or HID.
+
+        >>> for _ in range(0, 100):
+        ...     time.sleep(0.05)
+        ...     receiver.ptz.zoom(.5)
+
+        Arguments:
+            zoom_speed (float): `-1.0` (zoom out, max speed) … `0.0` (no zooming) … `1.0` (zoom in, max speed)
+
+        .. versionadded:: 0.0.7
+        """
+        if not -1 <= zoom_speed <= 1:
+            raise ValueError(f"zoom_speed must be between -1.0 and 1.0 inclusive, but was {zoom_speed}")
+        return NDIlib_recv_ptz_zoom_speed(self._get_ptr(), zoom_speed)
+
+    def pan_and_tilt(self, float pan_speed, float tilt_speed):
+        """Pan and tilt the camera.
+
+        The assumption is that this function is called continuously,
+        for example while pressing a button in a GUI or HID.
+
+        >>> for _ in range(0, 100):
+        ...     time.sleep(0.05)
+        ...     receiver.ptz.pan_and_tilt(.5)
+
+        Arguments:
+            pan_speed (float): `1.0` (fastest left) … `0.0` (no movement) … `-1.0` (fastest right)
+            tilt_speed (float): `-1.0` (fastest downwards) … `0.0` (no movement) … `1.0` (fastest upwards)
+
+        .. Attention::
+            `1` is *to the left*, and `-1` *is to the right*!
+
+        .. versionadded:: 0.0.7
+        """
+        return self._set_pan_and_tilt_speed(pan_speed, tilt_speed)
+
+    def pan(self, float pan_speed):
+        """Pan the camera.
+
+        The assumption is that this function is called continuously,
+        for example while pressing a button in a GUI or HID.
+
+        >>> for _ in range(0, 100):
+        ...     time.sleep(0.05)
+        ...     receiver.ptz.pan(.5)
+
+        Arguments:
+            pan_speed (float): `1.0` (fastest left) … `0.0` (no movement) … `-1.0` (fastest right)
+
+        .. Attention:
+            `1` is *to the left*, and `-1` *is to the right*!
+
+        This is the same as `pan_and_tilt(pan_speed, 0.0)`, see :meth:`pan_and_tilt`.
+
+        .. versionadded:: 0.0.7
+        """
+        return self._set_pan_and_tilt_speed(pan_speed, 0.0)
+
+    def tilt(self, float tilt_speed):
+        """Pan and tilt the camera.
+
+        The assumption is that this function is called continuously,
+        for example while pressing a button in a GUI or HID.
+
+        >>> for _ in range(0, 100):
+        ...     time.sleep(0.05)
+        ...     receiver.ptz.tilt(.5)
+
+        Arguments:
+            tilt_speed (float): `-1.0` (fastest downwards) … `0.0` (no movement) … `1.0` (fastest upwards)
+
+        This is the same as `pan_and_tilt(0.0, tilt_speed)`, see :meth:`pan_and_tilt`.
+
+        .. versionadded:: 0.0.7
+        """
+        return self._set_pan_and_tilt_speed(0.0, tilt_speed)
+
+    def _set_pan_and_tilt_speed(self, float pan_speed, float tilt_speed):
+        if not -1 <= pan_speed <= 1:
+            raise ValueError(f"pan_speed must be between -1.0 and 1.0 inclusive, but was {pan_speed}")
+        if not -1 <= tilt_speed <= 1:
+            raise ValueError(f"tilt_speed must be between -1.0 and 1.0 inclusive, but was {tilt_speed}")
+        return NDIlib_recv_ptz_pan_tilt_speed(self._get_ptr(), pan_speed, tilt_speed)
+
+    def set_pan_and_tilt_values(self, float pan_value, float tilt_value):
+        """Set pan and tilt angles of the camera.
+
+        Arguments:
+            pan_value (float): `-1.0` (leftmost) … `0.0` (center) … `1.0` (right)
+            tilt_value (float): `-1.0` (bottom) … `0.0` (middle) … `1.0` (top)
+
+        .. Attention:
+            While invoking `pan(-1)` moves the camera to the _right_,
+            here a :attr:pan_value of `-1` means _all the way to the left_!
+
+        .. Note::
+            Some cameras (e.g. OBSBOT) only support tilt values from `-0.5` to `0.5`.
+
+        .. versionadded:: 0.0.7
+        """
+        if not -1 <= pan_value <= 1:
+            raise ValueError(f"pan_value must be between -1.0 and 1.0 inclusive, but was {pan_value}")
+        if not -1 <= tilt_value <= 1:
+            raise ValueError(f"tilt_value must be between -1.0 and 1.0 inclusive, but was {tilt_value}")
+        return NDIlib_recv_ptz_pan_tilt(self._get_ptr(), pan_value, tilt_value)
+
+    def store_preset(self, int preset_no):
+        """Store the current PTZ configuration as preset.
+
+        This includes position, focus, ….
+
+        Arguments:
+            preset_no (int): `0` … `99`
+
+        .. versionadded:: 0.0.7
+        """
+        if not 0 <= preset_no <= 99:
+            raise ValueError(f"preset_no must be between 0 and 99 inclusive, but was {preset_no}")
+        return NDIlib_recv_ptz_store_preset(self._get_ptr(), preset_no)
+
+    def recall_preset(self, int preset_no, float speed):
+        """Recalls a previously stored PTZ preset.
+
+        This includes position, focus, ….
+        The speed indicates how fast the camera moves to the position.
+
+        Arguments:
+            preset_no (int): `0` … `99`
+            speed (float): `0.0` (slowest) … `1.0` (fastest)
+
+        .. versionadded:: 0.0.7
+        """
+        if not 0 <= preset_no <= 99:
+            raise ValueError(f"preset_no must be between 0 and 99 inclusive, but was {preset_no}")
+        if not 0 <= speed <= 1:
+            raise ValueError(f"speed must be between 0.0 and 1.0 inclusive, but was {speed}")
+        return NDIlib_recv_ptz_recall_preset(self._get_ptr(), preset_no, speed)
+
+    def autofocus(self):
+        """Re-enables / triggers the autofocus.
+
+        .. versionadded:: 0.0.7
+        """
+        return NDIlib_recv_ptz_auto_focus(self._get_ptr())
+
+    def set_focus(self, float focus_value):
+        """Sets focus to a specific value.
+
+        Arguments:
+            focus_value (float): `0.0` (max focus out; infinity) … `1.0` (max focus in)
+
+        .. versionadded:: 0.0.7
+        """
+        if not 0 <= focus_value <= 1:
+            raise ValueError(f"focus_value must be between 0.0 and 1.0 inclusive, but was {focus_value}")
+        return NDIlib_recv_ptz_focus(self._get_ptr(), focus_value)
+
+    def focus(self, float focus_speed):
+        """Controls the focus of the camera.
+
+        The assumption is that this function is called continuously,
+        for example while pressing a button in a GUI or HID.
+
+        >>> for _ in range(0, 100):
+        ...     time.sleep(0.05)
+        ...     receiver.ptz.focus(.5)
+
+        Arguments:
+            focus_speed (float): `-1.0` (focus out) … `0.0` (no change) … `1.0` (focus in)
+
+        .. versionadded:: 0.0.7
+        """
+        if not -1 <= focus_speed <= 1:
+            raise ValueError(f"focus_speed must be between -1 and 1.0 inclusive, but was {focus_speed}")
+        return NDIlib_recv_ptz_focus_speed(self._get_ptr(), focus_speed)
+
+    def white_balance_auto(self):
+        """Changes the white balance to auto mode.
+
+        .. versionadded:: 0.0.7
+        """
+        return NDIlib_recv_ptz_white_balance_auto(self._get_ptr())
+
+    def white_balance_indoor(self):
+        """Changes the white balance to indoor mode.
+
+        .. versionadded:: 0.0.7
+        """
+        return NDIlib_recv_ptz_white_balance_indoor(self._get_ptr())
+
+    def white_balance_outdoor(self):
+        """Changes the white balance to outdoor mode.
+
+        .. versionadded:: 0.0.7
+        """
+        return NDIlib_recv_ptz_white_balance_outdoor(self._get_ptr())
+
+    def white_balance_oneshot(self):
+        """Determines the white balance automatically from the center of the current frame.
+
+        .. versionadded:: 0.0.7
+        """
+        return NDIlib_recv_ptz_white_balance_oneshot(self._get_ptr())
+
+    def set_white_balance(self, float red, float blue):
+        """Manually set the white balance values.
+
+        Arguments:
+            red (float): 0.0 … 1.0
+            blue (float): 0.0 … 1.0
+
+        .. versionadded:: 0.0.7
+        """
+        if not 0 <= red <= 1:
+            raise ValueError(f"red must be between 0.0 and 1.0 inclusive, but was {red}")
+        if not 0 <= blue <= 1:
+            raise ValueError(f"blue must be between 0.0 and 1.0 inclusive, but was {blue}")
+        return NDIlib_recv_ptz_white_balance_manual(self._get_ptr(), red, blue)
+
+    def exposure_auto(self):
+        """(Re-)enables the auto exposure mode.
+
+        .. versionadded:: 0.0.7
+        """
+        return NDIlib_recv_ptz_exposure_auto(self._get_ptr())
+
+    def set_exposure_coarse(self, float exposure_level):
+        """Manually control the exposure.
+
+        See also :meth:`set_exposure_fine`.
+
+        Arguments:
+            exposure_level (float): `0.0` (dark) … `1.0` (bright)
+
+        .. Note::
+            Use either this or :meth:`set_exposure_fine`.
+            There's no value in using both.
+            Prefer :meth:`set_exposure_fine`.
+
+        .. versionadded:: 0.0.7
+        """
+        if not 0 <= exposure_level <= 1:
+            raise ValueError(f"exposure_level must be between 0.0 and 1.0 inclusive, but was {exposure_level}")
+        return NDIlib_recv_ptz_exposure_manual(self._get_ptr(), exposure_level)
+
+    def set_exposure_fine(self, float iris, float gain, float shutter_speed):
+        """Precisely control the exposure.
+
+        See also :meth:`set_exposure_coarse`.
+
+        Arguments:
+            iris (float): `0.0` (closed) … `1.0` (open)
+            gain (float): `0.0` (low) … `1.0` (high)
+            shutter_speed (float): `0.0` (slow) … `1.0` (fast)
+
+        .. Note::
+            Use either this or :meth:`set_exposure_coarse`.
+            There's no value in using both.
+            Prefer this method.
+
+        .. versionadded:: 0.0.7
+        """
+        if not 0 <= iris <= 1:
+            raise ValueError(f"iris must be between 0.0 and 1.0 inclusive, but was {iris}")
+        if not 0 <= gain <= 1:
+            raise ValueError(f"gain must be between 0.0 and 1.0 inclusive, but was {gain}")
+        if not 0 <= shutter_speed <= 1:
+            raise ValueError(f"shutter_speed must be between 0.0 and 1.0 inclusive, but was {shutter_speed}")
+        return NDIlib_recv_ptz_exposure_manual_v2(self._get_ptr(), iris, gain, shutter_speed)
+
+
 cdef class RecvThreadWorker:
     cdef Receiver receiver
     cdef uint32_t timeout_ms
@@ -707,7 +1019,7 @@ def test():
         nc = receiver.get_num_connections()
         connected = receiver.is_connected()
         print(f'connected: {connected}, num_connections: {nc}')
-        print('receive..')
+        print('receive…')
         frame_type = receiver._receive(recv_type, 100)
         print('frame_type: ', frame_type)
         # if connected:
