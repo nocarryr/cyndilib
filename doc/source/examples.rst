@@ -70,7 +70,7 @@ PTZ
 This example showcases the PTZ functions on an |NDI| :class:`~cyndilib.receiver.Receiver`.
 
 :class:`~cyndilib.finder.Finder` is used to locate a :class:`~cyndilib.finder.Source`.
-A :class:`~cyndlib.receiver.Receiver` is then created.
+A :class:`~cyndilib.receiver.Receiver` is then created.
 
 Various PTZ methods are then invoked.
 
