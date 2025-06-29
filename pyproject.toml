@@ -105,18 +105,11 @@ addopts = "-n auto --no-success-flaky-report --doctest-modules --doctest-glob='*
 
 
 [tool.cibuildwheel]
+build-frontend = {name = "build[uv]", args = ["--locked "]}
 build = "cp3{9,10,11,12,13}-*"
 skip = "*-musllinux*"
-test-requires = [
-    "pytest",
-    "pytest-xdist",
-    "pytest-doctestplus",
-    "flaky",
-    "psutil",
-    "cython>=0.29.32",
-]
+test-groups = ["build", "test"]
 test-command = [
-    "pip install setuptools",
     "python {project}/build_tests.py",
     "pip uninstall -y setuptools",
     "py.test {project}/tests/",
