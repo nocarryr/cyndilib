@@ -52,10 +52,12 @@ PACKAGE_DATA = {
 def get_ndi_libdir():
     lib_pkg_data = []
     bin_pkg_data = []
+    lib_dirs = []
+    runtime_lib_dirs = []
     if WIN32:
         lib_dir = PROJECT_PATH / 'src' / 'cyndilib' / 'wrapper' / 'lib'
         dll_dir = lib_dir.parent / 'bin'
-        LIB_DIRS.extend([str(dll_dir.resolve()), str(lib_dir.resolve())])
+        lib_dirs.extend([str(dll_dir.resolve()), str(lib_dir.resolve())])
         bin_pkg_data.append('*.dll')
         lib_pkg_data.append('*.lib')
     else:
@@ -77,11 +79,17 @@ def get_ndi_libdir():
             lib_dir = lib_dir / arch
             bin_pkg_data.append(f'{arch}/*.so')
         lib_dir = lib_dir.resolve()
-        LIB_DIRS.append(str(lib_dir))
-        RUNTIME_LIB_DIRS.append(str(lib_dir))
+        lib_dirs.append(str(lib_dir))
+        runtime_lib_dirs.append(str(lib_dir))
 
-    PACKAGE_DATA['cyndilib.wrapper.bin'].extend(bin_pkg_data)
-    PACKAGE_DATA['cyndilib.wrapper.lib'].extend(lib_pkg_data)
+    bin_pkg_data.append('*.txt')
+    package_data = PACKAGE_DATA.copy()
+    package_data.update({
+        'cyndilib.wrapper.bin':bin_pkg_data,
+        'cyndilib.wrapper.lib':lib_pkg_data,
+    })
+    return package_data, lib_dirs, runtime_lib_dirs
+
 
 def get_ndi_libname():
     if WIN32:
@@ -89,7 +97,7 @@ def get_ndi_libname():
     return 'ndi'
 
 if IS_BUILD:
-    get_ndi_libdir()
+    PACKAGE_DATA, LIB_DIRS, RUNTIME_LIB_DIRS = get_ndi_libdir()
 
 try:
     import numpy
