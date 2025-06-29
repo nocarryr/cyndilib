@@ -35,8 +35,8 @@ PROJECT_PATH = Path(__file__).parent
 WIN32 = sys.platform == 'win32'
 MACOS = sys.platform == 'darwin'
 IS_BUILD = True
-LIB_DIRS = []
-RUNTIME_LIB_DIRS = []
+LIB_DIRS: list[str] = []
+RUNTIME_LIB_DIRS: list[str] = []
 NDI_INCLUDE = PROJECT_PATH / 'src' / 'cyndilib' / 'wrapper' / 'include'
 INCLUDE_PATH = [str(NDI_INCLUDE), get_python_inc()]
 PACKAGE_DATA = {
@@ -123,9 +123,9 @@ class CyBuildError(CCompilerError):
 
 
 compiler_directives = {'embedsignature':True, 'embedsignature.format':'python'}
-
+ext_macros: list[tuple[str, str|None]] | None
 if USE_PROFILE:
-    ext_macros = [('CYTHON_TRACE', 1), ('CYTHON_TRACE_NOGIL', 1)]
+    ext_macros = [('CYTHON_TRACE', '1'), ('CYTHON_TRACE_NOGIL', '1')]
     compiler_directives.update({'profile':True, 'linetrace':True})
 else:
     ext_macros = None
@@ -137,10 +137,6 @@ if WIN32:
 else:
     extra_compile_args.append('-fpermissive')
 
-if not len(LIB_DIRS):
-    LIB_DIRS = None
-if not len(RUNTIME_LIB_DIRS):
-    RUNTIME_LIB_DIRS = None
 
 ext_modules = [
     Extension(
@@ -182,6 +178,7 @@ class build_ext_subclass(build_ext):
 
 
 def build_annotate_index(extensions):
+    assert callable(AnnotateIndex)
     root = AnnotateIndex('', root_dir=PROJECT_PATH / 'src')
     for ext in extensions:
         pkg_dir = Path(ext.sources[0]).parent
