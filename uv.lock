@@ -2,7 +2,8 @@ version = 1
 revision = 1
 requires-python = ">=3.9"
 resolution-markers = [
-    "python_full_version >= '3.11'",
+    "python_full_version >= '3.13'",
+    "python_full_version >= '3.11' and python_full_version < '3.13'",
     "python_full_version == '3.10.*'",
     "python_full_version < '3.10'",
 ]
@@ -150,7 +151,8 @@ name = "click"
 version = "8.2.1"
 source = { registry = "https://pypi.org/simple" }
 resolution-markers = [
-    "python_full_version >= '3.11'",
+    "python_full_version >= '3.13'",
+    "python_full_version >= '3.11' and python_full_version < '3.13'",
     "python_full_version == '3.10.*'",
 ]
 dependencies = [
@@ -210,12 +212,14 @@ dev = [
     { name = "sphinx" },
     { name = "sphinx-codeautolink", version = "0.15.2", source = { registry = "https://pypi.org/simple" }, marker = "python_full_version < '3.10'" },
     { name = "sphinx-codeautolink", version = "0.17.4", source = { registry = "https://pypi.org/simple" }, marker = "python_full_version >= '3.10'" },
+    { name = "standard-imghdr", marker = "python_full_version >= '3.13'" },
 ]
 doc = [
     { name = "furo" },
     { name = "sphinx" },
     { name = "sphinx-codeautolink", version = "0.15.2", source = { registry = "https://pypi.org/simple" }, marker = "python_full_version < '3.10'" },
     { name = "sphinx-codeautolink", version = "0.17.4", source = { registry = "https://pypi.org/simple" }, marker = "python_full_version >= '3.10'" },
+    { name = "standard-imghdr", marker = "python_full_version >= '3.13'" },
 ]
 examples = [
     { name = "click", version = "8.1.8", source = { registry = "https://pypi.org/simple" }, marker = "python_full_version < '3.10'" },
@@ -258,11 +262,13 @@ dev = [
     { name = "snakeviz" },
     { name = "sphinx", specifier = ">=5.0,<6.0" },
     { name = "sphinx-codeautolink" },
+    { name = "standard-imghdr", marker = "python_full_version >= '3.13'" },
 ]
 doc = [
     { name = "furo" },
     { name = "sphinx", specifier = ">=5.0,<6.0" },
     { name = "sphinx-codeautolink" },
+    { name = "standard-imghdr", marker = "python_full_version >= '3.13'" },
 ]
 examples = [{ name = "click" }]
 test = [
@@ -508,7 +514,8 @@ name = "ipython"
 version = "9.3.0"
 source = { registry = "https://pypi.org/simple" }
 resolution-markers = [
-    "python_full_version >= '3.11'",
+    "python_full_version >= '3.13'",
+    "python_full_version >= '3.11' and python_full_version < '3.13'",
 ]
 dependencies = [
     { name = "colorama", marker = "python_full_version >= '3.11' and sys_platform == 'win32'" },
@@ -769,7 +776,8 @@ name = "numpy"
 version = "2.3.1"
 source = { registry = "https://pypi.org/simple" }
 resolution-markers = [
-    "python_full_version >= '3.11'",
+    "python_full_version >= '3.13'",
+    "python_full_version >= '3.11' and python_full_version < '3.13'",
 ]
 sdist = { url = "https://files.pythonhosted.org/packages/2e/19/d7c972dfe90a353dbd3efbbe1d14a5951de80c99c9dc1b93cd998d51dc0f/numpy-2.3.1.tar.gz", hash = "sha256:1ec9ae20a4226da374362cca3c62cd753faf2f951440b0e3b98e93c235441d2b", size = 20390372 }
 wheels = [
@@ -1100,7 +1108,8 @@ name = "sphinx-codeautolink"
 version = "0.17.4"
 source = { registry = "https://pypi.org/simple" }
 resolution-markers = [
-    "python_full_version >= '3.11'",
+    "python_full_version >= '3.13'",
+    "python_full_version >= '3.11' and python_full_version < '3.13'",
     "python_full_version == '3.10.*'",
 ]
 dependencies = [
@@ -1178,6 +1187,15 @@ dependencies = [
 sdist = { url = "https://files.pythonhosted.org/packages/28/e3/55dcc2cfbc3ca9c29519eb6884dd1415ecb53b0e934862d3559ddcb7e20b/stack_data-0.6.3.tar.gz", hash = "sha256:836a778de4fec4dcd1dcd89ed8abff8a221f58308462e1c4aa2a3cf30148f0b9", size = 44707 }
 wheels = [
     { url = "https://files.pythonhosted.org/packages/f1/7b/ce1eafaf1a76852e2ec9b22edecf1daa58175c090266e9f6c64afcd81d91/stack_data-0.6.3-py3-none-any.whl", hash = "sha256:d5558e0c25a4cb0853cddad3d77da9891a08cb85dd9f9f91b9f8cd66e511e695", size = 24521 },
+]
+
+[[package]]
+name = "standard-imghdr"
+version = "3.13.0"
+source = { registry = "https://pypi.org/simple" }
+sdist = { url = "https://files.pythonhosted.org/packages/1a/8d/ab2620fbe2e348483c9cb776c3b7b3cc407899291a041d7fa026469b7cd1/standard_imghdr-3.13.0.tar.gz", hash = "sha256:8d9c68058d882f6fc3542a8d39ef9ff94d2187dc90bd0c851e0902776b7b7a42", size = 5511 }
+wheels = [
+    { url = "https://files.pythonhosted.org/packages/df/cb/e1da7e340586a078404c7e4328bfefc930867ace8a9a55916fd220cf9547/standard_imghdr-3.13.0-py3-none-any.whl", hash = "sha256:30a1bff5465605bb496f842a6ac3cc1f2131bf3025b0da28d4877d6d4b7cc8e9", size = 4639 },
 ]
 
 [[package]]
