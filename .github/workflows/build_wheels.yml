@@ -68,7 +68,7 @@ jobs:
       - name: Compile tests
         run: uv run python build_tests.py
       - name: Run tests
-        run: uv run py.test
+        run: uv run pytest
 
   build_wheels:
     name: Build wheels on ${{ matrix.os }}_${{ matrix.python-version }}-${{ matrix.arch }}
