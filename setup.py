@@ -53,25 +53,8 @@ def get_ndi_libdir():
     lib_pkg_data = []
     bin_pkg_data = []
     if WIN32:
-        p = Path(os.environ.get('PROGRAMFILES'))
-        sdk_dir = p / 'NDI' / 'NDI 5 SDK'
-        lib_sys = sdk_dir / 'Lib' / 'x64'
-        dll_sys = sdk_dir / 'Bin' / 'x64'
         lib_dir = PROJECT_PATH / 'src' / 'cyndilib' / 'wrapper' / 'lib'
         dll_dir = lib_dir.parent / 'bin'
-
-        if not len(list(lib_dir.glob('*.lib'))):
-            assert lib_sys.exists()
-            lib_sys = sdk_dir / 'Lib' / 'x64'
-            dll_sys = sdk_dir / 'Bin' / 'x64'
-            for src_p, dst_p in zip([lib_sys, dll_sys], [lib_dir, dll_dir]):
-                for fn in src_p.iterdir():
-                    if not fn.is_file():
-                        continue
-                    dest_fn = dst_p / fn.name
-                    if dest_fn.exists():
-                        continue
-                    shutil.copy2(fn, dest_fn)
         LIB_DIRS.extend([str(dll_dir.resolve()), str(lib_dir.resolve())])
         bin_pkg_data.append('*.dll')
         lib_pkg_data.append('*.lib')
