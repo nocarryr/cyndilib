@@ -105,7 +105,7 @@ addopts = "-n auto --no-success-flaky-report --doctest-modules --doctest-glob='*
 
 
 [tool.cibuildwheel]
-build-frontend = {name = "build[uv]", args = ["--locked "]}
+build-frontend = "build[uv]"
 build = "cp3{9,10,11,12,13}-*"
 skip = "*-musllinux*"
 test-groups = ["build", "test"]
