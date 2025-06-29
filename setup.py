@@ -35,8 +35,8 @@ PROJECT_PATH = Path(__file__).parent
 WIN32 = sys.platform == 'win32'
 MACOS = sys.platform == 'darwin'
 IS_BUILD = True
-LIB_DIRS = []
-RUNTIME_LIB_DIRS = []
+LIB_DIRS: list[str] = []
+RUNTIME_LIB_DIRS: list[str] = []
 NDI_INCLUDE = PROJECT_PATH / 'src' / 'cyndilib' / 'wrapper' / 'include'
 INCLUDE_PATH = [str(NDI_INCLUDE), get_python_inc()]
 PACKAGE_DATA = {
@@ -52,27 +52,12 @@ PACKAGE_DATA = {
 def get_ndi_libdir():
     lib_pkg_data = []
     bin_pkg_data = []
+    lib_dirs = []
+    runtime_lib_dirs = []
     if WIN32:
-        p = Path(os.environ.get('PROGRAMFILES'))
-        sdk_dir = p / 'NDI' / 'NDI 5 SDK'
-        lib_sys = sdk_dir / 'Lib' / 'x64'
-        dll_sys = sdk_dir / 'Bin' / 'x64'
         lib_dir = PROJECT_PATH / 'src' / 'cyndilib' / 'wrapper' / 'lib'
         dll_dir = lib_dir.parent / 'bin'
-
-        if not len(list(lib_dir.glob('*.lib'))):
-            assert lib_sys.exists()
-            lib_sys = sdk_dir / 'Lib' / 'x64'
-            dll_sys = sdk_dir / 'Bin' / 'x64'
-            for src_p, dst_p in zip([lib_sys, dll_sys], [lib_dir, dll_dir]):
-                for fn in src_p.iterdir():
-                    if not fn.is_file():
-                        continue
-                    dest_fn = dst_p / fn.name
-                    if dest_fn.exists():
-                        continue
-                    shutil.copy2(fn, dest_fn)
-        LIB_DIRS.extend([str(dll_dir.resolve()), str(lib_dir.resolve())])
+        lib_dirs.extend([str(dll_dir.resolve()), str(lib_dir.resolve())])
         bin_pkg_data.append('*.dll')
         lib_pkg_data.append('*.lib')
     else:
@@ -94,11 +79,17 @@ def get_ndi_libdir():
             lib_dir = lib_dir / arch
             bin_pkg_data.append(f'{arch}/*.so')
         lib_dir = lib_dir.resolve()
-        LIB_DIRS.append(str(lib_dir))
-        RUNTIME_LIB_DIRS.append(str(lib_dir))
+        lib_dirs.append(str(lib_dir))
+        runtime_lib_dirs.append(str(lib_dir))
 
-    PACKAGE_DATA['cyndilib.wrapper.bin'].extend(bin_pkg_data)
-    PACKAGE_DATA['cyndilib.wrapper.lib'].extend(lib_pkg_data)
+    bin_pkg_data.append('*.txt')
+    package_data = PACKAGE_DATA.copy()
+    package_data.update({
+        'cyndilib.wrapper.bin':bin_pkg_data,
+        'cyndilib.wrapper.lib':lib_pkg_data,
+    })
+    return package_data, lib_dirs, runtime_lib_dirs
+
 
 def get_ndi_libname():
     if WIN32:
@@ -106,7 +97,7 @@ def get_ndi_libname():
     return 'ndi'
 
 if IS_BUILD:
-    get_ndi_libdir()
+    PACKAGE_DATA, LIB_DIRS, RUNTIME_LIB_DIRS = get_ndi_libdir()
 
 try:
     import numpy
@@ -123,9 +114,9 @@ class CyBuildError(CCompilerError):
 
 
 compiler_directives = {'embedsignature':True, 'embedsignature.format':'python'}
-
+ext_macros: list[tuple[str, str|None]] | None
 if USE_PROFILE:
-    ext_macros = [('CYTHON_TRACE', 1), ('CYTHON_TRACE_NOGIL', 1)]
+    ext_macros = [('CYTHON_TRACE', '1'), ('CYTHON_TRACE_NOGIL', '1')]
     compiler_directives.update({'profile':True, 'linetrace':True})
 else:
     ext_macros = None
@@ -137,10 +128,6 @@ if WIN32:
 else:
     extra_compile_args.append('-fpermissive')
 
-if not len(LIB_DIRS):
-    LIB_DIRS = None
-if not len(RUNTIME_LIB_DIRS):
-    RUNTIME_LIB_DIRS = None
 
 ext_modules = [
     Extension(
@@ -182,6 +169,7 @@ class build_ext_subclass(build_ext):
 
 
 def build_annotate_index(extensions):
+    assert callable(AnnotateIndex)
     root = AnnotateIndex('', root_dir=PROJECT_PATH / 'src')
     for ext in extensions:
         pkg_dir = Path(ext.sources[0]).parent
