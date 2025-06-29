@@ -111,7 +111,7 @@ skip = "*-musllinux*"
 test-groups = ["build", "test"]
 test-command = [
     "python {project}/build_tests.py",
-    "pip uninstall -y setuptools",
+    "uv pip uninstall setuptools",
     "py.test {project}/tests/",
 ]
 test-skip = "cp38-macosx*"
