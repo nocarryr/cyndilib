@@ -1,6 +1,6 @@
 [build-system]
 requires = ["setuptools", "wheel", "numpy", "cython>=0.29.32"]
-build-backend = "setuptools.build_meta:__legacy__"
+build-backend = "setuptools.build_meta"
 
 [project]
 name = "cyndilib"
@@ -63,6 +63,39 @@ Documentation = "https://cyndilib.readthedocs.io"
 Download = "https://pypi.org/project/cyndilib"
 Source = "https://github.com/nocarryr/cyndilib"
 Tracker = "https://github.com/nocarryr/cyndilib/issues"
+
+
+[dependency-groups]
+build = [
+    "setuptools",
+    "numpy",
+    "cython>=0.29.32",
+]
+test = [
+    "pytest",
+    "pytest-xdist",
+    "pytest-doctestplus",
+    "flaky",
+    "psutil",
+    "cython>=0.29.32",
+]
+doc = [
+    "Sphinx>=5.0,<6.0",
+    "furo",
+    "sphinx-codeautolink",
+]
+examples = [
+    "click",
+]
+dev = [
+    {include-group = "build"},
+    {include-group = "test"},
+    {include-group = "doc"},
+    {include-group = "examples"},
+    "ipython",
+    "snakeviz",
+    "pytest-profiling",
+]
 
 
 [tool.pytest.ini_options]
