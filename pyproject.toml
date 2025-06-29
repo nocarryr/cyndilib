@@ -2,6 +2,74 @@
 requires = ["setuptools", "wheel", "numpy", "cython>=0.29.32"]
 build-backend = "setuptools.build_meta:__legacy__"
 
+[project]
+name = "cyndilib"
+version = "0.0.6"
+authors = [
+    { name = "Matthew Reid", email = "matt@nomadic-recording.com" }
+]
+description = "Python wrapper for NDI® written in Cython"
+readme = "README.rst"
+license = "MIT"
+license-files = [
+    "LICENSE",
+    "libndi_licenses.txt"
+]
+requires-python = ">=3.9"
+dependencies = [
+    "numpy",
+    "importlib_resources;python_version<'3.9'",
+]
+classifiers = [
+    "Development Status :: 3 - Alpha",
+    "Intended Audience :: Developers",
+    "Natural Language :: English",
+    "Operating System :: MacOS",
+    "Operating System :: MacOS :: MacOS X",
+    "Operating System :: Microsoft",
+    "Operating System :: Microsoft :: Windows",
+    "Operating System :: Microsoft :: Windows :: Windows 10",
+    "Operating System :: POSIX",
+    "Operating System :: POSIX :: Linux",
+    "Programming Language :: Cython",
+    "Programming Language :: Python",
+    "Programming Language :: Python :: 3 :: Only",
+    "Programming Language :: Python :: 3.9",
+    "Programming Language :: Python :: 3.10",
+    "Programming Language :: Python :: 3.11",
+    "Programming Language :: Python :: 3.12",
+    "Programming Language :: Python :: 3.13",
+    "Programming Language :: Python :: Implementation :: CPython",
+    "Topic :: Multimedia",
+    "Topic :: Multimedia :: Sound/Audio",
+    "Topic :: Multimedia :: Sound/Audio :: Capture/Recording",
+    "Topic :: Multimedia :: Sound/Audio :: Conversion",
+    "Topic :: Multimedia :: Video",
+    "Topic :: Multimedia :: Video :: Capture",
+    "Topic :: Multimedia :: Video :: Conversion",
+    "Topic :: Software Development",
+    "Topic :: Software Development :: Libraries",
+    "Topic :: Software Development :: Libraries :: Python Modules"
+]
+
+[tool.setuptools.packages.find]
+where = ["src"]
+exclude = ["tests", "tests.*"]
+
+
+[project.urls]
+Homepage = "https://github.com/nocarryr/cyndilib"
+Documentation = "https://cyndilib.readthedocs.io"
+Download = "https://pypi.org/project/cyndilib"
+Source = "https://github.com/nocarryr/cyndilib"
+Tracker = "https://github.com/nocarryr/cyndilib/issues"
+
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+addopts = "-n auto --no-success-flaky-report --doctest-modules --doctest-glob='*.rst'"
+
+
 [tool.cibuildwheel]
 build = "cp3{9,10,11,12,13}-*"
 skip = "*-musllinux*"
