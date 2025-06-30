@@ -82,24 +82,24 @@ cdef class Source:
     cpdef set_program_tally(self, bint value):
         """Set the source's program tally to the given state
 
-        .. note::
-
-            This is only valid for sources attached to an active
-            :class:`.receiver.Receiver`
+        .. deprecated:: 0.0.7
+            Use :meth:`.receiver.Receiver.set_source_tally_program()` instead.
 
         """
         self.tally.on_program = value
+        import warnings
+        warnings.warn(DeprecationWarning("Use Receiver.set_source_tally_program() instead."))
 
     cpdef set_preview_tally(self, bint value):
         """Set the source's preview tally to the given state
 
-        .. note::
-
-            This is only valid for sources attached to an active
-            :class:`.receiver.Receiver`
+        .. deprecated:: 0.0.7
+            Use :meth:`.receiver.Receiver.set_source_tally_preview()` instead.
 
         """
         self.tally.on_preview = value
+        import warnings
+        warnings.warn(DeprecationWarning("Use Receiver.set_source_tally_preview() instead."))
 
     cdef int _set_tally(self, bint program, bint preview) except -1 nogil:
         self.tally.on_program = program
