@@ -5,7 +5,7 @@ from cyndilib.wrapper import *
 from cyndilib.audio_frame import AudioSendFrame
 from cyndilib.video_frame import VideoSendFrame
 
-import _test_send_frame_status
+import _test_send_frame_status  # type: ignore[missing-import]
 from conftest import AudioParams, IS_CI_BUILD
 
 NULL_INDEX = _test_send_frame_status.get_null_idx()

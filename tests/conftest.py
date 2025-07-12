@@ -6,7 +6,7 @@ from fractions import Fraction
 import numpy as np
 import psutil
 
-from _test_video_frame import build_test_frames
+from _test_video_frame import build_test_frames # type: ignore[missing-import]
 
 IS_CI_BUILD = 'true' in [os.environ.get(key) for key in ['CI', 'CODESPACES']]
 

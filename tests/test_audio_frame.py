@@ -13,10 +13,10 @@ from conftest import AudioParams, IS_CI_BUILD
 from cyndilib.locks import RLock, Condition
 from cyndilib.audio_frame import AudioRecvFrame, AudioFrameSync, AudioSendFrame
 
-from _test_audio_frame import (
+from _test_audio_frame import (         # type: ignore[missing-import]
     fill_audio_frame, fill_audio_frame_sync, audio_frame_process_events,
 )
-from _test_send_frame_status import (
+from _test_send_frame_status import (   # type: ignore[missing-import]
     set_send_frame_sender_status, set_send_frame_send_complete,
     check_audio_send_frame, get_max_frame_buffers, get_null_idx,
 )

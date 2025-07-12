@@ -14,9 +14,9 @@ from cyndilib.locks import RLock, Condition
 
 from conftest import IS_CI_BUILD, AudioParams, VideoParams
 
-import _test_sender
-import _test_audio_frame
-import _test_send_frame_status
+import _test_sender             # type: ignore[missing-import]
+import _test_audio_frame        # type: ignore[missing-import]
+import _test_send_frame_status  # type: ignore[missing-import]
 
 NULL_INDEX = _test_send_frame_status.get_null_idx()
 MAX_FRAME_BUFFERS = _test_send_frame_status.get_max_frame_buffers()

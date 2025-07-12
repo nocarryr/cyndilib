@@ -1,6 +1,6 @@
 import pytest
 
-from _test_exceptions import raise_py_exc
+from _test_exceptions import raise_py_exc # type: ignore[missing-import]
 
 @pytest.fixture(params=[
     Exception,
