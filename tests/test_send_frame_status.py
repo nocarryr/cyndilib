@@ -1,3 +1,5 @@
+from __future__ import annotations
+from typing import Callable
 import pytest
 import numpy as np
 
@@ -6,15 +8,15 @@ from cyndilib.audio_frame import AudioSendFrame
 from cyndilib.video_frame import VideoSendFrame
 
 import _test_send_frame_status  # type: ignore[missing-import]
-from conftest import AudioParams, IS_CI_BUILD
+from conftest import AudioInitParams, AudioParams, VideoParams, IS_CI_BUILD
 
 NULL_INDEX = _test_send_frame_status.get_null_idx()
 MAX_FRAME_BUFFERS = _test_send_frame_status.get_max_frame_buffers()
 
 @pytest.fixture
-def fake_audio_data(fake_audio_builder):
+def fake_audio_data(fake_audio_builder: Callable[[AudioInitParams], AudioParams]) -> AudioParams:
     num_seconds = 8 if IS_CI_BUILD else 32
-    params = AudioParams()
+    params = AudioInitParams()
     num_samples = params.sample_rate * num_seconds
     num_segments = num_samples // params.s_perseg
     params = params._replace(num_samples=num_samples, num_segments=num_segments)
@@ -23,7 +25,7 @@ def fake_audio_data(fake_audio_builder):
 def test_indexing():
     _test_send_frame_status.test_indexing()
 
-def test_video(fake_video_frames):
+def test_video(fake_video_frames: VideoParams):
     width, height, fr, num_frames, fake_frames = fake_video_frames
 
     vf = VideoSendFrame()
@@ -57,7 +59,7 @@ def test_video(fake_video_frames):
     _test_send_frame_status.set_send_frame_sender_status(vf, False)
     vf.destroy()
 
-def test_audio(fake_audio_data):
+def test_audio(fake_audio_data: AudioParams):
     fs = fake_audio_data.sample_rate
     N = fake_audio_data.num_samples
     num_channels = fake_audio_data.num_channels

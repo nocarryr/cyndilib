@@ -8,7 +8,7 @@ import pytest
 
 import numpy as np
 
-from conftest import AudioParams, IS_CI_BUILD
+from conftest import AudioInitParams, AudioParams, IS_CI_BUILD
 
 from cyndilib.locks import RLock, Condition
 from cyndilib.audio_frame import AudioRecvFrame, AudioFrameSync, AudioSendFrame
@@ -330,26 +330,26 @@ class StateThread(threading.Thread):
 
 
 @pytest.fixture(params=[2, 8] if IS_CI_BUILD else [2, 8, 16, 32])
-def num_seconds(request):
+def num_seconds(request) -> int:
     return request.param
 
 @pytest.fixture
-def fake_audio_data(num_seconds, fake_audio_builder):
-    params = AudioParams()
+def fake_audio_data(num_seconds, fake_audio_builder) -> AudioParams:
+    params = AudioInitParams()
     num_samples = params.sample_rate * num_seconds
     num_segments = num_samples // params.s_perseg
     params = params._replace(num_samples=num_samples, num_segments=num_segments)
     return fake_audio_builder(params)
 
 @pytest.fixture
-def fake_audio_data_longer(num_seconds, fake_audio_builder):
-    params = AudioParams()
+def fake_audio_data_longer(num_seconds, fake_audio_builder) -> AudioParams:
+    params = AudioInitParams()
     num_samples = params.sample_rate * num_seconds * 2
     num_segments = num_samples // params.s_perseg
     params = params._replace(num_samples=num_samples, num_segments=num_segments)
     return fake_audio_builder(params)
 
-def test_buffer_read_all(fake_audio_data):
+def test_buffer_read_all(fake_audio_data: AudioParams):
     fs = fake_audio_data.sample_rate
     N = fake_audio_data.num_samples
     num_channels = fake_audio_data.num_channels
@@ -408,7 +408,7 @@ def test_buffer_read_all(fake_audio_data):
     # time.sleep(.5)
 
 
-def test_buffer_read_single(fake_audio_data_longer):
+def test_buffer_read_single(fake_audio_data_longer: AudioParams):
     fake_audio_data = fake_audio_data_longer
     fs = fake_audio_data.sample_rate
     N = fake_audio_data.num_samples
@@ -440,7 +440,7 @@ def test_buffer_read_single(fake_audio_data_longer):
         assert audio_frame.get_buffer_depth() == 0
     assert np.array_equal(samples, results)
 
-def test_buffer_fill_read_data(fake_audio_data):
+def test_buffer_fill_read_data(fake_audio_data: AudioParams):
     fs = fake_audio_data.sample_rate
     N = fake_audio_data.num_samples
     num_channels = fake_audio_data.num_channels
@@ -467,7 +467,7 @@ def test_buffer_fill_read_data(fake_audio_data):
     assert np.array_equal(samples, results)
 
 @pytest.mark.flaky(max_runs=3)
-def test_buffer_fill_read_data_threaded(fake_audio_data):
+def test_buffer_fill_read_data_threaded(fake_audio_data: AudioParams):
     fs = fake_audio_data.sample_rate
     N = fake_audio_data.num_samples
     num_channels = fake_audio_data.num_channels
@@ -562,7 +562,7 @@ def test_buffer_fill_read_data_threaded(fake_audio_data):
     assert np.array_equal(samples[:num_iterations], results[:num_iterations])
 
 
-def test_buffer_overwrite(fake_audio_data_longer):
+def test_buffer_overwrite(fake_audio_data_longer: AudioParams):
     fake_audio_data = fake_audio_data_longer
     fs = fake_audio_data.sample_rate
     N = fake_audio_data.num_samples
@@ -599,7 +599,7 @@ def test_buffer_overwrite(fake_audio_data_longer):
 
 
 
-def test_frame_sync(fake_audio_data_longer):
+def test_frame_sync(fake_audio_data_longer: AudioParams):
     fake_audio_data = fake_audio_data_longer
     # fs = 48000
     # N = 60
@@ -656,7 +656,7 @@ def test_frame_sync(fake_audio_data_longer):
     results = np.concatenate(results, axis=1)
     assert np.array_equal(samples_flat, results)
 
-def test_audio_send_frame(fake_audio_data):
+def test_audio_send_frame(fake_audio_data: AudioParams):
     fs = fake_audio_data.sample_rate
     N = fake_audio_data.num_samples
     num_channels = fake_audio_data.num_channels

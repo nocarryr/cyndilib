@@ -10,6 +10,7 @@ from _test_send_frame_status import (       # type: ignore[missing-import]
     set_send_frame_sender_status, set_send_frame_send_complete,
     check_video_send_frame, get_null_idx, get_max_frame_buffers,
 )
+from conftest import VideoParams
 
 MAX_FRAME_BUFFERS = get_max_frame_buffers()
 NULL_INDEX = get_null_idx()
@@ -57,7 +58,7 @@ def test_frame_builder():
         assert a[i].tobytes() == b[i].tobytes() == c[i].tobytes() == d[i].tobytes()
 
 
-def test_video_send_frame(fake_video_frames):
+def test_video_send_frame(fake_video_frames: VideoParams):
     width, height, fr, num_frames, fake_frames = fake_video_frames
 
     vf = VideoSendFrame()

@@ -1,7 +1,7 @@
 from __future__ import annotations
+from typing import NamedTuple, Callable
 import os
 import pytest
-from collections import namedtuple
 from fractions import Fraction
 import numpy as np
 import psutil
@@ -10,22 +10,79 @@ from _test_video_frame import build_test_frames # type: ignore[missing-import]
 
 IS_CI_BUILD = 'true' in [os.environ.get(key) for key in ['CI', 'CODESPACES']]
 
-AudioParams = namedtuple('AudioParams', [
-    'sample_rate', 'num_channels', 'num_samples', 'num_segments', 's_perseg',
-    'samples_3d', 'samples_2d'],
-    defaults=[
-        48000, 2, 48000*2, 48000*2//6000, 6000, None, None,
-    ]
-)
 
-VideoParams = namedtuple('VideoParams', [
-    'width', 'height', 'frame_rate', 'num_frames', 'frames',
-])
+class AudioInitParams(NamedTuple):
+    """Parameters used to generate fake audio data.
+    """
+    sample_rate: int = 48000
+    num_channels: int = 2
+    num_samples: int = 48000 * 2
+    num_segments: int = 48000 * 2 // 6000
+    s_perseg: int = 6000
+
+class AudioParams(NamedTuple):
+    """Generated fake audio data and parameters.
+    """
+    samples_3d: np.ndarray
+    samples_2d: np.ndarray
+    sample_rate: int = 48000
+    num_channels: int = 2
+    num_samples: int = 48000 * 2
+    num_segments: int = 48000 * 2 // 6000
+    s_perseg: int = 6000
+
+    @classmethod
+    def from_init(
+        cls,
+        init: AudioInitParams,
+        samples_3d: np.ndarray,
+        samples_2d: np.ndarray
+    ) -> AudioParams:
+        """Create AudioParams from AudioInitParams and generated data.
+        """
+        return cls(
+            samples_3d=samples_3d,
+            samples_2d=samples_2d,
+            sample_rate=init.sample_rate,
+            num_channels=init.num_channels,
+            num_samples=init.num_samples,
+            num_segments=init.num_segments,
+            s_perseg=init.s_perseg,
+        )
+
+
+class VideoInitParams(NamedTuple):
+    """Parameters used to generate fake video data.
+    """
+    width: int
+    height: int
+    frame_rate: Fraction
+    num_frames: int
+    as_uint32: bool = False
+    as_flat_uint8: bool = True
+
+class VideoParams(NamedTuple):
+    """Generated fake video data and parameters.
+    """
+    width: int
+    height: int
+    frame_rate: Fraction
+    num_frames: int
+    frames: np.ndarray
+    @classmethod
+    def from_init(cls, init: VideoInitParams, frames: np.ndarray) -> VideoParams:
+        """Create VideoParams from VideoInitParams and generated data.
+        """
+        return cls(
+            init.width, init.height, init.frame_rate,
+            init.num_frames, frames
+        )
+
 
 @pytest.fixture
-def fake_audio_builder():
+def fake_audio_builder() -> Callable[[AudioInitParams], AudioParams]:
     def build_fake_data(
-        params: AudioParams
+        params: AudioInitParams
     ) -> AudioParams:
         print(f'N={params.num_samples}')
         fc = 2000
@@ -46,27 +103,30 @@ def fake_audio_builder():
             for j in range(params.num_channels):
                 b[i,j,:] = a[j,i*s_perseg:i*s_perseg+s_perseg]
 
-        return params._replace(samples_3d=b, samples_2d=a)
+        return AudioParams.from_init(params, b, a)
 
     return build_fake_data
 
 
 @pytest.fixture
-def fake_video_builder():
-    def build_fake_data(width, height, num_frames, as_uint32=True, as_flat_uint8=False):
-        return build_test_frames(width, height, num_frames, as_uint32, as_flat_uint8)
+def fake_video_builder() -> Callable[[VideoInitParams], np.ndarray]:
+    def build_fake_data(video_params: VideoInitParams):
+        return build_test_frames(
+            video_params.width, video_params.height, video_params.num_frames,
+            video_params.as_uint32, video_params.as_flat_uint8
+        )
 
     return build_fake_data
 
 
 @pytest.fixture(params=[(640,360), (1280,720), (1920,1080)])
-def video_resolution(request):
+def video_resolution(request) -> tuple[int, int]:
     w, h = request.param
     return w, h
 
 
 @pytest.fixture(params=[59.94, 29.97, 25])
-def video_frame_rate(request):
+def video_frame_rate(request) -> Fraction:
     if request.param == int(request.param):
         return Fraction(request.param, 1)
     else:
@@ -90,8 +150,8 @@ def humanize_bytes(nbytes: int) -> str:
     return f'{mb_i:,}.{mb_f} MB'
 
 def calc_mem_required(
-    video_params: VideoParams,
-    audio_params: AudioParams|None = None,
+    video_params: VideoInitParams,
+    audio_params: AudioInitParams|None = None,
 ) -> int:
 
     vid_dt = np.dtype(np.uint8)
@@ -109,8 +169,8 @@ def calc_mem_required(
     return vid_mem + aud_mem
 
 def check_mem_available(
-    video_params: VideoParams,
-    audio_params: AudioParams|None = None,
+    video_params: VideoInitParams,
+    audio_params: AudioInitParams|None = None,
 ) -> tuple[bool, int, int]:
 
     mem_padding = 200 * ONE_MB
@@ -121,10 +181,14 @@ def check_mem_available(
 
 
 @pytest.fixture
-def fake_video_frames(video_resolution, video_frame_rate, fake_video_builder):
+def fake_video_frames(
+    video_resolution: tuple[int, int],
+    video_frame_rate: Fraction,
+    fake_video_builder: Callable[[VideoInitParams], np.ndarray]
+) -> VideoParams:
     w, h = video_resolution
     num_frames = 40 if IS_CI_BUILD else 160
-    video_params = VideoParams(w, h, video_frame_rate, num_frames, None)
+    video_params = VideoInitParams(w, h, video_frame_rate, num_frames)
     mem_ok, mem_req, mem_avail = check_mem_available(video_params)
     while not mem_ok:
         num_frames //= 2
@@ -133,7 +197,7 @@ def fake_video_frames(video_resolution, video_frame_rate, fake_video_builder):
         video_params = video_params._replace(num_frames=num_frames)
         mem_ok, mem_req, mem_avail = check_mem_available(video_params)
     try:
-        frames = fake_video_builder(w, h, num_frames, False, True)
+        frames = fake_video_builder(video_params)
     except MemoryError:
         print(f'{psutil.virtual_memory()=}')
         raise
@@ -141,7 +205,10 @@ def fake_video_frames(video_resolution, video_frame_rate, fake_video_builder):
 
 
 @pytest.fixture
-def fake_av_frames(fake_video_frames, fake_audio_builder):
+def fake_av_frames(
+    fake_video_frames: VideoParams,
+    fake_audio_builder: Callable[[AudioInitParams], AudioParams]
+) -> tuple[VideoParams, AudioParams]:
     num_frames = fake_video_frames.num_frames
     fs = Fraction(48000, 1)
     s_perseg = fs / fake_video_frames.frame_rate
@@ -150,7 +217,7 @@ def fake_av_frames(fake_video_frames, fake_audio_builder):
     else:
         s_perseg = int(s_perseg) + 1
 
-    params = AudioParams(
+    params = AudioInitParams(
         sample_rate=int(fs), num_samples=s_perseg * num_frames,
         s_perseg=s_perseg, num_segments=num_frames,
     )

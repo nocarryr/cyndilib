@@ -22,7 +22,7 @@ NULL_INDEX = _test_send_frame_status.get_null_idx()
 MAX_FRAME_BUFFERS = _test_send_frame_status.get_max_frame_buffers()
 
 
-def test_send_video(request, fake_video_frames):
+def test_send_video(request, fake_video_frames: VideoParams):
     width, height, fr, num_frames, fake_frames = fake_video_frames
     name = request.node.nodeid.split('::')[-1]
     sender = Sender(name)
@@ -100,7 +100,7 @@ def setup_sender(
 
     return sender
 
-def test_send_video_and_audio_cy(request, fake_av_frames):
+def test_send_video_and_audio_cy(request, fake_av_frames: tuple[VideoParams, AudioParams]):
     video_data, audio_data = fake_av_frames
 
     sender = setup_sender(request, video_data, audio_data)
@@ -131,7 +131,7 @@ def test_send_video_and_audio_cy(request, fake_av_frames):
     print('sender closed')
 
 
-def test_send_video_and_audio_py(request, fake_av_frames):
+def test_send_video_and_audio_py(request, fake_av_frames: tuple[VideoParams, AudioParams]):
     video_data, audio_data = fake_av_frames
 
     sender = setup_sender(request, video_data, audio_data)
@@ -156,6 +156,7 @@ def test_send_video_and_audio_py(request, fake_av_frames):
         with sender:
             # time.sleep(.5)
             assert sender._running is True
+            assert sender.source is not None
             print(f'{sender.source.name=}')
             print('loop_start')
             # time.sleep(.5)
@@ -314,6 +315,7 @@ class SenderThread(threading.Thread):
         raise NotImplementedError()
 
 class VideoSenderThread(SenderThread):
+    data: VideoParams
     def get_num_frames(self) -> int:
         return self.data.num_frames
 
@@ -325,6 +327,7 @@ class VideoSenderThread(SenderThread):
             self.sender.write_video_async(data)
 
 class AudioSenderThread(SenderThread):
+    data: AudioParams
     def get_num_frames(self) -> int:
         return self.data.num_segments
 
@@ -335,7 +338,7 @@ class AudioSenderThread(SenderThread):
 
 
 @pytest.mark.flaky(max_runs=3)
-def test_send_video_and_audio_threaded(request, fake_av_frames):
+def test_send_video_and_audio_threaded(request, fake_av_frames: tuple[VideoParams, AudioParams]):
     video_data, audio_data = fake_av_frames
 
     sender = setup_sender(request, video_data, audio_data)
@@ -381,6 +384,8 @@ def test_send_video_and_audio_threaded(request, fake_av_frames):
         if not IS_CI_BUILD:
             dur_min = expected_dur - one_frame
             dur_max = expected_dur + one_frame
+            assert vid_thread.duration is not None
+            assert aud_thread.duration is not None
             assert dur_min <= vid_thread.duration <= dur_max
             assert dur_min <= aud_thread.duration <= dur_max
         cur_iteration += 1
