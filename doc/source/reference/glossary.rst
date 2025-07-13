@@ -51,7 +51,7 @@ Glossary
         * SMPTE
             * :math:`-20\text{ dBFS} = 0\text{ dBVU} = +4\text{ dBu}`
         * EBU
-            * :math:`-14\text{ dBFS} = -4\text{ dBVU} = 0\text{ dBu}`
+            * :math:`-18\text{ dBFS} = -4\text{ dBVU} = 0\text{ dBu}`
 
     dBVU
         Decibels relative to 1.0 volts RMS. Its amplitude is calculated as:
