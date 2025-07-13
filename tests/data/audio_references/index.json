@@ -1,0 +1,126 @@
+[
+  {
+    "video_file": "aud_rec_1.mov",
+    "audio_file": "aud_rec_1.wav",
+    "frame_rate": "30/1",
+    "sample_rate": 48000,
+    "no_channels": 4,
+    "no_frames": 124,
+    "start_timecode": 0,
+    "last_timecode": 626899666667,
+    "duration_timecode": 626899666667,
+    "extra_metadata": {
+      "dBu": "-20",
+      "dBVU": "-24"
+    }
+  },
+  {
+    "video_file": "aud_rec_2.mov",
+    "audio_file": "aud_rec_2.wav",
+    "frame_rate": "30/1",
+    "sample_rate": 48000,
+    "no_channels": 4,
+    "no_frames": 124,
+    "start_timecode": 0,
+    "last_timecode": 628121666667,
+    "duration_timecode": 628121666667,
+    "extra_metadata": {
+      "dBu": "-16",
+      "dBVU": "-20"
+    }
+  },
+  {
+    "video_file": "aud_rec_5.mov",
+    "audio_file": "aud_rec_5.wav",
+    "frame_rate": "30/1",
+    "sample_rate": 48000,
+    "no_channels": 4,
+    "no_frames": 124,
+    "start_timecode": 0,
+    "last_timecode": 630170000000,
+    "duration_timecode": 630170000000,
+    "extra_metadata": {
+      "dBu": "4",
+      "dBVU": "0",
+      "align": "dBFS_smpte"
+    }
+  },
+  {
+    "video_file": "aud_rec_6.mov",
+    "audio_file": "aud_rec_6.wav",
+    "frame_rate": "30/1",
+    "sample_rate": 48000,
+    "no_channels": 4,
+    "no_frames": 124,
+    "start_timecode": 0,
+    "last_timecode": 630748666667,
+    "duration_timecode": 630748666667,
+    "extra_metadata": {
+      "dBu": "10",
+      "dBVU": "6"
+    }
+  },
+  {
+    "video_file": "aud_rec_7.mov",
+    "audio_file": "aud_rec_7.wav",
+    "frame_rate": "30/1",
+    "sample_rate": 48000,
+    "no_channels": 4,
+    "no_frames": 124,
+    "start_timecode": 0,
+    "last_timecode": 631580666667,
+    "duration_timecode": 631580666667,
+    "extra_metadata": {
+      "dBu": "18",
+      "dBVU": "14",
+      "full_scale": "dBFS_ebu"
+    }
+  },
+  {
+    "video_file": "aud_rec_4.mov",
+    "audio_file": "aud_rec_4.wav",
+    "frame_rate": "30/1",
+    "sample_rate": 48000,
+    "no_channels": 4,
+    "no_frames": 124,
+    "start_timecode": 0,
+    "last_timecode": 629514666667,
+    "duration_timecode": 629514666667,
+    "extra_metadata": {
+      "dBu": "0",
+      "dBVU": "-4",
+      "align": "dBFS_ebu"
+    }
+  },
+  {
+    "video_file": "aud_rec_3.mov",
+    "audio_file": "aud_rec_3.wav",
+    "frame_rate": "30/1",
+    "sample_rate": 48000,
+    "no_channels": 4,
+    "no_frames": 124,
+    "start_timecode": 0,
+    "last_timecode": 628711333333,
+    "duration_timecode": 628711333333,
+    "extra_metadata": {
+      "dBu": "-8",
+      "dBVU": "-12"
+    }
+  },
+  {
+    "video_file": "aud_rec_8.mov",
+    "audio_file": "aud_rec_8.wav",
+    "frame_rate": "30/1",
+    "sample_rate": 48000,
+    "no_channels": 4,
+    "no_frames": 124,
+    "start_timecode": 0,
+    "last_timecode": 632276000000,
+    "duration_timecode": 632276000000,
+    "extra_metadata": {
+      "dBu": "24",
+      "dBVU": "20",
+      "full_scale": "dBFS_smpte"
+    }
+  }
+]
