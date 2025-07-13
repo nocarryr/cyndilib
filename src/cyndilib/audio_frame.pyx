@@ -914,34 +914,3 @@ cdef class AudioSendFrame(AudioFrame):
         frame_status_copy_frame_ptr(s_ptr, self.ptr)
         frame_status_alloc_p_data(s_ptr)
         return 0
-
-
-
-@cython.boundscheck(False)
-@cython.wraparound(False)
-cdef int float_ptr_to_memview_2d(float32_t* p, cnp.float32_t[:,:] dest) except -1 nogil:
-    cdef size_t ncols = dest.shape[1], nrows = dest.shape[0]
-    # cdef float *float_p = <float*>bfr.p_data
-    cdef size_t i, j, k = 0
-
-    for i in range(nrows):
-        for j in range(ncols):
-            dest[i,j] = p[k]
-            k += 1
-    return 0
-
-
-
-cdef int audio_bfr_unpack_data(audio_bfr_p bfr, uint8_t* p_data) except -1 nogil:
-    if bfr.p_data is not NULL:
-        raise_withgil(PyExc_ValueError, 'float buffer exists')
-    cdef size_t size_in_samples = bfr.num_channels * bfr.num_samples
-    cdef size_t size_in_bytes = bfr.num_channels * bfr.num_samples * sizeof(float)
-    bfr.p_data = <float*>mem_alloc(size_in_bytes)
-    if bfr.p_data is NULL:
-        raise_mem_err()
-    memcpy(<void*>bfr.p_data, <void*>p_data, size_in_bytes)
-    # g = (float)((data[0] << 24) | (data[1] << 16) | (data[2] << 8) | (data[3]) );
-    # size_t ch_idx, samp_idx
-    # for ch_idx in range(bfr.num_channels):
-    return 0
