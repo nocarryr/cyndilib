@@ -18,5 +18,6 @@ Reference
    video_frame
    audio_frame
    metadata_frame
+   audio_reference
    locks
    wrapper/index.rst
