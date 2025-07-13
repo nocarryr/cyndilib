@@ -4,9 +4,6 @@
 from .wrapper.ndi_structs cimport NDIlib_audio_frame_v3_t
 
 
-ctypedef fused float_ft:
-    float
-    double
 
 cpdef enum AudioReference:
     """An enum for |NDI| Audio Reference Levels
@@ -46,16 +43,16 @@ cdef class AudioReferenceConverter:
     cdef double _calc_dB(self, double value_amplitude) except? 100 nogil
     cdef double _get_scale(self, AudioReference other) noexcept nogil
     cdef double _to_other(self, AudioReference other, double value, bint force=*) noexcept nogil
-    cdef int _to_other_array_in_place(self, AudioReference other, float_ft[:,:] value, bint force=*) except -1 nogil
+    cdef int _to_other_array_in_place(self, AudioReference other, float[:,:] value, bint force=*) except -1 nogil
     cdef int _to_other_array(
         self,
         AudioReference other,
-        float_ft[:,:] src,
-        float_ft[:,:] dst
+        float[:,:] src,
+        float[:,:] dst
     ) except -1 nogil
-    cdef int _to_ndi_array(self, float_ft[:,:] src, float_ft[:,:] dest) except -1 nogil
-    cdef int _from_ndi_array(self, float_ft[:,:] src, float_ft[:,:] dest) except -1 nogil
-    cdef int _to_ndi_float_ptr(self, float_ft[:,:] src, float *dest) except -1 nogil
+    cdef int _to_ndi_array(self, float[:,:] src, float[:,:] dest) except -1 nogil
+    cdef int _from_ndi_array(self, float[:,:] src, float[:,:] dest) except -1 nogil
+    cdef int _to_ndi_float_ptr(self, float[:,:] src, float *dest) except -1 nogil
     cdef int _to_ndi_frame_in_place(self, NDIlib_audio_frame_v3_t* frame) except -1 nogil
-    cdef int _from_ndi_float_ptr(self, float *src, float_ft[:,:] dest) except -1 nogil
+    cdef int _from_ndi_float_ptr(self, float *src, float[:,:] dest) except -1 nogil
     cdef int _from_ndi_frame_in_place(self, NDIlib_audio_frame_v3_t* frame) except -1 nogil

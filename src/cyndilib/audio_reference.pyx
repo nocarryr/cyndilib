@@ -189,8 +189,8 @@ cdef class AudioReferenceConverter:
     def to_other_array(
         self,
         AudioReference other,
-        float_ft[:,:] src,
-        float_ft[:,:] dst
+        float[:,:] src,
+        float[:,:] dst
     ):
         """Convert a 2D array of values from the current :attr:`reference` level to another.
 
@@ -204,14 +204,14 @@ cdef class AudioReferenceConverter:
     cdef int _to_other_array(
         self,
         AudioReference other,
-        float_ft[:,:] src,
-        float_ft[:,:] dst
+        float[:,:] src,
+        float[:,:] dst
     ) except -1 nogil:
         cdef double scale = self._get_scale(other)
         copy_scale_array(src, dst, scale)
         return 0
 
-    def to_other_array_in_place(self, AudioReference other, float_ft[:,:] value, bint force = False):
+    def to_other_array_in_place(self, AudioReference other, float[:,:] value, bint force = False):
         """Convert a 2D array of values from the current :attr:`reference` level to another.
 
         This is an in-place conversion.
@@ -224,12 +224,12 @@ cdef class AudioReferenceConverter:
         """
         self._to_other_array_in_place(other, value, force)
 
-    cdef int _to_other_array_in_place(self, AudioReference other, float_ft[:,:] value, bint force = False) except -1 nogil:
+    cdef int _to_other_array_in_place(self, AudioReference other, float[:,:] value, bint force = False) except -1 nogil:
         cdef double scale = self._get_scale(other)
         copy_scale_array(value, value, scale)
         return 0
 
-    def to_ndi_array(self, float_ft[:,:] src, float_ft[:,:] dest):
+    def to_ndi_array(self, float[:,:] src, float[:,:] dest):
         """Convert a 2D array of values to |NDI| levels.
 
         Arguments:
@@ -238,7 +238,7 @@ cdef class AudioReferenceConverter:
         """
         self._to_ndi_array(src, dest)
 
-    cdef int _to_ndi_array(self, float_ft[:,:] src, float_ft[:,:] dest) except -1 nogil:
+    cdef int _to_ndi_array(self, float[:,:] src, float[:,:] dest) except -1 nogil:
         if self._is_ndi_native():
             dest[...] = src
             return 0
@@ -246,7 +246,7 @@ cdef class AudioReferenceConverter:
         copy_scale_array(src, dest, scale)
         return 0
 
-    cdef int _to_ndi_float_ptr(self, float_ft[:,:] src, float *dest) except -1 nogil:
+    cdef int _to_ndi_float_ptr(self, float[:,:] src, float *dest) except -1 nogil:
         cdef double scale = self.ptr.multiplier
         cdef size_t nrows = src.shape[0], ncols = src.shape[1], i, j, k = 0
         for i in range(nrows):
@@ -264,7 +264,7 @@ cdef class AudioReferenceConverter:
                 data[i * ncols + j] *= scale
         return 0
 
-    def from_ndi_array(self, float_ft[:,:] src, float_ft[:,:] dest):
+    def from_ndi_array(self, float[:,:] src, float[:,:] dest):
         """Convert a 2D array of values from |NDI| levels.
 
         Arguments:
@@ -273,7 +273,7 @@ cdef class AudioReferenceConverter:
         """
         self._from_ndi_array(src, dest)
 
-    cdef int _from_ndi_array(self, float_ft[:,:] src, float_ft[:,:] dest) except -1 nogil:
+    cdef int _from_ndi_array(self, float[:,:] src, float[:,:] dest) except -1 nogil:
         if self._is_ndi_native():
             dest[...] = src
             return 0
@@ -281,7 +281,7 @@ cdef class AudioReferenceConverter:
         copy_scale_array(src, dest, scale)
         return 0
 
-    cdef int _from_ndi_float_ptr(self, float *src, float_ft[:,:] dest) except -1 nogil:
+    cdef int _from_ndi_float_ptr(self, float *src, float[:,:] dest) except -1 nogil:
         cdef double scale = self.ptr.divisor
         cdef size_t nrows = dest.shape[0], ncols = dest.shape[1], i, j, k = 0
         for i in range(nrows):
@@ -308,8 +308,8 @@ cdef class AudioReferenceConverter:
 
 
 cdef int copy_scale_array(
-    float_ft[:,:] src,
-    float_ft[:,:] dest,
+    float[:,:] src,
+    float[:,:] dest,
     double scale
 ) except -1 nogil:
     cdef size_t nrows = src.shape[0], ncols = src.shape[1], i, j
