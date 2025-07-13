@@ -1,5 +1,7 @@
 from __future__ import annotations
-from typing import Literal, get_args
+from typing import Literal, TypedDict, cast, get_args
+from pathlib import Path
+import json
 
 import numpy as np
 import numpy.typing as npt
@@ -12,6 +14,67 @@ ReferenceAmplitude = Literal['0.063', '0.1', '0.63', '1.0', '5.01', '10.0']
 ReferenceAmplitudes: list[ReferenceAmplitude] = list(get_args(ReferenceAmplitude))
 
 AmplitudeMap = dict[ReferenceAmplitude, float]
+
+
+HERE = Path(__file__).parent.resolve()
+REF_DATA_DIR = HERE / 'data' / 'audio_references'
+
+
+
+class AudioReferenceExtraMetaTD(TypedDict):
+    dBu: str
+    dBVU: str
+
+
+class AudioReferenceExtraMeta(TypedDict):
+    dBu: float
+    dBVU: float
+
+
+class AudioReferenceDataTD(TypedDict):
+    audio_file: str
+    sample_rate: int
+    no_channels: int
+    extra_metadata: AudioReferenceExtraMetaTD
+
+class AudioReferenceData(TypedDict):
+    audio_file: Path
+    npz_file: Path
+    sample_rate: int
+    no_channels: int
+    extra_metadata: AudioReferenceExtraMeta
+
+
+def load_audio_reference_index() -> list[AudioReferenceData]:
+    index_file = REF_DATA_DIR / 'index.json'
+    data = index_file.read_text()
+    index: list[AudioReferenceDataTD] = json.loads(data)
+    r: list[AudioReferenceData] = []
+    for item in index:
+        audio_file = REF_DATA_DIR / item['audio_file']
+        extra_metadata: AudioReferenceExtraMeta = {
+            'dBu': float(item['extra_metadata']['dBu']),
+            'dBVU': float(item['extra_metadata']['dBVU']),
+        }
+        npz_file = audio_file.with_suffix('.npz')
+        assert npz_file.exists(), f'Expected {npz_file} to exist'
+        r.append(AudioReferenceData(
+            audio_file=audio_file,
+            npz_file=npz_file,
+            sample_rate=item['sample_rate'],
+            no_channels=item['no_channels'],
+            extra_metadata=extra_metadata,
+        ))
+    return r
+
+AUDIO_REFERENCE_FILE_DATA: list[AudioReferenceData] = load_audio_reference_index()
+
+
+@pytest.fixture(params=AUDIO_REFERENCE_FILE_DATA)
+def audio_reference_data(request) -> AudioReferenceData:
+    return request.param
+
+
 
 AMPLITUDE_MAPS: dict[AudioReference, AmplitudeMap] = {
     AudioReference.dBu: {
@@ -177,3 +240,52 @@ def test_to_other(audio_reference_with_amplitude: tuple[AudioReference, Amplitud
         print(f'{converted_sig=}, {converted_amp_expected=}')
         assert np.max(np.abs(converted_sig)) == pytest.approx(converted_amp_expected, rel=1e-6)
         # assert np.allclose(sig, converted_sig)
+
+
+def test_wave(
+    audio_reference: AudioReference,
+    audio_reference_data: AudioReferenceData
+) -> None:
+    reference = audio_reference
+    converter = AudioReferenceConverter(reference)
+    dbu_converter = AudioReferenceConverter(AudioReference.dBu)
+    dbvu_converter = AudioReferenceConverter(AudioReference.dBVU)
+    npz_filename = audio_reference_data['npz_file']
+    with np.load(npz_filename) as npz_file:
+        wave_data = npz_file['audio_data']
+        assert isinstance(wave_data, np.ndarray)
+        assert wave_data.dtype == np.float32
+        assert wave_data.shape[1] == audio_reference_data['no_channels']
+        nframes = wave_data.shape[0]
+        wave_data = np.transpose(wave_data)
+        assert wave_data.shape[0] == audio_reference_data['no_channels']
+        assert wave_data.shape[1] == nframes
+        wave_data = cast(np.ndarray[tuple[int, int], np.dtype[np.float32]], wave_data)
+
+    wave_dBu = audio_reference_data['extra_metadata']['dBu']
+    wave_dBVU = audio_reference_data['extra_metadata']['dBVU']
+    wave_max = np.max(np.abs(wave_data))
+    print(f'dBu={wave_dBu:5.0f}, dBVU={wave_dBVU:5.0f}, amp_max={wave_max}')
+
+    src_amp_expected = dbu_converter.calc_amplitude(wave_dBu)
+    assert np.allclose(wave_max, src_amp_expected)
+
+    src_amp_expected = dbvu_converter.calc_amplitude(wave_dBVU)
+    assert np.allclose(wave_max, src_amp_expected)
+
+    wave_data_local = np.empty_like(wave_data)
+    converter.from_ndi_array(wave_data, wave_data_local)
+    local_dB_offset = wave_dBVU + reference.value
+    local_amp_expected = 10 ** (local_dB_offset / 20.0)
+    print(f'{reference=}, {local_dB_offset=}, {local_amp_expected=}')
+    assert np.allclose(np.max(np.abs(wave_data_local)), local_amp_expected)
+    if converter.is_ndi_native:
+        # If the reference is NDI native, the data should be the same
+        assert np.allclose(wave_data, wave_data_local)
+
+    wave_data_ndi = np.empty_like(wave_data_local)
+    converter.to_ndi_array(wave_data_local, wave_data_ndi)
+    assert np.allclose(wave_data, wave_data_ndi)
+    if converter.is_ndi_native:
+        # If the reference is NDI native, the data should be the same
+        assert np.allclose(wave_data, wave_data_ndi)
