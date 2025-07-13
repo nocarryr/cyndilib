@@ -1,5 +1,5 @@
 from __future__ import annotations
-from typing import Literal, TypedDict, cast, get_args
+from typing import Literal, TypedDict, Callable, cast, get_args
 from pathlib import Path
 import json
 
@@ -8,6 +8,10 @@ import numpy.typing as npt
 import pytest
 
 from cyndilib.audio_reference import AudioReference, AudioReferenceConverter
+from cyndilib import AudioFrameSync, AudioRecvFrame, AudioSendFrame
+from cyndilib.sender import Sender
+from conftest import AudioInitParams, AudioParams
+import _test_audio_frame  # type: ignore[missing-import]
 
 
 ReferenceAmplitude = Literal['0.063', '0.1', '0.63', '1.0', '5.01', '10.0']
@@ -289,3 +293,82 @@ def test_wave(
     if converter.is_ndi_native:
         # If the reference is NDI native, the data should be the same
         assert np.allclose(wave_data, wave_data_ndi)
+
+
+
+@pytest.fixture
+def fake_audio_data(
+    fake_audio_builder: Callable[[AudioInitParams], AudioParams],
+) -> AudioParams:
+    # Disable the noise generator and set the signal amplitude to 1.0
+    params = AudioInitParams(
+        nse_amplitude=0.0,
+        sig_amplitude=1.0,
+        sig_fc=1000.0,
+    )
+    return fake_audio_builder(params)
+
+
+def test_audio_send_frame(
+    request,
+    audio_reference: AudioReference,
+    fake_audio_data: AudioParams,
+):
+    sender_name = request.node.nodeid.split('::')[-1]
+    sender = Sender(sender_name)
+
+    af = AudioSendFrame()
+    af.sample_rate = fake_audio_data.sample_rate
+    af.num_channels = fake_audio_data.num_channels
+    af.set_max_num_samples(fake_audio_data.s_perseg)
+    af.reference_level = audio_reference
+    sender.set_audio_frame(af)
+
+    # The sine amplitude is 1.0 which equals 0 dBVU (the native NDI level).
+    # The AudioSendFrame should convert this to 1 / reference_amplitude before
+    # sending.
+    expected_amplitude = 1 / (10 ** (audio_reference.value / 20.0))
+
+    with sender:
+        assert af.shape == (fake_audio_data.num_channels, fake_audio_data.s_perseg)
+        src_samples = fake_audio_data.samples_3d[0]
+        assert src_samples.shape == (fake_audio_data.num_channels, fake_audio_data.s_perseg)
+        af.write_data(src_samples)
+        samples_written = _test_audio_frame.get_audio_send_frame_current_data(af)
+        assert samples_written.shape == src_samples.shape
+        samples_expected = src_samples * expected_amplitude
+        assert np.allclose(samples_written, samples_expected)
+        if audio_reference == AudioReference.dBVU:
+            assert np.array_equal(samples_written, src_samples)
+
+
+def test_audio_frame_sync(
+    audio_reference: AudioReference,
+    fake_audio_data: AudioParams,
+):
+    fs = fake_audio_data.sample_rate
+
+    af = AudioFrameSync()
+    af.sample_rate = fake_audio_data.sample_rate
+    af.num_channels = fake_audio_data.num_channels
+    af.reference_level = audio_reference
+
+    # The sine amplitude is 1.0 which equals 0 dBVU (the native NDI level).
+    # The AudioFrameSync should convert this to the reference_amplitude before
+    # we read from it.
+    expected_amplitude = 10 ** (audio_reference.value / 20.0)
+
+    src_samples = fake_audio_data.samples_3d[0]
+    _test_audio_frame.fill_audio_frame_sync(
+        audio_frame=af,
+        samples=src_samples,
+        sample_rate=int(fs),
+        timestamp=0,
+        do_process=True,
+    )
+    samples_received = af.get_array()
+    assert samples_received.shape == src_samples.shape
+    samples_expected = src_samples * expected_amplitude
+    assert np.allclose(samples_received, samples_expected)
+    if audio_reference == AudioReference.dBVU:
+        assert np.array_equal(samples_received, src_samples)
