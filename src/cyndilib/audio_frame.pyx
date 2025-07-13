@@ -504,7 +504,7 @@ cdef class AudioRecvFrame(AudioFrame):
             self.read_lock._release()
 
     cdef size_t _get_next_write_index(self) except? -1 nogil:
-        cdef size_t result, niter, bfr_len = self.read_indices.size()
+        cdef size_t result, niter = 0, bfr_len = self.read_indices.size()
 
         if bfr_len > 0:
             result = self.read_indices.back() + 1
@@ -651,6 +651,7 @@ cdef class AudioFrameSync(AudioFrame):
             if fs_ptr is not NULL:
                 self.fs_ptr = NULL
                 NDIlib_framesync_free_audio_v2(fs_ptr, self.ptr)
+            self.shape[1] = 0
 
     cdef int _process_incoming(self, NDIlib_framesync_instance_t fs_ptr) except -1 nogil:
         if self.view_count > 0:
