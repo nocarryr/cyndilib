@@ -621,6 +621,7 @@ cdef class VideoFrameSync(VideoFrame):
             if fs_ptr is not NULL:
                 self.fs_ptr = NULL
                 NDIlib_framesync_free_video(fs_ptr, self.ptr)
+            self.shape[0] = 0
 
     cdef int _process_incoming(self, NDIlib_framesync_instance_t fs_ptr) except -1 nogil:
         if self.view_count > 0:
