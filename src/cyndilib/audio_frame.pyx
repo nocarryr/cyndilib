@@ -11,11 +11,21 @@ __all__ = ('AudioFrame', 'AudioRecvFrame', 'AudioFrameSync', 'AudioSendFrame')
 
 cdef class AudioFrame:
     """Base class for audio frames
+
+    Attributes:
+        reference_converter (AudioReferenceConverter, read-only): Converter to
+            match the input (for :class:`AudioSendFrame`) or output
+            (for :class:`AudioRecvFrame` and :class:`AudioFrameSync`) data to
+            what the NDI library expects.
+            The desired :class:`~.audio_reference.AudioReference` level
+            can be set using the :attr:`reference_level` property.
+
     """
     def __cinit__(self, *args, **kwargs):
         self.ptr = audio_frame_create_default()
         if self.ptr is NULL:
             raise MemoryError()
+        self.reference_converter = AudioReferenceConverter()
 
     def __init__(self, *args, **kwargs):
         pass
@@ -68,6 +78,22 @@ cdef class AudioFrame:
         return self.ptr.no_samples
     cdef int _set_num_samples(self, int value) except -1 nogil:
         self.ptr.no_samples = value
+        return 0
+
+    @property
+    def reference_level(self):
+        """The current :class:`~.audio_reference.AudioReference` of the :attr:`reference_converter`
+        """
+        return self._get_reference_level()
+    @reference_level.setter
+    def reference_level(self, AudioReference reference):
+        self._set_reference_level(reference)
+
+    cdef AudioReference _get_reference_level(self) noexcept nogil:
+        return self.reference_converter.ptr.reference
+
+    cdef int _set_reference_level(self, AudioReference reference) except -1 nogil:
+        self.reference_converter._set_reference(reference)
         return 0
 
     @property
@@ -552,7 +578,7 @@ cdef class AudioRecvFrame(AudioFrame):
             write_bfr.total_size = p.no_channels * p.channel_stride_in_bytes
             write_bfr.p_data = <float*>p.p_data
             write_bfr.valid = True
-            float_ptr_to_memview_2d(<float*>p.p_data, write_view)
+            self.reference_converter._from_ndi_float_ptr(<float*>p.p_data, write_view)
 
             self.current_timestamp = p.timestamp
             self.current_timecode = p.timecode
@@ -632,6 +658,7 @@ cdef class AudioFrameSync(AudioFrame):
 
         cdef NDIlib_audio_frame_v3_t* p = self.ptr
         cdef size_t nrows = p.no_channels, ncols = p.no_samples
+        self.reference_converter._from_ndi_frame_in_place(p)
         self.shape[0] = nrows
         self.shape[1] = ncols
         self.strides[0] = ncols * sizeof(cnp.float32_t)
@@ -780,6 +807,8 @@ cdef class AudioSendFrame(AudioFrame):
         cdef AudioSendFrame_item_s* cur_item = self.buffer_write_item
         if cur_item is not NULL and cur_item.data.idx == item.data.idx:
             self.buffer_write_item = NULL
+        if cur_item is not NULL:
+            self.reference_converter._to_ndi_frame_in_place(item.frame_ptr)
         self.send_status.data.read_index = item.data.idx
         frame_status_set_send_ready(&(self.send_status))
 
