@@ -478,7 +478,7 @@ cdef class AudioRecvFrame(AudioFrame):
             self.read_lock._release()
 
     cdef size_t _get_next_write_index(self) except? -1 nogil:
-        cdef size_t result, niter, bfr_len = self.read_indices.size()
+        cdef size_t result, niter = 0, bfr_len = self.read_indices.size()
 
         if bfr_len > 0:
             result = self.read_indices.back() + 1
