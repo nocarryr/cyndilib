@@ -76,8 +76,9 @@ Conversely, if you are receiving audio from |NDI|, the audio will be 20 dB highe
 How to Handle It
 ^^^^^^^^^^^^^^^^
 
-Scaling audio samples to/from |NDI| can be done automatically by the :class:`~cyndilib.audio_frame.AudioFrame`,
-but its :attr:`reference level <cyndilib.audio_frame.AudioFrame.reference_level>` must be set appropriately.
+Starting with ``cyndilib v0.0.8``, scaling audio samples to/from |NDI| can be done automatically by the
+:class:`~cyndilib.audio_frame.AudioFrame`, but its :attr:`reference level <cyndilib.audio_frame.AudioFrame.reference_level>`
+must be set appropriately.
 
 By default, it is set to :attr:`~cyndilib.audio_reference.AudioReference.dBVU` so no scaling is done to
 maintain backwards-compatibility [#]_.

@@ -1,6 +1,9 @@
 # cython: language_level=3, boundscheck=False, wraparound=False, cdivision=True
 """
 Utilities for handling |NDI| audio reference levels.
+
+.. versionadded:: 0.0.8
+
 """
 
 cimport cython
@@ -62,6 +65,10 @@ _init_all_references()
 
 cdef class AudioReferenceConverter:
     """Convert between different |NDI| :class:`AudioReference` levels.
+
+
+    .. versionadded:: 0.0.8
+
     """
     def __cinit__(self, *args, **kwargs):
         self.ptr = NULL

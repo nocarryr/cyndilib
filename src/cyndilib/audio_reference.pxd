@@ -18,6 +18,9 @@ cpdef enum AudioReference:
         dBFS_smpte (int): Reference for :term:`dBFS` (SMPTE) (-20 dB)
         dBFS_ebu (int): Reference for :term:`dBFS` (EBU) (-14 dB)
 
+
+    .. versionadded:: 0.0.8
+
     """
     dBu = 4
     dBVU = 0
