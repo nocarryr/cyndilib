@@ -16,6 +16,7 @@ def get_include() -> str:
 
 from .wrapper import *
 from .audio_frame import *
+from .audio_reference import AudioReference
 from .finder import Source, Finder
 from .framesync import FrameSync
 from .metadata_frame import *

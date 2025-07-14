@@ -11,11 +11,21 @@ __all__ = ('AudioFrame', 'AudioRecvFrame', 'AudioFrameSync', 'AudioSendFrame')
 
 cdef class AudioFrame:
     """Base class for audio frames
+
+    Attributes:
+        reference_converter (AudioReferenceConverter, read-only): Converter to
+            match the input (for :class:`AudioSendFrame`) or output
+            (for :class:`AudioRecvFrame` and :class:`AudioFrameSync`) data to
+            what the NDI library expects.
+            The desired :class:`~.audio_reference.AudioReference` level
+            can be set using the :attr:`reference_level` property.
+
     """
     def __cinit__(self, *args, **kwargs):
         self.ptr = audio_frame_create_default()
         if self.ptr is NULL:
             raise MemoryError()
+        self.reference_converter = AudioReferenceConverter()
 
     def __init__(self, *args, **kwargs):
         pass
@@ -68,6 +78,22 @@ cdef class AudioFrame:
         return self.ptr.no_samples
     cdef int _set_num_samples(self, int value) except -1 nogil:
         self.ptr.no_samples = value
+        return 0
+
+    @property
+    def reference_level(self):
+        """The current :class:`~.audio_reference.AudioReference` of the :attr:`reference_converter`
+        """
+        return self._get_reference_level()
+    @reference_level.setter
+    def reference_level(self, AudioReference reference):
+        self._set_reference_level(reference)
+
+    cdef AudioReference _get_reference_level(self) noexcept nogil:
+        return self.reference_converter.ptr.reference
+
+    cdef int _set_reference_level(self, AudioReference reference) except -1 nogil:
+        self.reference_converter._set_reference(reference)
         return 0
 
     @property
@@ -552,7 +578,7 @@ cdef class AudioRecvFrame(AudioFrame):
             write_bfr.total_size = p.no_channels * p.channel_stride_in_bytes
             write_bfr.p_data = <float*>p.p_data
             write_bfr.valid = True
-            float_ptr_to_memview_2d(<float*>p.p_data, write_view)
+            self.reference_converter._from_ndi_float_ptr(<float*>p.p_data, write_view)
 
             self.current_timestamp = p.timestamp
             self.current_timecode = p.timecode
@@ -633,6 +659,7 @@ cdef class AudioFrameSync(AudioFrame):
 
         cdef NDIlib_audio_frame_v3_t* p = self.ptr
         cdef size_t nrows = p.no_channels, ncols = p.no_samples
+        self.reference_converter._from_ndi_frame_in_place(p)
         self.shape[0] = nrows
         self.shape[1] = ncols
         self.strides[0] = ncols * sizeof(cnp.float32_t)
@@ -781,6 +808,8 @@ cdef class AudioSendFrame(AudioFrame):
         cdef AudioSendFrame_item_s* cur_item = self.buffer_write_item
         if cur_item is not NULL and cur_item.data.idx == item.data.idx:
             self.buffer_write_item = NULL
+        if cur_item is not NULL:
+            self.reference_converter._to_ndi_frame_in_place(item.frame_ptr)
         self.send_status.data.read_index = item.data.idx
         frame_status_set_send_ready(&(self.send_status))
 
@@ -886,34 +915,3 @@ cdef class AudioSendFrame(AudioFrame):
         frame_status_copy_frame_ptr(s_ptr, self.ptr)
         frame_status_alloc_p_data(s_ptr)
         return 0
-
-
-
-@cython.boundscheck(False)
-@cython.wraparound(False)
-cdef int float_ptr_to_memview_2d(float32_t* p, cnp.float32_t[:,:] dest) except -1 nogil:
-    cdef size_t ncols = dest.shape[1], nrows = dest.shape[0]
-    # cdef float *float_p = <float*>bfr.p_data
-    cdef size_t i, j, k = 0
-
-    for i in range(nrows):
-        for j in range(ncols):
-            dest[i,j] = p[k]
-            k += 1
-    return 0
-
-
-
-cdef int audio_bfr_unpack_data(audio_bfr_p bfr, uint8_t* p_data) except -1 nogil:
-    if bfr.p_data is not NULL:
-        raise_withgil(PyExc_ValueError, 'float buffer exists')
-    cdef size_t size_in_samples = bfr.num_channels * bfr.num_samples
-    cdef size_t size_in_bytes = bfr.num_channels * bfr.num_samples * sizeof(float)
-    bfr.p_data = <float*>mem_alloc(size_in_bytes)
-    if bfr.p_data is NULL:
-        raise_mem_err()
-    memcpy(<void*>bfr.p_data, <void*>p_data, size_in_bytes)
-    # g = (float)((data[0] << 24) | (data[1] << 16) | (data[2] << 8) | (data[3]) );
-    # size_t ch_idx, samp_idx
-    # for ch_idx in range(bfr.num_channels):
-    return 0

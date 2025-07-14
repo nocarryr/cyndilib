@@ -19,6 +19,9 @@ class AudioInitParams(NamedTuple):
     num_samples: int = 48000 * 2
     num_segments: int = 48000 * 2 // 6000
     s_perseg: int = 6000
+    sig_fc: float = 2000
+    sig_amplitude: float = 10 ** (-6/20)
+    nse_amplitude: float = 10 ** (-30/20)
 
 class AudioParams(NamedTuple):
     """Generated fake audio data and parameters.
@@ -30,6 +33,9 @@ class AudioParams(NamedTuple):
     num_samples: int = 48000 * 2
     num_segments: int = 48000 * 2 // 6000
     s_perseg: int = 6000
+    sig_fc: float = 2000
+    sig_amplitude: float = 10 ** (-6/20)
+    nse_amplitude: float = 10 ** (-30/20)
 
     @classmethod
     def from_init(
@@ -48,6 +54,9 @@ class AudioParams(NamedTuple):
             num_samples=init.num_samples,
             num_segments=init.num_segments,
             s_perseg=init.s_perseg,
+            sig_fc=init.sig_fc,
+            sig_amplitude=init.sig_amplitude,
+            nse_amplitude=init.nse_amplitude,
         )
 
 
@@ -85,11 +94,9 @@ def fake_audio_builder() -> Callable[[AudioInitParams], AudioParams]:
         params: AudioInitParams
     ) -> AudioParams:
         print(f'N={params.num_samples}')
-        fc = 2000
-        sig_dbFS = -6
-        sig_amp = 10 ** (sig_dbFS/20)
-        nse_dbFS = -30
-        nse_amp = 10 ** (nse_dbFS/20)
+        fc = params.sig_fc
+        sig_amp = params.sig_amplitude
+        nse_amp = params.nse_amplitude
         t = np.arange(params.num_samples) / params.sample_rate
         a = sig_amp*np.sin(2*np.pi*fc*t)
         print(f'a.size={a.size}')

@@ -5,3 +5,4 @@ Guide
    :maxdepth: 2
 
    finder
+   audio

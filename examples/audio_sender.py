@@ -7,8 +7,7 @@ import numpy as np
 import click
 
 from cyndilib.wrapper.ndi_structs import FourCC
-from cyndilib.video_frame import VideoSendFrame
-from cyndilib.audio_frame import AudioSendFrame
+from cyndilib import VideoSendFrame, AudioSendFrame, AudioReference
 from cyndilib.sender import Sender
 
 
@@ -24,9 +23,11 @@ class Options(NamedTuple):
     yres: int                           #: Vertical resolution
     fps: int                            #: Frame rate
     sine_freq: float = 1000.0           #: Frequency of the sine wave
-    sine_vol_dBVU: float = -20          #: Volume of the sine wave in dBVU
+    sine_vol_dB: float = -20            #: Volume of the sine wave in dBVU
     sample_rate: int = 48000            #: Sample rate of the audio
     audio_channels: int = 2             #: Number of audio channels
+    audio_reference: AudioReference = AudioReference.dBVU
+    """Audio reference level"""
     num_frames: int|None = None         #: Number of frames to send, or None for infinite
     sender_name: str = 'audio_sender'   #: NDI name for the sender
 
@@ -71,7 +72,7 @@ class Signal:
     """
     def __init__(self, opts: Options) -> None:
         self.opts = opts
-        self.amplitude = 10 ** (opts.sine_vol_dBVU / 20.0)
+        self.amplitude = 10 ** (opts.sine_vol_dB / 20.0)
         self.samples_per_frame = opts.sample_rate // opts.fps
         one_sample = Fraction(1, opts.sample_rate)
         fc = 1 / Fraction(opts.sine_freq)
@@ -118,6 +119,7 @@ def send(opts: Options) -> None:
     af = AudioSendFrame()
     af.sample_rate = opts.sample_rate
     af.num_channels = opts.audio_channels
+    af.reference_level = opts.audio_reference
 
     # Set `max_num_samples` to the number of samples per frame
     af.set_max_num_samples(sig_generator.samples_per_frame)
@@ -158,7 +160,17 @@ def send(opts: Options) -> None:
 @click.option('--yres', type=int, default=480, show_default=True)
 @click.option('--fps', type=int, default=30, show_default=True)
 @click.option('-f', '--sine-freq', type=float, default=1000.0, show_default=True)
-@click.option('-s', '--sine-vol', type=float, default=-20.0, show_default=True)
+@click.option(
+    '-s', '--sine-vol', type=float, default=-20.0, show_default=True,
+    help='Volume of the sine wave in dB (unit depends on audio reference)',
+)
+@click.option(
+    '--audio-reference',
+    type=click.Choice([m.name for m in AudioReference]),
+    default=AudioReference.dBVU.name,
+    show_default=True,
+    help='Audio reference level',
+)
 @click.option('--sample-rate', type=int, default=48000, show_default=True)
 @click.option('--audio-channels', type=int, default=2, show_default=True)
 @click.option(
@@ -175,18 +187,21 @@ def main(
     fps: int,
     sine_freq: float,
     sine_vol: float,
+    audio_reference: str,
     sample_rate: int,
     audio_channels: int,
     num_frames: int | None,
     sender_name: str,
 ) -> None:
     """Send a sine wave audio signal as an NDI stream."""
+    audio_reference_enum = AudioReference[audio_reference]
     opts = Options(
         xres=xres,
         yres=yres,
         fps=fps,
         sine_freq=sine_freq,
-        sine_vol_dBVU=sine_vol,
+        sine_vol_dB=sine_vol,
+        audio_reference=audio_reference_enum,
         sample_rate=sample_rate,
         audio_channels=audio_channels,
         num_frames=num_frames,
