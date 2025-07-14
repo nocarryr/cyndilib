@@ -73,9 +73,9 @@ Glossary
 
         where :math:`V_{RMS}` is the RMS voltage of the signal.
 
-        The alignment level for this scale is :math:`+4\text{ dBu} = 0\text{ dBVU}`.
+        The `dBu`_ alignment level is :math:`+4\text{ dBu} = 0\text{ dBVU}`.
 
 
-
+.. _dBu: https://en.m.wikipedia.org/wiki/Decibel#Voltage
 .. _dBFS: https://en.m.wikipedia.org/wiki/DBFS
 .. _Volume Unit: https://en.m.wikipedia.org/wiki/VU_meter
