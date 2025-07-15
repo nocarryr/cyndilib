@@ -78,6 +78,7 @@ test = [
     "flaky",
     "psutil",
     "cython>=0.29.32",
+    "pytest-codspeed>=4.0.0",
 ]
 doc = [
     "Sphinx>=5.0,<6.0",
