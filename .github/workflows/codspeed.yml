@@ -1,0 +1,35 @@
+name: Codspeed
+
+on:
+  push:
+    branches: [main, codspeed]
+  pull_request:
+
+  workflow_dispatch:
+
+jobs:
+  benchmark:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Install uv
+        uses: astral-sh/setup-uv@v5
+
+      - name: Set up Python
+        uses: actions/setup-python@v4
+        with:
+          python-version: "3.13"
+
+      - name: Install Project
+        run: uv sync --frozen --group build --group test
+        env:
+          CYNDILIB_BUILD_PARALLEL: auto
+
+      - name: Compile tests
+        run: uv run python build_tests.py
+
+      - name: Run benchmarks
+        uses: CodSpeedHQ/action@v3
+        with:
+          run: uv run py.test tests/ --codspeed -n=0
