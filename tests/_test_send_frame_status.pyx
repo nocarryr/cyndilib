@@ -56,6 +56,17 @@ def set_send_frame_send_complete(object frame):
     else:
         raise Exception()
 
+def set_vid_send_frame_complete(VideoSendFrame vf):
+    assert vf._send_frame_available()
+    cdef VideoSendFrame_item_s* item = vf._get_send_frame()
+    vf._on_sender_write(item)
+
+
+def set_aud_send_frame_complete(AudioSendFrame af):
+    assert af._send_frame_available()
+    cdef AudioSendFrame_item_s* item = af._get_send_frame()
+    af._on_sender_write(item)
+
 def write_audio_frame_memview(AudioSendFrame af, cnp.float32_t[:,:] data):
     cdef AudioSendFrame_item_s* item = af._prepare_memview_write()
     assert item.data.view_count == 0

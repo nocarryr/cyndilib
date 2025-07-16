@@ -1,4 +1,5 @@
 from __future__ import annotations
+from typing import Callable
 import time
 from pprint import pprint
 from functools import partial
@@ -18,6 +19,7 @@ from _test_audio_frame import (         # type: ignore[missing-import]
 )
 from _test_send_frame_status import (   # type: ignore[missing-import]
     set_send_frame_sender_status, set_send_frame_send_complete,
+    set_aud_send_frame_complete, get_audio_frame_data,
     check_audio_send_frame, get_max_frame_buffers, get_null_idx,
 )
 
@@ -712,3 +714,45 @@ def test_audio_send_frame(fake_audio_data: AudioParams):
     af.destroy()
     assert af.write_index == 0
     assert af.read_index == NULL_INDEX
+
+
+@pytest.fixture
+def fake_audio_data_bench(fake_audio_builder: Callable[[AudioInitParams], AudioParams]) -> AudioParams:
+    num_seconds = 90
+    params = AudioInitParams()
+    num_samples = params.sample_rate * num_seconds
+    num_segments = num_samples // params.s_perseg
+    params = params._replace(num_samples=num_samples, num_segments=num_segments)
+    return fake_audio_builder(params)
+
+
+def test_audio_benchmark(benchmark, fake_audio_data_bench: AudioParams):
+    num_channels = fake_audio_data_bench.num_channels
+    num_segments = fake_audio_data_bench.num_segments
+    s_perseg = fake_audio_data_bench.s_perseg
+    samples = fake_audio_data_bench.samples_3d
+
+    af = AudioSendFrame()
+    af.sample_rate = fake_audio_data_bench.sample_rate
+    af.num_channels = num_channels
+    af.set_max_num_samples(s_perseg)
+    assert af.num_samples == s_perseg
+
+    results = np.zeros((num_segments, num_channels, s_perseg), dtype=samples.dtype)
+
+    set_send_frame_sender_status(af, True)
+
+    assert af.shape == results[0].shape
+
+    def run_audio_test():
+        for i in range(num_segments):
+            af.write_data(samples[i])
+            get_audio_frame_data(af, results[i,...])
+            set_aud_send_frame_complete(af)
+
+    benchmark(run_audio_test)
+
+    assert np.array_equal(samples, results)
+
+    set_send_frame_sender_status(af, False)
+    af.destroy()

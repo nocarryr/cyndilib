@@ -1,5 +1,9 @@
+from __future__ import annotations
+from typing import Callable
+from fractions import Fraction
 import time
 import numpy as np
+import pytest
 from cyndilib.video_frame import VideoRecvFrame, VideoSendFrame
 from cyndilib.wrapper import FourCC
 from _test_video_frame import (             # type: ignore[missing-import]
@@ -8,12 +12,26 @@ from _test_video_frame import (             # type: ignore[missing-import]
 )
 from _test_send_frame_status import (       # type: ignore[missing-import]
     set_send_frame_sender_status, set_send_frame_send_complete,
+    set_vid_send_frame_complete, get_video_frame_data,
     check_video_send_frame, get_null_idx, get_max_frame_buffers,
 )
-from conftest import VideoParams
+from conftest import VideoParams, VideoInitParams
 
 MAX_FRAME_BUFFERS = get_max_frame_buffers()
 NULL_INDEX = get_null_idx()
+
+
+@pytest.fixture
+def fake_video_frames_bench(fake_video_builder: Callable[[VideoInitParams], np.ndarray]) -> VideoParams:
+    params = VideoInitParams(
+        width=640,
+        height=360,
+        frame_rate=Fraction(30, 1),
+        num_frames=60,
+    )
+    frames = fake_video_builder(params)
+    return VideoParams.from_init(params, frames=frames)
+
 
 def test():
     width, height = 1920, 1080
@@ -105,3 +123,33 @@ def test_video_send_frame(fake_video_frames: VideoParams):
     vf.destroy()
     assert vf.write_index == 0
     assert vf.read_index == NULL_INDEX
+
+
+def test_video_benchmark(benchmark, fake_video_frames_bench: VideoParams):
+    width, height, fr, num_frames, fake_frames = fake_video_frames_bench
+
+    vf = VideoSendFrame()
+    vf.set_fourcc(FourCC.RGBA)
+    vf.set_frame_rate(fr)
+    vf.set_resolution(width, height)
+    assert vf.get_line_stride() == width * 4
+    items_per_frame = fake_frames.shape[-1]
+
+    results = np.zeros((num_frames, items_per_frame), dtype=fake_frames.dtype)
+
+    set_send_frame_sender_status(vf, True)
+
+    assert vf.shape == results[0].shape
+
+    def run_video_test():
+        for i in range(num_frames):
+            vf.write_data(fake_frames[i])
+            get_video_frame_data(vf, results[i,...])
+            set_vid_send_frame_complete(vf)
+
+    benchmark(run_video_test)
+
+    assert np.array_equal(fake_frames, results)
+
+    set_send_frame_sender_status(vf, False)
+    vf.destroy()
