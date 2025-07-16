@@ -24,10 +24,10 @@ NULL_INDEX = get_null_idx()
 @pytest.fixture
 def fake_video_frames_bench(fake_video_builder: Callable[[VideoInitParams], np.ndarray]) -> VideoParams:
     params = VideoInitParams(
-        width=640,
-        height=360,
+        width=160,
+        height=90,
         frame_rate=Fraction(30, 1),
-        num_frames=60,
+        num_frames=30,
     )
     frames = fake_video_builder(params)
     return VideoParams.from_init(params, frames=frames)

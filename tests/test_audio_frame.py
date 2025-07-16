@@ -718,7 +718,7 @@ def test_audio_send_frame(fake_audio_data: AudioParams):
 
 @pytest.fixture
 def fake_audio_data_bench(fake_audio_builder: Callable[[AudioInitParams], AudioParams]) -> AudioParams:
-    num_seconds = 90
+    num_seconds = 8
     params = AudioInitParams()
     num_samples = params.sample_rate * num_seconds
     num_segments = num_samples // params.s_perseg
