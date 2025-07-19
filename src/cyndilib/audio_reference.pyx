@@ -263,6 +263,8 @@ cdef class AudioReferenceConverter:
         return 0
 
     cdef int _to_ndi_frame_in_place(self, NDIlib_audio_frame_v3_t* frame) except -1 nogil:
+        if self._is_ndi_native():
+            return 0
         cdef double scale = self.ptr.multiplier
         cdef size_t nrows = frame.no_channels, ncols = frame.no_samples, i, j
         cdef float* data = <float*>frame.p_data
@@ -298,6 +300,8 @@ cdef class AudioReferenceConverter:
         return 0
 
     cdef int _from_ndi_frame_in_place(self, NDIlib_audio_frame_v3_t* frame) except -1 nogil:
+        if self._is_ndi_native():
+            return 0
         cdef double scale = self.ptr.divisor
         cdef size_t nrows = frame.no_channels, ncols = frame.no_samples, i, j
         cdef float* data = <float*>frame.p_data
