@@ -4,6 +4,7 @@ from fractions import Fraction
 
 import numpy as np
 import pytest
+from cyndilib import AudioReference
 from cyndilib.video_frame import VideoSendFrame
 from cyndilib.audio_frame import AudioSendFrame
 from cyndilib.wrapper import FourCC
@@ -11,6 +12,9 @@ from _bench_helpers import BenchSender      # type: ignore[missing-import]
 from conftest import VideoParams, VideoInitParams, AudioInitParams, AudioParams
 
 
+@pytest.fixture(params=list(AudioReference), ids=lambda ar: ar.name)
+def audio_reference(request) -> AudioReference:
+    return request.param
 
 
 @pytest.fixture
@@ -42,6 +46,36 @@ def test_audio_send_benchmark(benchmark, fake_audio_data_bench: AudioParams):
     samples = fake_audio_data_bench.samples_3d
 
     af = AudioSendFrame()
+    af.sample_rate = fake_audio_data_bench.sample_rate
+    af.num_channels = num_channels
+    af.set_max_num_samples(s_perseg)
+    assert af.num_samples == s_perseg
+    sender = BenchSender()
+    sender.set_audio_frame(af)
+
+    def run_audio_test():
+        for i in range(num_segments):
+            sender.write_audio(samples[i])
+
+    with sender:
+        benchmark(run_audio_test)
+
+    af.destroy()
+
+
+
+def test_audio_send_reference_convert_benchmark(
+    benchmark,
+    fake_audio_data_bench: AudioParams,
+    audio_reference: AudioReference
+):
+    num_channels = fake_audio_data_bench.num_channels
+    num_segments = fake_audio_data_bench.num_segments
+    s_perseg = fake_audio_data_bench.s_perseg
+    samples = fake_audio_data_bench.samples_3d
+
+    af = AudioSendFrame()
+    af.reference_level = audio_reference
     af.sample_rate = fake_audio_data_bench.sample_rate
     af.num_channels = num_channels
     af.set_max_num_samples(s_perseg)
