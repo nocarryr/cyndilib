@@ -15,9 +15,6 @@ from conftest import VideoParams
 MAX_FRAME_BUFFERS = get_max_frame_buffers()
 NULL_INDEX = get_null_idx()
 
-
-
-
 def test():
     width, height = 1920, 1080
 
