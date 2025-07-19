@@ -1,9 +1,5 @@
-from __future__ import annotations
-from typing import Callable
-from fractions import Fraction
 import time
 import numpy as np
-import pytest
 from cyndilib.video_frame import VideoRecvFrame, VideoSendFrame
 from cyndilib.wrapper import FourCC
 from _test_video_frame import (             # type: ignore[missing-import]
@@ -14,23 +10,12 @@ from _test_send_frame_status import (       # type: ignore[missing-import]
     set_send_frame_sender_status, set_send_frame_send_complete,
     check_video_send_frame, get_null_idx, get_max_frame_buffers,
 )
-from _bench_helpers import BenchSender      # type: ignore[missing-import]
-from conftest import VideoParams, VideoInitParams
+from conftest import VideoParams
 
 MAX_FRAME_BUFFERS = get_max_frame_buffers()
 NULL_INDEX = get_null_idx()
 
 
-@pytest.fixture
-def fake_video_frames_bench(fake_video_builder: Callable[[VideoInitParams], np.ndarray]) -> VideoParams:
-    params = VideoInitParams(
-        width=160,
-        height=90,
-        frame_rate=Fraction(30, 1),
-        num_frames=30,
-    )
-    frames = fake_video_builder(params)
-    return VideoParams.from_init(params, frames=frames)
 
 
 def test():
@@ -123,25 +108,3 @@ def test_video_send_frame(fake_video_frames: VideoParams):
     vf.destroy()
     assert vf.write_index == 0
     assert vf.read_index == NULL_INDEX
-
-
-def test_video_benchmark(benchmark, fake_video_frames_bench: VideoParams):
-    width, height, fr, num_frames, fake_frames = fake_video_frames_bench
-
-    vf = VideoSendFrame()
-    vf.set_fourcc(FourCC.RGBA)
-    vf.set_frame_rate(fr)
-    vf.set_resolution(width, height)
-    assert vf.get_line_stride() == width * 4
-
-    sender = BenchSender()
-    sender.set_video_frame(vf)
-
-    def run_video_test():
-        for i in range(num_frames):
-            sender.write_video(fake_frames[i])
-
-    with sender:
-        benchmark(run_video_test)
-
-    vf.destroy()
