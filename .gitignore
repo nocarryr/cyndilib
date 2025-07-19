@@ -91,3 +91,4 @@ wheelhouse/
 venv*
 .venv*
 .DS_store
+.codspeed
