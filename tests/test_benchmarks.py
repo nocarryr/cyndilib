@@ -113,3 +113,6 @@ def test_video_and_audio_send_benchmark(
 
     with sender:
         benchmark(run_bench)
+
+    vf.destroy()
+    af.destroy()
