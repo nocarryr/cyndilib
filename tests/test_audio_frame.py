@@ -19,9 +19,9 @@ from _test_audio_frame import (         # type: ignore[missing-import]
 )
 from _test_send_frame_status import (   # type: ignore[missing-import]
     set_send_frame_sender_status, set_send_frame_send_complete,
-    set_aud_send_frame_complete, get_audio_frame_data,
     check_audio_send_frame, get_max_frame_buffers, get_null_idx,
 )
+from _bench_helpers import BenchSender  # type: ignore[missing-import]
 
 NULL_INDEX = get_null_idx()
 MAX_FRAME_BUFFERS = get_max_frame_buffers()
@@ -737,22 +737,14 @@ def test_audio_benchmark(benchmark, fake_audio_data_bench: AudioParams):
     af.num_channels = num_channels
     af.set_max_num_samples(s_perseg)
     assert af.num_samples == s_perseg
-
-    results = np.zeros((num_segments, num_channels, s_perseg), dtype=samples.dtype)
-
-    set_send_frame_sender_status(af, True)
-
-    assert af.shape == results[0].shape
+    sender = BenchSender()
+    sender.set_audio_frame(af)
 
     def run_audio_test():
         for i in range(num_segments):
-            af.write_data(samples[i])
-            get_audio_frame_data(af, results[i,...])
-            set_aud_send_frame_complete(af)
+            sender.write_audio(samples[i])
 
-    benchmark(run_audio_test)
+    with sender:
+        benchmark(run_audio_test)
 
-    assert np.array_equal(samples, results)
-
-    set_send_frame_sender_status(af, False)
     af.destroy()
