@@ -11,10 +11,12 @@ from .wrapper cimport *
 from .buffertypes cimport *
 from .locks cimport RLock, Condition
 from .send_frame_status cimport *
+from .audio_reference cimport AudioReference, AudioReferenceConverter
 
 
 cdef class AudioFrame:
     cdef NDIlib_audio_frame_v3_t* ptr
+    cdef readonly AudioReferenceConverter reference_converter
 
     cdef int _get_sample_rate(self) noexcept nogil
     cdef void _set_sample_rate(self, int value) noexcept nogil
@@ -22,6 +24,8 @@ cdef class AudioFrame:
     cdef int _set_num_channels(self, int value) except -1 nogil
     cdef int _get_num_samples(self) noexcept nogil
     cdef int _set_num_samples(self, int value) except -1 nogil
+    cdef AudioReference _get_reference_level(self) noexcept nogil
+    cdef int _set_reference_level(self, AudioReference reference) except -1 nogil
     cdef int64_t _get_timecode(self) noexcept nogil
     cdef int64_t _set_timecode(self, int64_t value) noexcept nogil
     cdef int _get_channel_stride(self) noexcept nogil

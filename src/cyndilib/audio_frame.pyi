@@ -5,6 +5,7 @@ import numpy.typing as npt
 import numpy as np
 
 from . import locks
+from .audio_reference import AudioReference
 
 
 _FloatArray = npt.NDArray[np.float32]
@@ -25,6 +26,10 @@ class AudioFrame:
     def num_samples(self) -> int: ...
     @num_samples.setter
     def num_samples(self, value: int) -> None: ...
+    @property
+    def reference_level(self) -> AudioReference: ...
+    @reference_level.setter
+    def reference_level(self, value: AudioReference) -> None: ...
     @property
     def sample_rate(self) -> int: ...
     @sample_rate.setter

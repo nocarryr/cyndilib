@@ -15,8 +15,31 @@ import time
 from cyndilib.wrapper cimport *
 import numpy as np
 cimport numpy as cnp
-from cyndilib.audio_frame cimport AudioRecvFrame, AudioFrameSync
+from cyndilib.audio_frame cimport AudioRecvFrame, AudioFrameSync, AudioSendFrame
+from cyndilib.send_frame_status cimport AudioSendFrame_item_s
 
+
+def get_audio_send_frame_current_data(AudioSendFrame audio_frame):
+    """Hook to read the data from an AudioSendFrame directly after
+    writing to it, but before it's been sent.
+    """
+    cdef AudioSendFrame_item_s* item = audio_frame._get_send_frame()
+    cdef NDIlib_audio_frame_v3_t* frame = item.frame_ptr
+    if frame.p_data is NULL:
+        raise ValueError("AudioSendFrame has no data")
+
+    cdef cnp.ndarray np_data = np.zeros((
+        audio_frame.num_channels, audio_frame.num_samples
+    ), dtype=np.float32)
+    cdef cnp.float32_t[:,:] data_view = np_data
+    cdef float* float_data = <float*>frame.p_data
+    cdef size_t i, j, k=0
+
+    for i in range(audio_frame.num_channels):
+        for j in range(audio_frame.num_samples):
+            data_view[i,j] = float_data[k]
+            k += 1
+    return np_data
 
 
 cdef int print_audio_frame_data(NDIlib_audio_frame_v3_t* p) except -1 nogil:
