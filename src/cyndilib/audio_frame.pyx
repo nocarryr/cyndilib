@@ -153,6 +153,20 @@ cdef class AudioFrame:
     cdef void _set_timestamp(self, int64_t value) noexcept nogil:
         self.ptr.timestamp = value
 
+    def get_timestamp_posix(self):
+        """Get the current :term:`timestamp <ndi-timestamp>` converted to float
+        seconds (posix)
+        """
+        cdef double r = ndi_time_to_posix(self.ptr.timestamp)
+        return r
+
+    def get_timecode_posix(self):
+        """Get the current :term:`timecode <ndi-timecode>` converted to float
+        seconds (posix)
+        """
+        cdef double r = ndi_time_to_posix(self.ptr.timecode)
+        return r
+
 
 cdef class AudioRecvFrame(AudioFrame):
     """Audio frame to be used with a :class:`.receiver.Receiver`

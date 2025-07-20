@@ -656,6 +656,7 @@ def test_frame_sync(fake_audio_data_longer: AudioParams):
         assert np.array_equal(src_samples, r)
         assert fs_helper.num_outstanding == 0
         results.append(r)
+        assert audio_frame.get_timestamp_posix() == pytest.approx(last_ts)
         last_ts += samp_len / fs
         num_samples_used += samp_len
         s_idx = e_idx
