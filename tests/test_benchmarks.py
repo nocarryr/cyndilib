@@ -5,10 +5,14 @@ from fractions import Fraction
 import numpy as np
 import pytest
 from cyndilib import AudioReference
-from cyndilib.video_frame import VideoSendFrame
-from cyndilib.audio_frame import AudioSendFrame
+from cyndilib.video_frame import VideoSendFrame, VideoFrameSync
+from cyndilib.audio_frame import AudioSendFrame, AudioFrameSync
 from cyndilib.wrapper import FourCC
 from _bench_helpers import BenchSender      # type: ignore[missing-import]
+from _framesync_helpers import (  # type: ignore[missing-import]
+    VideoFrameSyncHelper,
+    AudioFrameSyncHelper,
+)
 from conftest import VideoParams, VideoInitParams, AudioInitParams, AudioParams
 
 
@@ -150,3 +154,51 @@ def test_video_and_audio_send_benchmark(
 
     vf.destroy()
     af.destroy()
+
+
+def test_video_framesync_benchmark(benchmark, fake_video_frames_bench: VideoParams):
+    width, height, fr, num_frames, fake_frames = fake_video_frames_bench
+
+    vf = VideoFrameSync()
+    vf.set_frame_rate(fr)
+    vf.set_fourcc(FourCC.RGBA)
+
+    fs_helper = VideoFrameSyncHelper()
+    fs_helper.set_video_frame(vf)
+
+    timestamps = np.arange(num_frames) * (1 / float(fr))
+
+    def run_video_test():
+        for i in range(num_frames):
+            fs_helper.fill_data(
+                fake_frames[i], width, height, timestamps[i]
+            )
+            assert fs_helper.num_outstanding == 1
+            fs_helper.free_previous()
+            assert fs_helper.num_outstanding == 0
+
+    benchmark(run_video_test)
+
+
+def test_audio_framesync_benchmark(benchmark, fake_audio_data_bench: AudioParams):
+    num_channels = fake_audio_data_bench.num_channels
+    num_segments = fake_audio_data_bench.num_segments
+    s_perseg = fake_audio_data_bench.s_perseg
+    samples = fake_audio_data_bench.samples_3d
+    fs = fake_audio_data_bench.sample_rate
+    timestamps = np.arange(num_segments) * (s_perseg / fs)
+
+
+    af = AudioFrameSync()
+
+    fs_helper = AudioFrameSyncHelper()
+    fs_helper.set_audio_frame(af)
+
+    def run_audio_test():
+        for i in range(num_segments):
+            fs_helper.fill_data(samples[i], fs, timestamps[i])
+            assert fs_helper.num_outstanding == 1
+            fs_helper.free_previous()
+            assert fs_helper.num_outstanding == 0
+
+    benchmark(run_audio_test)
