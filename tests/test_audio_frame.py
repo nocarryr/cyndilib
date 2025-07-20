@@ -16,6 +16,9 @@ from cyndilib.audio_frame import AudioRecvFrame, AudioFrameSync, AudioSendFrame
 from _test_audio_frame import (         # type: ignore[missing-import]
     fill_audio_frame, fill_audio_frame_sync, audio_frame_process_events,
 )
+from _framesync_helpers import (   # type: ignore[missing-import]
+    AudioFrameSyncHelper
+)
 from _test_send_frame_status import (   # type: ignore[missing-import]
     set_send_frame_sender_status, set_send_frame_send_complete,
     check_audio_send_frame, get_max_frame_buffers, get_null_idx,
@@ -612,6 +615,8 @@ def test_frame_sync(fake_audio_data_longer: AudioParams):
     num_segments = fake_audio_data.num_segments
     s_perseg = fake_audio_data.s_perseg
     audio_frame = AudioFrameSync()
+    fs_helper = AudioFrameSyncHelper()
+    fs_helper.set_audio_frame(audio_frame)
 
     def iter_divisors():
         while True:
@@ -645,9 +650,11 @@ def test_frame_sync(fake_audio_data_longer: AudioParams):
         # print(f'{samp_len=}, {num_samples_used=}')
         e_idx = s_idx + samp_len
         src_samples = samples_flat[:,s_idx:e_idx]
-        fill_audio_frame_sync(audio_frame, src_samples, fs, last_ts)
+        fs_helper.fill_data(src_samples, fs, last_ts)
+        assert fs_helper.num_outstanding == 1
         r = audio_frame.get_array()
         assert np.array_equal(src_samples, r)
+        assert fs_helper.num_outstanding == 0
         results.append(r)
         last_ts += samp_len / fs
         num_samples_used += samp_len

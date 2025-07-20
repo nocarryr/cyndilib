@@ -1,6 +1,8 @@
 import time
 import numpy as np
-from cyndilib.video_frame import VideoRecvFrame, VideoSendFrame
+import pytest
+
+from cyndilib.video_frame import VideoRecvFrame, VideoSendFrame, VideoFrameSync
 from cyndilib.wrapper import FourCC
 from _test_video_frame import (             # type: ignore[missing-import]
     build_test_frame, build_test_frames,
@@ -9,6 +11,9 @@ from _test_video_frame import (             # type: ignore[missing-import]
 from _test_send_frame_status import (       # type: ignore[missing-import]
     set_send_frame_sender_status, set_send_frame_send_complete,
     check_video_send_frame, get_null_idx, get_max_frame_buffers,
+)
+from _framesync_helpers import (   # type: ignore[missing-import]
+    VideoFrameSyncHelper
 )
 from conftest import VideoParams
 
@@ -105,3 +110,30 @@ def test_video_send_frame(fake_video_frames: VideoParams):
     vf.destroy()
     assert vf.write_index == 0
     assert vf.read_index == NULL_INDEX
+
+
+def test_frame_sync(fake_video_frames: VideoParams):
+    width, height, fr, num_frames, fake_frames = fake_video_frames
+
+    vf = VideoFrameSync()
+    vf.set_frame_rate(fr)
+    vf.set_fourcc(FourCC.RGBA)
+
+    fs_helper = VideoFrameSyncHelper()
+    fs_helper.set_video_frame(vf)
+
+    timestamps = np.arange(num_frames) * (1 / float(fr))
+
+    results = np.zeros_like(fake_frames)
+
+    for i in range(num_frames):
+        fs_helper.fill_data(
+            fake_frames[i], width, height, timestamps[i]
+        )
+        assert fs_helper.num_outstanding == 1
+        r = vf.get_array()
+        results[i] = r.copy()
+        assert fs_helper.num_outstanding == 0
+        assert vf.get_timestamp_posix() == pytest.approx(timestamps[i], abs=1e-7)
+
+    assert np.array_equal(results, fake_frames)
