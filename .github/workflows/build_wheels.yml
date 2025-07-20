@@ -27,6 +27,10 @@ on:
         description: "Skip cibuildwheel tests"
         required: true
         type: boolean
+      skip_cibw:
+        description: "Skip cibuildwheel build"
+        required: true
+        type: boolean
       os_type:
         description: "OS"
         default: "all"
@@ -71,6 +75,7 @@ jobs:
         run: uv run pytest
 
   build_wheels:
+    if: ${{ inputs.skip_cibw != true }}
     name: Build wheels on ${{ matrix.os }}_${{ matrix.python-version }}-${{ matrix.arch }}
     runs-on: ${{ matrix.os }}
     strategy:
