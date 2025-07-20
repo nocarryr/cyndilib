@@ -327,7 +327,7 @@ cdef class Sender:
     def send_video(self):
         """Send a frame of video data (if available) that was previously
         written to the :attr:`video_frame` using its
-        :meth:`~.video_frame.VideoSendFram.write_data` method.
+        :meth:`~.video_frame.VideoSendFrame.write_data` method.
 
         .. note::
 
