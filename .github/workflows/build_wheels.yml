@@ -7,8 +7,7 @@ on:
     - "pyproject.toml"
     - "setup.py"
     - "setup.cfg"
-    - "src/**"
-    - "tests/**"
+    - "src/wrapper/**"
     - ".github/workflows/build_wheels.yml"
 
   pull_request:
@@ -17,8 +16,7 @@ on:
     - "pyproject.toml"
     - "setup.py"
     - "setup.cfg"
-    - "src/**"
-    - "tests/**"
+    - "src/wrapper/**"
     - ".github/workflows/build_wheels.yml"
 
   workflow_dispatch:
