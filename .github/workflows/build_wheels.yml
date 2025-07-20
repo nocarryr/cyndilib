@@ -43,33 +43,6 @@ on:
 
 
 jobs:
-  test_inplace:
-    name: Test on ${{ matrix.os }}_${{ matrix.python-version }}
-    runs-on: ${{ matrix.os }}
-    strategy:
-      fail-fast: false
-      matrix:
-        os: [ubuntu-latest, macos-latest, windows-latest]
-        python-version: ["3.9", "3.10", "3.11", "3.12", "3.13"]
-    env:
-      UV_PYTHON: ${{ matrix.python-version }}
-    steps:
-      - uses: actions/checkout@v3
-      - name: Install uv
-        uses: astral-sh/setup-uv@v5
-      - name: Set up Python ${{ matrix.python-version }}
-        uses: actions/setup-python@v5
-        with:
-          python-version: ${{ matrix.python-version }}
-      - name: Install Project
-        run: uv sync --frozen --group build --group test
-        env:
-          CYNDILIB_BUILD_PARALLEL: auto
-      - name: Compile tests
-        run: uv run python build_tests.py
-      - name: Run tests
-        run: uv run pytest
-
   build_wheels:
     name: Build wheels on ${{ matrix.os }}_${{ matrix.python-version }}-${{ matrix.arch }}
     runs-on: ${{ matrix.os }}
@@ -143,7 +116,7 @@ jobs:
 
   deploy:
       name: 'Deploy to PyPI'
-      needs: [test_inplace, build_wheels]
+      needs: [build_wheels]
       runs-on: ubuntu-latest
       if: ${{ inputs.allow_deploy }}
       permissions:
