@@ -582,10 +582,23 @@ cdef class VideoFrameSync(VideoFrame):
         self.shape[0] = 0
         self.strides[0] = 0
         self.view_count = 0
-        self.fs_ptr = NULL
+        self.framesync_instance.fs_ptr = NULL
+        self.framesync_instance.free_data = NULL
 
     def __dealloc__(self):
-        self.fs_ptr = NULL
+        self.framesync_instance.fs_ptr = NULL
+        self.framesync_instance.free_data = NULL
+
+    cdef void _free_framesync_pointers(self) noexcept nogil:
+        self.framesync_instance.free_data = NULL
+        self.framesync_instance.fs_ptr = NULL
+
+    cdef void _free_framesync_data(self) noexcept nogil:
+        cdef FrameSyncVideoInstance_s* ptr = &self.framesync_instance
+        if ptr.free_data is NULL:
+            return
+        ptr.free_data(ptr, self.ptr)
+
 
     def get_array(self):
         """Get the video frame data as an :class:`numpy.ndarray` of unsigned
@@ -615,15 +628,12 @@ cdef class VideoFrameSync(VideoFrame):
         self.view_count += 1
 
     def __releasebuffer__(self, Py_buffer *buffer):
-        cdef NDIlib_framesync_instance_t fs_ptr = self.fs_ptr
         self.view_count -= 1
         if self.view_count == 0:
-            if fs_ptr is not NULL:
-                self.fs_ptr = NULL
-                NDIlib_framesync_free_video(fs_ptr, self.ptr)
+            self._free_framesync_data()
             self.shape[0] = 0
 
-    cdef int _process_incoming(self, NDIlib_framesync_instance_t fs_ptr) except -1 nogil:
+    cdef int _process_incoming(self) except -1 nogil:
         if self.view_count > 0:
             raise_withgil(PyExc_ValueError, 'cannot write with view active')
 
@@ -632,7 +642,6 @@ cdef class VideoFrameSync(VideoFrame):
         cdef size_t size_in_bytes = self._get_buffer_size()
         self.shape[0] = size_in_bytes
         self.strides[0] = sizeof(uint8_t)
-        self.fs_ptr = fs_ptr
         return 0
 
 

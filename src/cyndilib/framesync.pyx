@@ -4,6 +4,10 @@ from libc.math cimport lround
 import threading
 
 from .clock cimport time, sleep
+from .framesync_helper cimport (
+    FrameSyncVideoInstance_s, FrameSyncAudioInstance_s,
+    _free_video_default_func, _free_audio_default_func,
+)
 
 
 __all__ = (
@@ -95,10 +99,31 @@ cdef class FrameSync:
 
     cdef int _set_video_frame(self, VideoFrameSync video_frame) except -1:
         self.video_frame = video_frame
+        self._set_video_framesync_instance()
         return 0
 
     cdef int _set_audio_frame(self, AudioFrameSync audio_frame) except -1:
         self.audio_frame = audio_frame
+        self._set_audio_framesync_instance()
+        return 0
+
+    cdef int _set_video_framesync_instance(self) except -1 nogil:
+        if self.video_frame is None:
+            return 0
+        cdef FrameSyncVideoInstance_s* ptr = &self.video_frame.framesync_instance
+        if ptr.fs_ptr is not NULL and ptr.free_data is not NULL:
+            return 0
+        ptr.fs_ptr = self.ptr
+        ptr.free_data = _free_video_default_func
+
+    cdef int _set_audio_framesync_instance(self) except -1 nogil:
+        if self.audio_frame is None:
+            return 0
+        cdef FrameSyncAudioInstance_s* ptr = &self.audio_frame.framesync_instance
+        if ptr.fs_ptr is not NULL and ptr.free_data is not NULL:
+            return 0
+        ptr.fs_ptr = self.ptr
+        ptr.free_data = _free_audio_default_func
         return 0
 
     cdef int _audio_samples_available(self) noexcept nogil:
@@ -107,7 +132,7 @@ cdef class FrameSync:
     cdef int _capture_video(self, FrameFormat fmt = FrameFormat.progressive) except -1:
         cdef NDIlib_video_frame_v2_t* video_ptr = self.video_frame.ptr
         self._do_capture_video(video_ptr, fmt)
-        self.video_frame._process_incoming(self.ptr)
+        self.video_frame._process_incoming()
         return 0
 
     cdef size_t _capture_available_audio(self) except? -1:
@@ -128,7 +153,7 @@ cdef class FrameSync:
                     return 0
                 no_samples = num_available
         self._do_capture_audio(audio_ptr, no_samples)
-        self.audio_frame._process_incoming(self.ptr)
+        self.audio_frame._process_incoming()
         return no_samples
 
     cdef int _do_capture_video(

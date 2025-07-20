@@ -127,11 +127,10 @@ def fill_audio_frame_sync(
     bint do_process=True
 ):
     cdef NDIlib_audio_frame_v3_t* frame = audio_frame.ptr
-    cdef NDIlib_framesync_instance_t fs_ptr = NULL
 
     fill_audio_frame_struct(frame, samples, sample_rate, timestamp)
 
     if do_process:
-        audio_frame._process_incoming(fs_ptr)
+        audio_frame._process_incoming()
 
     return frame.timestamp

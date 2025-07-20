@@ -11,6 +11,7 @@ from .wrapper cimport *
 from .buffertypes cimport *
 from .locks cimport RLock, Condition
 from .send_frame_status cimport *
+from .framesync_helper cimport FrameSyncVideoInstance_s
 
 
 cdef class VideoFrame:
@@ -79,12 +80,14 @@ cdef class VideoRecvFrame(VideoFrame):
 
 
 cdef class VideoFrameSync(VideoFrame):
-    cdef NDIlib_framesync_instance_t fs_ptr
+    cdef FrameSyncVideoInstance_s framesync_instance
     cdef readonly size_t[1] shape
     cdef readonly size_t[1] strides
     cdef size_t view_count
 
-    cdef int _process_incoming(self, NDIlib_framesync_instance_t fs_ptr) except -1 nogil
+    cdef void _free_framesync_pointers(self) noexcept nogil
+    cdef void _free_framesync_data(self) noexcept nogil
+    cdef int _process_incoming(self) except -1 nogil
 
 
 cdef class VideoSendFrame(VideoFrame):

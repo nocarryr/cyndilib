@@ -12,6 +12,7 @@ from .buffertypes cimport *
 from .locks cimport RLock, Condition
 from .send_frame_status cimport *
 from .audio_reference cimport AudioReference, AudioReferenceConverter
+from .framesync_helper cimport FrameSyncAudioInstance_s
 
 
 cdef class AudioFrame:
@@ -88,12 +89,14 @@ cdef class AudioRecvFrame(AudioFrame):
 
 
 cdef class AudioFrameSync(AudioFrame):
-    cdef NDIlib_framesync_instance_t fs_ptr
+    cdef FrameSyncAudioInstance_s framesync_instance
     cdef readonly size_t[2] shape
     cdef readonly size_t[2] strides
     cdef size_t view_count
 
-    cdef int _process_incoming(self, NDIlib_framesync_instance_t fs_ptr) except -1 nogil
+    cdef void _free_framesync_pointers(self) noexcept nogil
+    cdef void _free_framesync_data(self) noexcept nogil
+    cdef int _process_incoming(self) except -1 nogil
 
 
 cdef class AudioSendFrame(AudioFrame):

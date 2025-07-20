@@ -612,9 +612,22 @@ cdef class AudioFrameSync(AudioFrame):
             self.shape[i] = 0
             self.strides[i] = 0
         self.view_count = 0
+        self.framesync_instance.fs_ptr = NULL
+        self.framesync_instance.free_data = NULL
 
     def __dealloc__(self):
-        self.fs_ptr = NULL
+        self.framesync_instance.fs_ptr = NULL
+        self.framesync_instance.free_data = NULL
+
+    cdef void _free_framesync_pointers(self) noexcept nogil:
+        self.framesync_instance.free_data = NULL
+        self.framesync_instance.fs_ptr = NULL
+
+    cdef void _free_framesync_data(self) noexcept nogil:
+        cdef FrameSyncAudioInstance_s* ptr = &self.framesync_instance
+        if ptr.free_data is NULL:
+            return
+        ptr.free_data(ptr, self.ptr)
 
     def get_array(self):
         """Get the current data as a :class:`ndarray` of float32 with shape
@@ -645,15 +658,12 @@ cdef class AudioFrameSync(AudioFrame):
         self.view_count += 1
 
     def __releasebuffer__(self, Py_buffer *buffer):
-        cdef NDIlib_framesync_instance_t fs_ptr = self.fs_ptr
         self.view_count -= 1
         if self.view_count == 0:
-            if fs_ptr is not NULL:
-                self.fs_ptr = NULL
-                NDIlib_framesync_free_audio_v2(fs_ptr, self.ptr)
+            self._free_framesync_data()
             self.shape[1] = 0
 
-    cdef int _process_incoming(self, NDIlib_framesync_instance_t fs_ptr) except -1 nogil:
+    cdef int _process_incoming(self) except -1 nogil:
         if self.view_count > 0:
             raise_withgil(PyExc_ValueError, 'cannot write with view active')
 
@@ -664,7 +674,6 @@ cdef class AudioFrameSync(AudioFrame):
         self.shape[1] = ncols
         self.strides[0] = ncols * sizeof(cnp.float32_t)
         self.strides[1] = sizeof(cnp.float32_t)
-        self.fs_ptr = fs_ptr
         return 0
 
 
