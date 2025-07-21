@@ -2,9 +2,9 @@
 # distutils: language = c++
 
 from libc.stdlib cimport malloc, free
+from cpython cimport PyObject
 
 cdef extern from 'Python.h':
-    ctypedef struct PyObject
     PyObject *PyExc_Exception
     PyObject *PyExc_RuntimeError
     PyObject *PyExc_KeyError
