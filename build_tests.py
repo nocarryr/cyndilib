@@ -143,8 +143,8 @@ def build_opts():
     # opts.append(f'--option=include_path={INCLUDE_PATH}')
     for key, val in COMPILER_DIRECTIVES.items():
         opts.append(f'--directive={key}={val}')
-    if CPU_COUNT is not None and CPU_COUNT > 1:
-        opts.append(f'-j {CPU_COUNT}')
+    # if CPU_COUNT is not None and CPU_COUNT > 1:
+    #     opts.append(f'-j {CPU_COUNT}')
     return ' '.join(opts)
 
 def do_cythonize(pyx_file, opts=None):
@@ -153,7 +153,7 @@ def do_cythonize(pyx_file, opts=None):
 
     opts = f'{opts} {pyx_file}'
     parsed, paths = Cythonize.parse_args(shlex.split(opts))
-    assert parsed.parallel == CPU_COUNT
+    parsed.parallel = 1
     if parsed.annotate:
         Cythonize.Options.annotate = True
     cython_compile(pyx_file, parsed)
