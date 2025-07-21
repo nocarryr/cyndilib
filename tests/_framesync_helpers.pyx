@@ -6,7 +6,7 @@
 # distutils: extra_compile_args=DISTUTILS_EXTRA_COMPILE_ARGS
 # distutils: define_macros=CYTHON_TRACE_NOGIL=1
 
-
+from libc.stdint cimport uint8_t
 cimport cython
 cimport numpy as cnp
 
