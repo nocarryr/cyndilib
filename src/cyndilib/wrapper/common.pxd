@@ -15,18 +15,8 @@ cdef extern from 'Python.h':
     PyObject *PyExc_ZeroDivisionError
 
 
-cdef inline int raise_withgil(PyObject *error, char *msg) except -1 with gil:
-    raise (<object>error)(msg.decode('ascii'))
-
-cdef inline int raise_exception(char *msg) except -1 nogil:
-    raise_withgil(PyExc_Exception, msg)
-
-cdef inline int raise_mem_err() except -1 nogil:
-    raise_withgil(PyExc_MemoryError, b'')
-
-
-cdef inline void* mem_alloc(size_t c) noexcept nogil:
-    return malloc(c)
-
-cdef inline void mem_free(void *p) noexcept nogil:
-    free(p)
+cdef int raise_withgil(PyObject *error, char *msg) except -1 with gil
+cdef int raise_exception(char *msg) except -1 nogil
+cdef int raise_mem_err() except -1 nogil
+cdef void* mem_alloc(size_t c) noexcept nogil
+cdef void mem_free(void *p) noexcept nogil
