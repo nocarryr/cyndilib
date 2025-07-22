@@ -4,7 +4,7 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "cyndilib"
-version = "0.0.7"
+version = "0.0.8"
 authors = [
     { name = "Matthew Reid", email = "matt@nomadic-recording.com" }
 ]
