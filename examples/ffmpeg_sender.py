@@ -1,6 +1,6 @@
 from __future__ import annotations
 
-from typing import NamedTuple, Generator, Any, cast
+from typing import NamedTuple, Literal, Generator, Any, cast, get_args
 from typing_extensions import Self
 import enum
 import io
@@ -15,8 +15,12 @@ from cyndilib.wrapper.ndi_structs import FourCC
 from cyndilib.video_frame import VideoSendFrame
 from cyndilib.sender import Sender
 
+TestSource = Literal[
+    'testsrc2', 'yuvtestsrc', 'rgbtestsrc', 'smptebars', 'smptehdbars',
+    'zoneplate', 'colorspectrum',
+]
 
-FF_CMD = '{ffmpeg} -f lavfi -i testsrc2=size={xres}x{yres}:rate={fps} \
+FF_CMD = '{ffmpeg} -f lavfi -i {source}=size={xres}x{yres}:rate={fps} \
     -pix_fmt {pix_fmt.name} -f rawvideo pipe: '
 
 
@@ -38,6 +42,7 @@ class PixFmt(enum.Enum):
 class Options(NamedTuple):
     """Options set through the cli
     """
+    source: TestSource                  #: Source to use for the test pattern
     pix_fmt: PixFmt                     #: Pixel format to send
     xres: int                           #: Horizontal resolution
     yres: int                           #: Vertical resolution
@@ -128,6 +133,15 @@ def send(opts: Options) -> None:
 
 @click.command()
 @click.option(
+    '--source',
+    type=click.Choice(
+        choices=[m for m in get_args(TestSource)],
+    ),
+    default='testsrc2',
+    show_default=True,
+    help='Name of the ffmpeg test source to use',
+)
+@click.option(
     '--pix-fmt',
     type=click.Choice(choices=[m.name for m in PixFmt]),
     default=PixFmt.uyvy422.name,
@@ -151,8 +165,17 @@ def send(opts: Options) -> None:
     show_default=True,
     help='Name/Path of the "ffmpeg" executable',
 )
-def main(pix_fmt: str, x_res: int, y_res: int, fps: str, sender_name: str, ffmpeg: str):
+def main(
+    source: TestSource,
+    pix_fmt: str,
+    x_res: int,
+    y_res: int,
+    fps: str,
+    sender_name: str,
+    ffmpeg: str
+):
     opts = Options(
+        source=source,
         pix_fmt=PixFmt.from_str(pix_fmt),
         xres=x_res,
         yres=y_res,
