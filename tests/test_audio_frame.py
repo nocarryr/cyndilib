@@ -15,6 +15,7 @@ from cyndilib.audio_frame import AudioRecvFrame, AudioFrameSync, AudioSendFrame
 
 from _test_audio_frame import (         # type: ignore[missing-import]
     fill_audio_frame, fill_audio_frame_sync, audio_frame_process_events,
+    get_audio_send_frame_current_data,
 )
 from _framesync_helpers import (   # type: ignore[missing-import]
     AudioFrameSyncHelper
@@ -714,6 +715,54 @@ def test_audio_send_frame(fake_audio_data: AudioParams):
         assert af.write_index == expected_write_idx
         assert af.read_index == expected_read_idx
         check_audio_send_frame(af)
+
+    set_send_frame_sender_status(af, False)
+
+    af.destroy()
+    assert af.write_index == 0
+    assert af.read_index == NULL_INDEX
+
+
+def test_audio_send_frame_irregular_sample_count(fake_audio_data: AudioParams):
+    fs = fake_audio_data.sample_rate
+    N = fake_audio_data.num_samples
+    num_channels = fake_audio_data.num_channels
+    s_perseg = fake_audio_data.s_perseg
+    samples_flat = fake_audio_data.samples_2d
+
+    af = AudioSendFrame()
+    af.sample_rate = fs
+    af.num_channels = num_channels
+    af.set_max_num_samples(s_perseg)
+
+    set_send_frame_sender_status(af, True)
+
+    start_ix = 0
+    end_ix = 0
+    samples_remaining = N
+    i = 0
+
+    while samples_remaining > 0:
+        print(f'{i=}, {samples_remaining=}, {start_ix=}, {end_ix=}')
+        assert af.max_num_samples == s_perseg
+        seg_len = s_perseg
+        if i % 2 == 0:
+            seg_len //= 2
+        if seg_len > samples_remaining:
+            seg_len = samples_remaining
+        end_ix = start_ix + seg_len
+
+        _samples = samples_flat[:,start_ix:end_ix]
+        assert _samples.shape == (num_channels, seg_len)
+        af.write_data(_samples)
+        frame_samples = get_audio_send_frame_current_data(af)
+        assert frame_samples.shape == (num_channels, seg_len)
+        assert np.array_equal(_samples, frame_samples)
+        set_send_frame_send_complete(af)
+
+        samples_remaining -= seg_len
+        start_ix = end_ix
+        i += 1
 
     set_send_frame_sender_status(af, False)
 

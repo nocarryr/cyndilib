@@ -28,15 +28,18 @@ def get_audio_send_frame_current_data(AudioSendFrame audio_frame):
     if frame.p_data is NULL:
         raise ValueError("AudioSendFrame has no data")
 
+    cdef size_t num_samples = item.data.shape[1]
+    assert num_samples == item.frame_ptr.no_samples
+
     cdef cnp.ndarray np_data = np.zeros((
-        audio_frame.num_channels, audio_frame.num_samples
+        audio_frame.num_channels, num_samples
     ), dtype=np.float32)
     cdef cnp.float32_t[:,:] data_view = np_data
     cdef float* float_data = <float*>frame.p_data
     cdef size_t i, j, k=0
 
     for i in range(audio_frame.num_channels):
-        for j in range(audio_frame.num_samples):
+        for j in range(num_samples):
             data_view[i,j] = float_data[k]
             k += 1
     return np_data
