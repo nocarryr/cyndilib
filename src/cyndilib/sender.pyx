@@ -236,7 +236,8 @@ cdef class Sender:
 
         vid_item = self.video_frame._prepare_buffer_write()
         aud_item = self.audio_frame._prepare_buffer_write()
-        cdef size_t* outer_shape = self.audio_frame.send_status.data.shape
+        self.audio_frame._set_shape_from_memview(aud_item, audio_data)
+        cdef Py_ssize_t* outer_shape = self.audio_frame.send_status.data.shape
         cdef cnp.uint8_t[:] vid_memview = self.video_frame
         cdef cnp.float32_t[:,:] aud_memview = self.audio_frame
 
@@ -247,7 +248,6 @@ cdef class Sender:
 
 
         with nogil:
-            self.audio_frame._set_shape_from_memview(aud_item, audio_data)
             aud_memview[...] = audio_data
             self.audio_frame._set_buffer_write_complete(aud_item)
             vid_memview[...] = video_data
@@ -398,12 +398,12 @@ cdef class Sender:
         if not self._check_running():
             return False
         cdef AudioSendFrame_item_s* item = self.audio_frame._prepare_buffer_write()
+        self.audio_frame._set_shape_from_memview(item, data)
         cdef cnp.float32_t[:,:] aud_memview = self.audio_frame
         cdef NDIlib_audio_frame_v3_t send_frame
 
         with nogil:
             audio_frame_copy(item.frame_ptr, &send_frame)
-            self.audio_frame._set_shape_from_memview(item, data)
             aud_memview[...] = data
             self.audio_frame._set_buffer_write_complete(item)
             send_frame.p_data = <uint8_t*>item.frame_ptr.p_data

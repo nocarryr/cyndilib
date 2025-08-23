@@ -713,8 +713,8 @@ cdef class VideoSendFrame(VideoFrame):
         buffer.ndim = self.send_status.data.ndim
         buffer.obj = self
         buffer.readonly = 0
-        buffer.shape = <Py_ssize_t*>item.data.shape
-        buffer.strides = <Py_ssize_t*>item.data.strides
+        buffer.shape = item.data.shape
+        buffer.strides = item.data.strides
         buffer.suboffsets = NULL
 
     def __releasebuffer__(self, Py_buffer *buffer):

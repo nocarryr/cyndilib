@@ -111,8 +111,8 @@ cdef int frame_status_alloc_p_data(SendFrame_status_s_ft* ptr) except -1 nogil:
 cdef int frame_status_item_alloc_p_data(
     SendFrame_item_s_ft* ptr,
     size_t total_size,
-    size_t[3] shape,
-    size_t[3] strides,
+    Py_ssize_t[3] shape,
+    Py_ssize_t[3] strides,
 ) except -1 nogil:
 
     cdef size_t i

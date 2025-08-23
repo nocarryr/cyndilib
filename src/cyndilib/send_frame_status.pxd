@@ -20,8 +20,8 @@ cdef struct SendFrame_item_s:
     size_t alloc_size
     bint write_available
     bint read_available
-    size_t[3] shape
-    size_t[3] strides
+    Py_ssize_t[3] shape
+    Py_ssize_t[3] strides
 
 
 cdef struct SendFrame_status_s:
@@ -29,8 +29,8 @@ cdef struct SendFrame_status_s:
     size_t write_index
     size_t read_index
     size_t ndim
-    size_t[3] shape
-    size_t[3] strides
+    Py_ssize_t[3] shape
+    Py_ssize_t[3] strides
     bint attached_to_sender
 
 cdef struct VideoSendFrame_item_s:

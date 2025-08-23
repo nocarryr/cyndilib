@@ -107,11 +107,11 @@ cdef class AudioSendFrame(AudioFrame):
     cpdef set_max_num_samples(self, size_t n)
     cdef int _destroy(self) except -1
     cdef bint _write_available(self) noexcept nogil
-    cdef void _set_shape_from_memview(
+    cdef int _set_shape_from_memview(
         self,
         AudioSendFrame_item_s* item,
         cnp.float32_t[:,:] data,
-    ) noexcept nogil
+    ) except -1 nogil
     cdef AudioSendFrame_item_s* _prepare_buffer_write(self) except NULL nogil
     cdef void _set_buffer_write_complete(self, AudioSendFrame_item_s* item) noexcept nogil
     cdef AudioSendFrame_item_s* _prepare_memview_write(self) except NULL nogil

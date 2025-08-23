@@ -780,12 +780,12 @@ cdef class AudioSendFrame(AudioFrame):
         buffer.buf = <char *>item.frame_ptr.p_data
         buffer.format = 'f'
         buffer.itemsize = sizeof(float32_t)
-        buffer.len = sizeof(float32_t) * s_ptr.data.shape[0] * s_ptr.data.shape[1]
+        buffer.len = sizeof(float32_t) * item.data.shape[0] * item.data.shape[1]
         buffer.ndim = self.send_status.data.ndim
         buffer.obj = self
         buffer.readonly = 0
-        buffer.shape = <Py_ssize_t*>s_ptr.data.shape
-        buffer.strides = <Py_ssize_t*>s_ptr.data.strides
+        buffer.shape = item.data.shape
+        buffer.strides = item.data.strides
         buffer.suboffsets = NULL
         buffer.internal = <void*>item
 
@@ -811,12 +811,22 @@ cdef class AudioSendFrame(AudioFrame):
         cdef size_t idx = frame_status_get_next_write_index(&(self.send_status))
         return idx != NULL_INDEX
 
-    cdef void _set_shape_from_memview(
+    cdef int _set_shape_from_memview(
         self,
         AudioSendFrame_item_s* item,
         cnp.float32_t[:,:] data,
-    ) noexcept nogil:
-        return
+    ) except -1 nogil:
+        cdef AudioSendFrame_status_s* s_ptr = &(self.send_status)
+        if item.data.shape == data.shape:
+            return 0
+        if item.data.shape[0] != data.shape[0]:
+            raise_withgil(PyExc_ValueError, 'number of channels must match')
+        if data.shape[1] > self.max_num_samples:
+            raise_withgil(PyExc_ValueError, 'number of samples exceeds maximum')
+        item.data.shape[1] = data.shape[1]
+        item.data.strides[0] = sizeof(float32_t) * data.shape[1]
+        item.frame_ptr.no_samples = data.shape[1]
+        return 0
 
     cdef AudioSendFrame_item_s* _prepare_buffer_write(self) except NULL nogil:
         if self.buffer_write_item is not NULL:
@@ -855,6 +865,7 @@ cdef class AudioSendFrame(AudioFrame):
 
         """
         cdef AudioSendFrame_item_s* item = self._prepare_memview_write()
+        self._set_shape_from_memview(item, data)
         cdef cnp.float32_t[:,:] view = self
 
         self._write_data_to_memview(data, view, item)
@@ -868,7 +879,6 @@ cdef class AudioSendFrame(AudioFrame):
         cnp.float32_t[:,:] view,
         AudioSendFrame_item_s* item
     ) noexcept nogil:
-        self._set_shape_from_memview(item, data)
         cdef size_t nrows = item.data.shape[0], ncols = item.data.shape[1]
         view[...] = data
         self._set_buffer_write_complete(item)
