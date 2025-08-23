@@ -107,11 +107,13 @@ def send(opts: Options) -> None:
     mv = memoryview(ba)
 
     i = 0
+    frame_sent = False
 
     with sender:
         with ffmpeg_proc(opts) as ff_proc:
             stdout = cast(io.BytesIO, ff_proc.stdout)
             while True:
+                i += 1
                 if ff_proc.returncode is not None:
                     break
                 # Read from the ffmpeg process into a view of the bytearray
@@ -119,13 +121,20 @@ def send(opts: Options) -> None:
 
                 # The first few reads might be empty, ignore
                 if num_read == 0:
+                    if frame_sent:
+                        # If we've sent a frame and there's no output,
+                        # ffmpeg has likely quit without setting returncode
+                        break
+                    elif i > 1000:
+                        # Check for ffmpeg startup errors
+                        print('Timeout waiting for ffmpeg to produce output')
+                        break
                     continue
-
+                frame_sent = True
                 # Pass the memoryview directly to the sender
                 # (using the buffer protocol)
                 sender.write_video_async(mv)
 
-                i += 1
                 if i % 10 == 0:
                     ff_proc.poll()
 
