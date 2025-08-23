@@ -237,7 +237,7 @@ cdef class Sender:
         vid_item = self.video_frame._prepare_buffer_write()
         aud_item = self.audio_frame._prepare_buffer_write()
         self.audio_frame._set_shape_from_memview(aud_item, audio_data)
-        cdef size_t* outer_shape = self.audio_frame.send_status.data.shape
+        cdef Py_ssize_t* outer_shape = self.audio_frame.send_status.data.shape
         cdef cnp.uint8_t[:] vid_memview = self.video_frame
         cdef cnp.float32_t[:,:] aud_memview = self.audio_frame
 
