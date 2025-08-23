@@ -32,7 +32,11 @@ class PixFmt(enum.Enum):
     uyvy422 = FourCC.UYVY   #: uyvy422
     nv12 = FourCC.NV12      #: nv12
     rgba = FourCC.RGBA      #: rgba
+    rgb0 = FourCC.RGBX      #: rgb0
     bgra = FourCC.BGRA      #: bgra
+    bgr0 = FourCC.BGRX      #: bgr0
+    p216be = FourCC.P216    #: p216be
+    yuv420p = FourCC.I420   #: yuv420p (i420)
 
     @classmethod
     def from_str(cls, name: str) -> Self:
