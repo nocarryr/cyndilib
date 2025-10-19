@@ -257,6 +257,7 @@ class StateThread(threading.Thread, Generic[_T]):
         exc_cond: Condition|None = None,
     ):
         super().__init__()
+        self.daemon = True
         self.state_group = state_group
         self.num_iterations = num_iterations
         self.iter_duration = iter_duration
@@ -334,7 +335,9 @@ class StateThread(threading.Thread, Generic[_T]):
         self._running = False
         with self.state_group as g:
             g.state_cond.notify_all()
-        self.stopped.wait()
+        r = self.stopped.wait(timeout=60)
+        if not r:
+            raise RuntimeError('Thread did not stop in time')
 
     def wait_for_next_iteration(self, elapsed: float):
         target_dur = self.iter_duration
@@ -489,6 +492,7 @@ def test_buffer_fill_read_data(fake_audio_data: AudioParams):
 
 @pytest.mark.flaky(max_runs=3)
 def test_buffer_fill_read_data_threaded(fake_audio_data: AudioParams):
+    MAX_TIMEOUT = 300
     fs = fake_audio_data.sample_rate
     N = fake_audio_data.num_samples
     num_channels = fake_audio_data.num_channels
@@ -573,8 +577,10 @@ def test_buffer_fill_read_data_threaded(fake_audio_data: AudioParams):
             if read_thread.exc is not None:
                 send_thread.stop()
 
-        send_thread.join()
-        read_thread.join()
+        send_thread.join(timeout=MAX_TIMEOUT)
+        read_thread.join(timeout=MAX_TIMEOUT)
+        if send_thread.is_alive() or read_thread.is_alive():
+            raise RuntimeError('Threads did not exit in time')
     except:
         send_thread.stop()
         read_thread.stop()

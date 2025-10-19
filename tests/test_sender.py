@@ -228,6 +228,7 @@ class SenderThread(threading.Thread):
         sync_rlock: RLock
     ):
         super().__init__()
+        self.daemon = True
         self.sender = sender
         self.data = data
         self.wait_time = wait_time
@@ -339,6 +340,7 @@ class AudioSenderThread(SenderThread):
 
 @pytest.mark.flaky(max_runs=3)
 def test_send_video_and_audio_threaded(request, fake_av_frames: tuple[VideoParams, AudioParams]):
+    MAX_TIMEOUT = 300
     video_data, audio_data = fake_av_frames
 
     sender = setup_sender(request, video_data, audio_data)
@@ -362,18 +364,24 @@ def test_send_video_and_audio_threaded(request, fake_av_frames: tuple[VideoParam
             aud_thread.set_dependent_thread(vid_thread)
             vid_thread.start()
             aud_thread.start()
-            vid_thread.ready.wait()
-            aud_thread.ready.wait()
+            r = vid_thread.ready.wait(timeout=MAX_TIMEOUT)
+            if not r:
+                raise TimeoutError('Video thread did not start in time')
+            r = aud_thread.ready.wait(timeout=MAX_TIMEOUT)
+            if not r:
+                raise TimeoutError('Audio thread did not start in time')
 
             with go_cond:
                 print('notify_all')
                 go_cond.notify_all()
                 time.sleep(.5)
 
-            vid_thread.join()
-            aud_thread.join()
-            assert vid_thread.exc is None
-            assert aud_thread.exc is None
+            vid_thread.join(timeout=MAX_TIMEOUT)
+            aud_thread.join(timeout=MAX_TIMEOUT)
+            if vid_thread.is_alive() or aud_thread.is_alive():
+                raise RuntimeError('Threads did not exit in time')
+            if vid_thread.exc is not None or aud_thread.exc is not None:
+                raise RuntimeError('Exception in thread') from (vid_thread.exc or aud_thread.exc)
             fps_arr, frame_times = vid_thread.fps_arr, vid_thread.frame_times
             print(f'vid_thread: {fps_arr.mean()=}, {frame_times.mean()=}, {fps_arr.min()=}, {fps_arr.max()=}')
             fps_arr, frame_times = aud_thread.fps_arr, aud_thread.frame_times
