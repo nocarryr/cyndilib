@@ -1,5 +1,7 @@
 from __future__ import annotations
 import time
+from typing import Literal, TypeVar, Generic, Sequence, Callable, get_args, cast
+
 from pprint import pprint
 from functools import partial
 import threading
@@ -28,17 +30,28 @@ from _test_send_frame_status import (   # type: ignore[missing-import]
 NULL_INDEX = get_null_idx()
 MAX_FRAME_BUFFERS = get_max_frame_buffers()
 
-class State:
-    def __init__(self, group: 'StateGroup', name: str, index_: int):
+
+StateName = Literal['INIT', 'FILL_FRAME', 'READ_FRAME', 'PROCESS_FRAME', 'DONE']
+StateNames = cast(Sequence[StateName], get_args(StateName))
+
+_K = TypeVar('_K', bound=StateName)
+_T = TypeVar('_T', bound=Sequence[StateName])
+
+_StateCallback = Callable[[], bool]
+
+
+class State(Generic[_K]):
+    def __init__(self, group: 'StateGroup', name: _K, index_: int):
         self.__name = name
         self.__index = index_
         self._active = False
         self.group = group
         self.active_cond = Condition(group._lock)
         self.inactive_cond = Condition(group._lock)
-        self._handler = None
+        self._handler: _StateCallback|None = None
+
     @property
-    def name(self) -> str:
+    def name(self) -> _K:
         return self.__name
     @property
     def index(self) -> int:
@@ -50,7 +63,7 @@ class State:
     def active(self, value: bool):
         self.set_active(value)
 
-    def set_handler(self, cb):
+    def set_handler(self, cb: _StateCallback):
         assert self._handler is None
         assert callable(cb)
         self._handler = cb
@@ -97,10 +110,11 @@ class State:
             name = self.name
         return f'"{name}" (active={self.active})'
 
-class StateGroup:
+
+class StateGroup(Generic[_T]):
     def __init__(
         self,
-        state_names: list[str],
+        state_names: _T,
         lock: RLock|None = None,
         name: str|None = None,
         state_continue_timeout: float = .01,
@@ -120,7 +134,7 @@ class StateGroup:
         self.continue_wait_cond = Condition(lock)
         self.state_continue_timeout = state_continue_timeout
         self._can_continue = True
-        self._current_state_name = None
+        self._current_state_name: StateName|None = None
 
     @property
     def current_state(self) -> State|None:
@@ -128,7 +142,7 @@ class StateGroup:
             return None
         return self.states[self._current_state_name]
     @current_state.setter
-    def current_state(self, value: State|str|None):
+    def current_state(self, value: State|StateName|None):
         self.set_current_state(value)
 
     @property
@@ -137,7 +151,7 @@ class StateGroup:
             self._can_continue = True
         return self._can_continue
 
-    def set_current_state(self, state:State|str|None):
+    def set_current_state(self, state:State|StateName|None):
         with self:
             if state is None:
                 assert self.current_state is not None
@@ -165,14 +179,13 @@ class StateGroup:
             self.current_state = state
         return state
 
-    def set_handler(self, state: State|str, cb):
+    def set_handler(self, state: State|StateName, cb):
         if not isinstance(state, State):
             state = self[state]
         state.set_handler(cb)
 
-    def copy(self) -> StateGroup:
-        state_names = [state.name for state in self.states_by_index]
-        return StateGroup(state_names, state_continue_timeout=self.state_continue_timeout)
+    def copy(self) -> StateGroup[_T]:
+        return StateGroup(self.state_names, state_continue_timeout=self.state_continue_timeout)
 
     def _on_state_active(self, state: State, value: bool):
         prev_state_name = self._current_state_name
@@ -215,10 +228,14 @@ class StateGroup:
         with self:
             self.continue_wait_cond.wait(self.state_continue_timeout)
 
-    def get(self, name: str) -> State|None:
-        return self.states.get(name)
-    def __getitem__(self, name: str) -> State:
-        return self.states[name]
+    def get(self, name: _K) -> State[_K]|None:
+        try:
+            return self[name]
+        except KeyError:
+            return None
+
+    def __getitem__(self, name: _K) -> State[_K]:
+        return cast(State[_K], self.states[name])
 
     def __iter__(self):
         yield from self.states.values()
@@ -231,10 +248,10 @@ class StateGroup:
         return str(self.states)
 
 
-class StateThread(threading.Thread):
+class StateThread(threading.Thread, Generic[_T]):
     def __init__(
         self,
-        state_group: StateGroup,
+        state_group: StateGroup[_T],
         num_iterations: int = 1,
         iter_duration: float|None = None,
         exc_cond: Condition|None = None,
