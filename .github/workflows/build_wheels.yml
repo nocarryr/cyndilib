@@ -5,6 +5,7 @@ on:
     branches: [ main ]
     paths:
     - "pyproject.toml"
+    - "uv.lock"
     - "setup.py"
     - "setup.cfg"
     - "src/wrapper/"
@@ -14,6 +15,7 @@ on:
     branches: [ main ]
     paths:
     - "pyproject.toml"
+    - "uv.lock"
     - "setup.py"
     - "setup.cfg"
     - "src/wrapper/"
