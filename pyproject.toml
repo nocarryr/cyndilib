@@ -77,7 +77,7 @@ test = [
     "pytest-doctestplus",
     "flaky",
     "psutil",
-    "cython>=0.29.32",
+    "cython>=0.29.32, <=3.1.5",
     "pytest-codspeed>=4.0.0",
 ]
 doc = [

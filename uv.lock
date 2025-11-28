@@ -376,6 +376,7 @@ build = [
 dev = [
     { name = "click" },
     { name = "cython", specifier = ">=0.29.32" },
+    { name = "cython", specifier = ">=0.29.32,<=3.1.5" },
     { name = "flaky" },
     { name = "furo" },
     { name = "ipython" },
@@ -400,7 +401,7 @@ doc = [
 ]
 examples = [{ name = "click" }]
 test = [
-    { name = "cython", specifier = ">=0.29.32" },
+    { name = "cython", specifier = ">=0.29.32,<=3.1.5" },
     { name = "flaky" },
     { name = "psutil" },
     { name = "pytest" },
