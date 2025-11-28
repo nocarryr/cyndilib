@@ -258,12 +258,6 @@ dependencies = [
 ]
 
 [package.dev-dependencies]
-build = [
-    { name = "cython" },
-    { name = "numpy", version = "2.2.6", source = { registry = "https://pypi.org/simple" }, marker = "python_full_version < '3.11'" },
-    { name = "numpy", version = "2.3.4", source = { registry = "https://pypi.org/simple" }, marker = "python_full_version >= '3.11'" },
-    { name = "setuptools" },
-]
 dev = [
     { name = "click" },
     { name = "cython" },
@@ -297,11 +291,14 @@ examples = [
 test = [
     { name = "cython" },
     { name = "flaky" },
+    { name = "numpy", version = "2.2.6", source = { registry = "https://pypi.org/simple" }, marker = "python_full_version < '3.11'" },
+    { name = "numpy", version = "2.3.4", source = { registry = "https://pypi.org/simple" }, marker = "python_full_version >= '3.11'" },
     { name = "psutil" },
     { name = "pytest" },
     { name = "pytest-codspeed" },
     { name = "pytest-doctestplus" },
     { name = "pytest-xdist" },
+    { name = "setuptools" },
 ]
 
 [package.metadata]
@@ -311,11 +308,6 @@ requires-dist = [
 ]
 
 [package.metadata.requires-dev]
-build = [
-    { name = "cython", specifier = "<=3.1.5" },
-    { name = "numpy" },
-    { name = "setuptools" },
-]
 dev = [
     { name = "click" },
     { name = "cython", specifier = "<=3.1.5" },
@@ -345,11 +337,13 @@ examples = [{ name = "click" }]
 test = [
     { name = "cython", specifier = "<=3.1.5" },
     { name = "flaky" },
+    { name = "numpy" },
     { name = "psutil" },
     { name = "pytest" },
     { name = "pytest-codspeed", specifier = ">=4.0.0" },
     { name = "pytest-doctestplus" },
     { name = "pytest-xdist" },
+    { name = "setuptools" },
 ]
 
 [[package]]
