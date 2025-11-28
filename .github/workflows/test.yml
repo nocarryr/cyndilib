@@ -46,7 +46,7 @@ jobs:
         with:
           python-version: ${{ matrix.python-version }}
       - name: Install Project
-        run: uv sync --frozen --group build --group test
+        run: uv sync --frozen --group test
         env:
           CYNDILIB_BUILD_PARALLEL: auto
       - name: Compile tests

@@ -22,7 +22,7 @@ jobs:
           python-version: "3.13"
 
       - name: Install Project
-        run: uv sync --frozen --group build --group test
+        run: uv sync --frozen --group test
         env:
           CYNDILIB_BUILD_PARALLEL: auto
 
