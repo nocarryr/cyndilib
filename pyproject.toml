@@ -115,11 +115,17 @@ test-skip = "cp38-macosx*"
 environment = {CI= "true", CYNDILIB_BUILD_PARALLEL= "auto"}
 
 [tool.cibuildwheel.linux]
-before-all = "yum install -y avahi-libs"
+before-all = [
+    "yum install -y avahi-libs",
+    "uv export --frozen --no-emit-project --no-build --only-group test -o pylock.toml",
+]
 
 [[tool.cibuildwheel.overrides]]
 select = "*-musllinux*"
-before-all = "apk add avahi-libs"
+before-all = [
+    "apk add avahi-libs",
+    "uv export --frozen --no-emit-project --no-build --only-group test -o pylock.toml",
+]
 
 [[tool.cibuildwheel.overrides]]
 select = "*-macosx*"
