@@ -1,5 +1,7 @@
 #! /usr/bin/env python3
 
+from __future__ import annotations
+from typing import Literal, TypedDict
 import os
 import sys
 import glob
@@ -34,7 +36,32 @@ COMPILER_DIRECTIVES = {
 run_distutils = Cythonize.run_distutils
 _FakePool = Cythonize._FakePool
 
-def get_cython_metadata(src_file: Path):
+
+class MetadataNotFound(Exception):
+    pass
+
+
+class NDIDistutilsMetadata(TypedDict):
+    extra_compile_args: list[str]
+    include_dirs: list[str]
+    libraries: list[str]
+    library_dirs: list[str]
+    runtime_library_dirs: list[str]|None
+    language: Literal['c', 'c++']
+
+
+class CythonDistutilsMetadata(NDIDistutilsMetadata):
+    depends: list[str]|None
+    name: str|None
+    sources: list[str]
+
+
+class CythonMetadata(TypedDict):
+    distutils: CythonDistutilsMetadata
+    module_name: str
+
+
+def get_cython_metadata(src_file: Path) -> CythonMetadata:
     """Read the distutils metadata embedded in cythonized sources
 
     The JSON-formatted "Cython Metadata" contains all of the necessary compiler
@@ -59,7 +86,7 @@ def get_cython_metadata(src_file: Path):
     if not isinstance(src_file, Path):
         src_file = Path(src_file)
     if src_file.suffix not in ['.c', '.cpp']:
-        return None
+        raise ValueError(f"Invalid source file type: {src_file}")
     start_found = False
     end_found = False
     meta_lines = []
@@ -71,30 +98,39 @@ def get_cython_metadata(src_file: Path):
                 if 'BEGIN: Cython Metadata' in line:
                     start_found = True
                 elif i > 100:
-                    return None
+                    raise MetadataNotFound(f"No metadata found in {src_file}")
             else:
                 if 'END: Cython Metadata' in line:
                     end_found = True
                     break
                 meta_lines.append(line)
     if not end_found or not len(meta_lines):
-        return None
+        raise MetadataNotFound(f"No metadata found in {src_file}")
     s = '\n'.join(meta_lines)
     return json.loads(s)
 
-def get_ndi_metadata():
+
+def get_ndi_metadata() -> NDIDistutilsMetadata:
     wrapper_dir = Path(cyndilib.get_include()).parent
     src_file = wrapper_dir / 'ndi_structs.cpp'
     if not src_file.exists():
         raise RuntimeError('cyndilib must be compiled first')
     metadata = get_cython_metadata(src_file)
-    keys = [
-        'extra_compile_args', 'include_dirs', 'libraries',
-        'library_dirs', 'runtime_library_dirs',
-    ]
-    data = {key:metadata['distutils'].get(key) for key in keys}
-    data['include_dirs'] = [cyndilib.get_include(), numpy.get_include()]
-    return data
+    dist_meta = metadata['distutils']
+    include_dirs = [cyndilib.get_include(), numpy.get_include()]
+    meta_inc = dist_meta.get('include_dirs', [])
+    if meta_inc is not None:
+        include_dirs.extend(meta_inc)
+    include_dirs = list(set(include_dirs))
+    return NDIDistutilsMetadata(
+        extra_compile_args=dist_meta.get('extra_compile_args', []),
+        libraries=dist_meta.get('libraries', []),
+        library_dirs=dist_meta.get('library_dirs', []),
+        runtime_library_dirs=dist_meta.get('runtime_library_dirs', []),
+        language=dist_meta.get('language', 'c++'),
+        include_dirs=include_dirs,
+    )
+
 
 def cython_compile(path_pattern, options):
     distutils_meta = get_ndi_metadata()
