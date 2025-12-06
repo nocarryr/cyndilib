@@ -1,5 +1,5 @@
 [build-system]
-requires = ["setuptools", "wheel", "numpy", "cython<=3.1.5"]
+requires = ["setuptools", "wheel", "numpy", "cython>=3.2.2"]
 build-backend = "setuptools.build_meta"
 
 [project]
@@ -73,7 +73,7 @@ test = [
     "psutil",
     "numpy",
     "setuptools",
-    "cython<=3.1.5",
+    "cython>=3.2.2",
     "pytest-codspeed>=4.0.0",
 ]
 doc = [
