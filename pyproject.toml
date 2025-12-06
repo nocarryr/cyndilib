@@ -73,7 +73,8 @@ test = [
     "psutil",
     "numpy",
     "setuptools",
-    "cython>=3.2.2",
+    "cython<=3.1.5; sys_platform == 'darwin' and platform_machine == 'x86_64'",
+    "cython>=3.2.2; sys_platform != 'darwin' or platform_machine != 'x86_64'",
     "pytest-codspeed>=4.0.0",
 ]
 doc = [
