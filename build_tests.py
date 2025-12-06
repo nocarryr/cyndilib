@@ -4,10 +4,10 @@ from __future__ import annotations
 from typing import Literal, TypedDict
 import os
 import sys
-import glob
 import shlex
 import json
-import multiprocessing
+import concurrent.futures
+from contextlib import contextmanager
 from pathlib import Path
 import numpy
 from Cython.Build import cythonize, Cythonize
@@ -34,7 +34,19 @@ COMPILER_DIRECTIVES = {
 }
 
 run_distutils = Cythonize.run_distutils
-_FakePool = Cythonize._FakePool
+
+
+# Copy of `Cythonize._interruptible_pool` instead of importing the private method
+# https://github.com/cython/cython/blob/2a8ee41263f6bc898a32c75a9156071bee5e8788/Cython/Build/Cythonize.py#L72-L80
+@contextmanager
+def _interruptible_pool(pool_cm):
+    with pool_cm as proc_pool:
+        try:
+            yield proc_pool
+        except KeyboardInterrupt:
+            proc_pool.terminate_workers()
+            proc_pool.shutdown(cancel_futures=True)
+            raise
 
 
 class MetadataNotFound(Exception):
@@ -133,47 +145,88 @@ def get_ndi_metadata() -> NDIDistutilsMetadata:
 
 
 def cython_compile(path_pattern, options):
+    parallel = options.parallel
+    assert isinstance(parallel, int) and parallel >= 0
     distutils_meta = get_ndi_metadata()
     aliases = {f'DISTUTILS_{k.upper()}':v for k,v in distutils_meta.items()}
     print(f'{aliases=}')
 
-    pool = None
     all_paths = map(os.path.abspath, extended_iglob(path_pattern))
     all_paths = [p for p in all_paths]
+    base_dir = os.path.dirname(path_pattern)
+
+    ext_modules = cythonize(
+        all_paths,
+        nthreads=options.parallel,
+        exclude_failures=options.keep_going,
+        exclude=options.excludes,
+        aliases=aliases,
+        compiler_directives=options.directives,
+        compile_time_env=options.compile_time_env,
+        force=options.force,
+        quiet=options.quiet,
+        **options.options)
+
+    # Make `ext_modules` match the output of `Cythonize._cython_compile_files()` in
+    # https://github.com/cython/cython/blob/2a8ee41263f6bc898a32c75a9156071bee5e8788/Cython/Build/Cythonize.py#L35-L69
+    ext_modules = [(base_dir, [m]) for m in ext_modules]
+
+
+    # Remainder adapted from `Cythonize._build` in
+    # https://github.com/cython/cython/blob/2a8ee41263f6bc898a32c75a9156071bee5e8788/Cython/Build/Cythonize.py#L84-L133
+    modcount = sum(len(modules) for _, modules in ext_modules)
+
+    if not modcount:
+        print('No modules found to compile')
+        return
+
+    serial_execution_mode = modcount == 1 or parallel < 2
+
     try:
-        base_dir = os.path.dirname(path_pattern)
+        pool_cm = (
+            None if serial_execution_mode
+            else concurrent.futures.ProcessPoolExecutor(max_workers=parallel)
+        )
+    except (OSError, ImportError):
+        # `OSError` is a historic exception in `multiprocessing`
+        # `ImportError` happens e.g. under pyodide (`ModuleNotFoundError`)
+        serial_execution_mode = True
 
-        ext_modules = cythonize(
-            all_paths,
-            nthreads=options.parallel,
-            exclude_failures=options.keep_going,
-            exclude=options.excludes,
-            aliases=aliases,
-            compiler_directives=options.directives,
-            compile_time_env=options.compile_time_env,
-            force=options.force,
-            quiet=options.quiet,
-            **options.options)
+    if serial_execution_mode:
+        for ext in ext_modules:
+            run_distutils(ext)
+        return
 
-        if ext_modules and options.build:
-            if len(ext_modules) > 1 and options.parallel > 1:
-                if pool is None:
-                    try:
-                        pool = multiprocessing.Pool(options.parallel)
-                    except OSError:
-                        pool = _FakePool()
-                pool.map_async(run_distutils, [
-                    (base_dir, [ext]) for ext in ext_modules])
+    with _interruptible_pool(pool_cm) as proc_pool:
+        compiler_tasks = [
+            proc_pool.submit(run_distutils, (base_dir, [ext]))
+            for base_dir, modules in ext_modules
+            for ext in modules
+        ]
+
+        concurrent.futures.wait(compiler_tasks, return_when=concurrent.futures.FIRST_EXCEPTION)
+
+        worker_exceptions = []
+        for task in compiler_tasks:  # discover any crashes
+            try:
+                task.result()
+            except BaseException as proc_err:  # could be SystemExit
+                worker_exceptions.append(proc_err)
+
+        if worker_exceptions:
+            exc_msg = 'Compiling Cython modules failed with these errors:\n\n'
+            exc_msg += '\n\t* '.join(('', *map(str, worker_exceptions)))
+            exc_msg += '\n\n'
+
+            non_base_exceptions = [
+                exc for exc in worker_exceptions
+                if isinstance(exc, Exception)
+            ]
+            if sys.version_info[:2] >= (3, 11) and non_base_exceptions:
+                raise ExceptionGroup(exc_msg, non_base_exceptions)
             else:
-                run_distutils((base_dir, ext_modules))
-    except:
-        if pool is not None:
-            pool.terminate()
-        raise
-    else:
-        if pool is not None:
-            pool.close()
-            pool.join()
+                raise RuntimeError(exc_msg) from worker_exceptions[0]
+
 
 def build_opts():
     opts = ['-i', '-a', '-b']
