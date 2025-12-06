@@ -9,6 +9,8 @@ import multiprocessing
 from pathlib import Path
 import numpy
 from Cython.Build import cythonize, Cythonize
+from Cython.Build.Dependencies import extended_iglob
+from Cython.Compiler import Options
 
 import cyndilib
 
@@ -31,7 +33,6 @@ COMPILER_DIRECTIVES = {
 
 run_distutils = Cythonize.run_distutils
 _FakePool = Cythonize._FakePool
-extended_iglob = Cythonize.extended_iglob
 
 def get_cython_metadata(src_file: Path):
     """Read the distutils metadata embedded in cythonized sources
@@ -155,7 +156,7 @@ def do_cythonize(pyx_file, opts=None):
     parsed, paths = Cythonize.parse_args(shlex.split(opts))
     assert parsed.parallel == CPU_COUNT
     if parsed.annotate:
-        Cythonize.Options.annotate = True
+        Options.annotate = True
     cython_compile(pyx_file, parsed)
 
 def main():
