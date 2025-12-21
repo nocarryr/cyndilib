@@ -105,7 +105,7 @@ jobs:
 
       - name: Build wheels
         id: build_wheel
-        uses: pypa/cibuildwheel@v2.22.0
+        uses: pypa/cibuildwheel@v3.3.0
         env:
           CIBW_BUILD: ${{ matrix.python-version }}-*
           CIBW_ARCHS: ${{ matrix.arch }}
