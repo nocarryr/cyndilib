@@ -109,7 +109,7 @@ addopts = "-n auto --no-success-flaky-report --doctest-modules --doctest-glob='*
 
 [tool.cibuildwheel]
 build-frontend = "build[uv]"
-build = "cp3{9,10,11,12,13}-*"
+build = "cp3{9,10,11,12,13,14}-*"
 skip = "*-musllinux*"
 before-all = "uv export --frozen --no-emit-project --no-build --only-group test -o pylock.toml"
 before-test = "uv pip install -r pylock.toml"
