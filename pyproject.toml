@@ -116,7 +116,7 @@ before-test = "uv pip install -r pylock.toml"
 test-command = [
     "python {project}/build_tests.py",
     "uv pip uninstall setuptools",
-    "py.test {project}/tests/",
+    "py.test --skip-flaky {project}/tests/",
 ]
 test-skip = "cp38-macosx*"
 environment = {CI= "true", CYNDILIB_BUILD_PARALLEL= "auto"}

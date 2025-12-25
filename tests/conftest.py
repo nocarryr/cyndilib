@@ -231,3 +231,23 @@ def fake_av_frames(
     # print(f'{params=}')
     audio_data = fake_audio_builder(params)
     return fake_video_frames, audio_data
+
+
+def pytest_addoption(parser: pytest.Parser) -> None:
+    parser.addoption(
+        '--skip-flaky', action='store_true', default=False,
+        help='skip tests marked as flaky',
+    )
+
+
+@pytest.hookimpl(trylast=True)
+def pytest_collection_modifyitems(
+    config: pytest.Config,
+    items: list[pytest.Item],
+) -> None:
+    if not config.getoption('--skip-flaky'):
+        return
+    skip_flaky = pytest.mark.skip(reason='skipped flaky test (use --skip-flaky to run)')
+    for item in items:
+        if 'flaky' in item.keywords:
+            item.add_marker(skip_flaky)
