@@ -317,6 +317,9 @@ class LinuxFileHandler(FileHandler):
                     self.old_lib_filename = old_lib_filename
                 else:
                     assert self.old_lib_filename == old_lib_filename, f'Old library filename {old_lib_filename} does not match previous {self.old_lib_filename}.'
+                if not cur_binary.exists():
+                    logger.warning(f'Old binary {cur_binary.relative_to(WRAPPER_ROOT)} does not exist, skipping removal.')
+                    return
                 logger.info(f'Removing old binary {cur_binary.relative_to(WRAPPER_ROOT)} before copying {src_path.name}')
                 if not self.dry_run:
                     if self.git_enable:
@@ -361,6 +364,8 @@ class LinuxFileHandler(FileHandler):
             logger.info(f'Checking symlinks in {dst.relative_to(WRAPPER_ROOT)} for {self.lib_filename}')
             symlinks = [p for p in dst.glob('libndi.so*') if p.is_symlink()]
             lib_file = dst / self.lib_filename
+            if self.dry_run:
+                continue
             assert lib_file.exists(), f'Library file {lib_file} does not exist.'
             for symlink in symlinks:
                 symlink_target = symlink.resolve()
