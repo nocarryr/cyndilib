@@ -8,3 +8,7 @@ from cyndilib.wrapper.ndi_ptz cimport *
 from cyndilib.wrapper.ndi_recv cimport *
 from cyndilib.wrapper.ndi_send cimport *
 from cyndilib.wrapper.ndi_utilities cimport *
+from cyndilib.wrapper.ndi_recv_advertiser cimport *
+from cyndilib.wrapper.ndi_recv_listener cimport *
+from cyndilib.wrapper.ndi_send_advertiser cimport *
+from cyndilib.wrapper.ndi_send_listener cimport *
