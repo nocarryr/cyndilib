@@ -336,6 +336,11 @@ class LinuxFileHandler(FileHandler):
                 assert dst_path.exists(), f'Destination path {dst_path} does not exist.'
         return super().copy_file(src_path, dst_path, file_type)
 
+    def check_text_file(self, src_path: Path, dst_path: Path) -> bool:
+        if src_path.suffix == '.h' and not dst_path.exists():
+            return True
+        return super().check_text_file(src_path, dst_path)
+
     def after_copy_files(self, file_type: FileType) -> None:
         logger.info(f'Running after_copy_files for {file_type} in {self.__class__.__name__}')
         if file_type != 'lib':
