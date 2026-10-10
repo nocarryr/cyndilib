@@ -26,21 +26,19 @@ cdef extern from "Processing.NDI.SendListener.h" nogil:
         # // If this field is a comma-separated list, then only the first address will be used.
         const char* p_url_address
 
-        # // Create an instance of the sender listener. This will return NULL if it fails to create the listener.
-        NDIlib_send_listener_instance_t NDIlib_send_listener_create(const NDIlib_send_listener_create_t* p_create_settings)
-        # Note: this is an overloaded definition adding the `p_create_settings` parameter. If not specified, it will be NULL.
-        NDIlib_send_listener_instance_t NDIlib_send_listener_create()
+    # // Create an instance of the sender listener. This will return NULL if it fails to create the listener.
+    NDIlib_send_listener_instance_t NDIlib_send_listener_create(const NDIlib_send_listener_create_t* p_create_settings)
+    NDIlib_send_listener_instance_t NDIlib_send_listener_create()
 
+    # // Destroy an instance of the sender listener.
+    void NDIlib_send_listener_destroy(NDIlib_send_listener_instance_t p_instance)
 
-        # // Destroy an instance of the sender listener.
-        void NDIlib_send_listener_destroy(NDIlib_send_listener_instance_t p_instance)
+    # // Returns true if the sender listener is actively connected to the configured NDI Discovery Server.
+    bint NDIlib_send_listener_is_connected(NDIlib_send_listener_instance_t p_instance)
 
-        # // Returns true if the sender listener is actively connected to the configured NDI Discovery Server.
-        bint NDIlib_send_listener_is_connected(NDIlib_send_listener_instance_t p_instance)
-
-        # // Retrieve the URL address of the NDI Discovery Server that the sender listener is connected to. This can
-        # // return NULL if the instance pointer is invalid.
-        const char* NDIlib_send_listener_get_server_url(NDIlib_send_listener_instance_t p_instance)
+    # // Retrieve the URL address of the NDI Discovery Server that the sender listener is connected to. This can
+    # // return NULL if the instance pointer is invalid.
+    const char* NDIlib_send_listener_get_server_url(NDIlib_send_listener_instance_t p_instance)
 
 
     # // Describes a sender that has been discovered.
