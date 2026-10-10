@@ -233,6 +233,17 @@ cdef extern from "Processing.NDI.Recv.h" nogil:
     # PROCESSINGNDILIB_API
     const char* NDIlib_recv_get_web_control(NDIlib_recv_instance_t p_instance)
 
+    # // Retrieve the name of the current NDI source that the NDI receiver is connected to. This will return false
+    # // if there has been no change in the source information since the last call. If p_source_name is NULL, then
+    # // the name of the current NDI source will not be returned. If p_source_name is not NULL, then the name of
+    # // the current source will be returned, however, the returned value can be NULL if the NDI receiver is
+    # // currently not connected to a source. If the returned pointer is not NULL, then you should call
+    # // NDIlib_recv_free_string to free the string that is returned by this function. A timeout value can be given
+    # // to wait until a change occurs. If waiting is not desired, then use a timeout of 0.
+    bint NDIlib_recv_get_source_name(NDIlib_recv_instance_t p_instance, const char** p_source_name)
+    # Note: this is an overloaded definition adding the `timeout_in_ms` parameter. If not specified, it will be 0.
+    bint NDIlib_recv_get_source_name(NDIlib_recv_instance_t p_instance, const char** p_source_name, uint32_t timeout_in_ms)
+
 
 cpdef enum RecvBandwidth:
     metadata_only = NDIlib_recv_bandwidth_metadata_only

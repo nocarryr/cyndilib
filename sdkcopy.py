@@ -1,17 +1,21 @@
 from __future__ import annotations
-from typing import ClassVar, Literal, Iterator, get_args
-from pathlib import Path
+
+import difflib
 import glob
+import logging
+import shlex
 import shutil
 import subprocess
-import shlex
-import logging
-import difflib
+from collections.abc import Iterator
+from pathlib import Path
+from typing import ClassVar, Literal, get_args
+
+import click
 
 logging.basicConfig(level=logging.INFO, format='%(lineno)04d - %(message)s')
 logger = logging.getLogger(__name__)
 
-import click
+
 
 
 HERE = Path(__file__).parent.resolve()
@@ -52,7 +56,7 @@ class FileHandler:
     HEADER_DESTS: ClassVar[Path]|None = None
     DLL_SOURCES: ClassVar[Path]|None = None
     DLL_DESTS: ClassVar[Path]|None = None
-    FILE_TYPES: ClassVar[list[FileType]]
+    FILE_TYPES: ClassVar[tuple[FileType, ...]]
     def __init__(self, src_dir: Path, git_enable: bool = True, dry_run: bool = False) -> None:
         self.src_dir = src_dir
         self.dry_run = dry_run
@@ -129,7 +133,6 @@ class FileHandler:
 
     def after_copy_files(self, file_type: FileType) -> None:
         """Hook for any additional actions after copying files of a specific type."""
-        pass
 
     def copy_file(self, src_path: Path, dst_path: Path, file_type: FileType) -> None:
         """Copy a single file from source to destination."""
@@ -143,10 +146,9 @@ class FileHandler:
             dst_rel = dst_path.relative_to(WRAPPER_ROOT)
         is_text = file_type in ['doc', 'header']
 
-        if is_text:
-            if not self.check_text_file(src_path, dst_path):
-                logger.info(f'File {src_rel} has no modifications, skipping copy.')
-                return
+        if is_text and not self.check_text_file(src_path, dst_path):
+            logger.info(f'File {src_rel} has no modifications, skipping copy.')
+            return
         logger.info(f'Copy {src_rel} -> {dst_rel}')
         if self.dry_run:
             return
@@ -171,9 +173,7 @@ class FileHandler:
         src_lines, dst_lines = src_text.splitlines(), dst_text.splitlines()
         diff = difflib.unified_diff(src_lines, dst_lines, fromfile=src_path.name, tofile=dst_path.name)
         diff_lines = list(diff)
-        if len(diff_lines) == 0:
-            return False
-        return True
+        return len(diff_lines) != 0
 
     def get_trimmed_text(self, path: Path) -> str:
         """Get the text from the file, trimmed of trailing whitespace."""
@@ -197,7 +197,7 @@ class WindowsFileHandler(FileHandler):
     DOC_SOURCES = Path('Bin') / 'x64' / 'Processing.NDI.Lib.Licenses.txt'
     DOC_DESTS = WRAPPER_ROOT / 'bin'
     HEADER_SOURCES = Path('Include') / '*.h'
-    FILE_TYPES = ['lib', 'dll', 'doc']
+    FILE_TYPES = ('lib', 'dll', 'doc')
 
     def copy_file(self, src_path: Path, dst_path: Path, file_type: FileType) -> None:
         assert dst_path.exists(), f'Destination path {dst_path} does not exist.'
@@ -212,7 +212,7 @@ class LinuxFileHandler(FileHandler):
     DOC_DESTS = WRAPPER_ROOT / 'bin'
     HEADER_SOURCES = Path('include') / '*.h'
     HEADER_DESTS = WRAPPER_ROOT / 'include'
-    FILE_TYPES = ['lib', 'doc', 'header']
+    FILE_TYPES = ('lib', 'doc', 'header')
 
     lib_filename: str|None = None
     old_lib_filename: str|None = None
@@ -317,6 +317,9 @@ class LinuxFileHandler(FileHandler):
                     self.old_lib_filename = old_lib_filename
                 else:
                     assert self.old_lib_filename == old_lib_filename, f'Old library filename {old_lib_filename} does not match previous {self.old_lib_filename}.'
+                if not cur_binary.exists():
+                    logger.warning(f'Old binary {cur_binary.relative_to(WRAPPER_ROOT)} does not exist, skipping removal.')
+                    return
                 logger.info(f'Removing old binary {cur_binary.relative_to(WRAPPER_ROOT)} before copying {src_path.name}')
                 if not self.dry_run:
                     if self.git_enable:
@@ -332,6 +335,11 @@ class LinuxFileHandler(FileHandler):
             else:
                 assert dst_path.exists(), f'Destination path {dst_path} does not exist.'
         return super().copy_file(src_path, dst_path, file_type)
+
+    def check_text_file(self, src_path: Path, dst_path: Path) -> bool:
+        if src_path.suffix == '.h' and not dst_path.exists():
+            return True
+        return super().check_text_file(src_path, dst_path)
 
     def after_copy_files(self, file_type: FileType) -> None:
         logger.info(f'Running after_copy_files for {file_type} in {self.__class__.__name__}')
@@ -361,6 +369,8 @@ class LinuxFileHandler(FileHandler):
             logger.info(f'Checking symlinks in {dst.relative_to(WRAPPER_ROOT)} for {self.lib_filename}')
             symlinks = [p for p in dst.glob('libndi.so*') if p.is_symlink()]
             lib_file = dst / self.lib_filename
+            if self.dry_run:
+                continue
             assert lib_file.exists(), f'Library file {lib_file} does not exist.'
             for symlink in symlinks:
                 symlink_target = symlink.resolve()
@@ -383,7 +393,7 @@ class MacFileHandler(FileHandler):
     DOC_DESTS = WRAPPER_ROOT / 'bin'
     # HEADER_SOURCES = Path('include') / '*.h'
     # HEADER_DESTS = WRAPPER_ROOT / 'include'
-    FILE_TYPES = ['lib', 'doc']
+    FILE_TYPES = ('lib', 'doc')
 
     def copy_file(self, src_path: Path, dst_path: Path, file_type: FileType) -> None:
         assert dst_path.exists(), f'Destination path {dst_path} does not exist.'
@@ -395,8 +405,8 @@ def undo_working_copy(lib_version: str|None) -> None:
     logger.info(f'Undoing working copy in {wrapper_dir}...')
     subprocess.run(shlex.split(f'git restore --staged {wrapper_dir}'), check=True)
     subprocess.run(shlex.split(f'git restore {wrapper_dir}'), check=True)
-    subprocess.run(shlex.split(f'git restore --staged libndi_licenses.txt'), check=True)
-    subprocess.run(shlex.split(f'git restore libndi_licenses.txt'), check=True)
+    subprocess.run(shlex.split('git restore --staged libndi_licenses.txt'), check=True)
+    subprocess.run(shlex.split('git restore libndi_licenses.txt'), check=True)
 
     if lib_version is not None:
         lib_filename = f'libndi.so.{lib_version}'
