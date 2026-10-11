@@ -1,7 +1,6 @@
 
-from cpython cimport PyObject
 from cpython.method cimport PyMethod_Check
-from cpython.weakref cimport PyWeakref_NewRef, PyWeakref_GetObject
+from cpython.weakref cimport PyWeakref_NewRef
 
 
 __all__ = ('Callback', 'WeakMethod')
@@ -67,16 +66,14 @@ cdef class WeakMethod:
     cdef bint trigger_callback(self) except -1:
         if not self.alive:
             return False
-        cdef PyObject* obj_ptr = PyWeakref_GetObject(self.obj_ref)
-        if not obj_ptr:
+        cdef object obj = self.obj_ref()
+        if obj is None:
             self.alive = False
             return False
-        cdef PyObject* func_ptr = PyWeakref_GetObject(self.func_ref)
-        if not func_ptr:
+        cdef object func = self.func_ref()
+        if func is None:
             self.alive = False
             return False
-        cdef object func = <object>func_ptr
-        cdef object obj = <object>obj_ptr
         cdef object meth = self.meth_type(func, obj)
         meth()
         return True
