@@ -59,7 +59,7 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        python-version: ["cp310", "cp311", "cp312", "cp313", "cp314"]
+        python-version: ["cp310", "cp311", "cp312", "cp313", "cp314", "cp315"]
         os:
           - "blacksmith-2vcpu-ubuntu-2404"
           - "blacksmith-2vcpu-windows-2025"
@@ -77,7 +77,7 @@ jobs:
 
       - uses: actions/setup-python@5fda3b95a4ea91299a34e894583c3862153e4b97 # v7
         with:
-          python-version: 3.14
+          python-version: 3.15
         if: runner.os == 'macOS' && runner.arch == 'ARM64'
 
       - name: Set cibuildwheel env
