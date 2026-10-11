@@ -445,7 +445,7 @@ test = [
 requires-dist = [
     { name = "importlib-resources", marker = "python_full_version < '3.9'" },
     { name = "numpy" },
-    { name = "pugixml-cython", specifier = ">=0.1.1" },
+    { name = "pugixml-cython", specifier = ">=0.1.2" },
 ]
 
 [package.metadata.requires-dev]
