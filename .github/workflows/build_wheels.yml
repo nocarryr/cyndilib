@@ -59,7 +59,7 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        python-version: ["cp310", "cp311", "cp312", "cp313", "cp314", "cp315"]
+        python-version: ["cp311", "cp312", "cp313", "cp314", "cp315"]
         os:
           - "blacksmith-2vcpu-ubuntu-2404"
           - "blacksmith-2vcpu-windows-2025"

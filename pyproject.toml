@@ -21,7 +21,7 @@ license-files = [
     "LICENSE",
     "libndi_licenses.txt"
 ]
-requires-python = ">=3.10"
+requires-python = ">=3.11"
 dependencies = [
     "numpy",
     "importlib_resources;python_version<'3.9'",
@@ -41,7 +41,6 @@ classifiers = [
     "Programming Language :: Cython",
     "Programming Language :: Python",
     "Programming Language :: Python :: 3 :: Only",
-    "Programming Language :: Python :: 3.10",
     "Programming Language :: Python :: 3.11",
     "Programming Language :: Python :: 3.12",
     "Programming Language :: Python :: 3.13",
@@ -114,7 +113,7 @@ addopts = "-n auto --no-success-flaky-report --doctest-modules --doctest-glob='*
 
 [tool.cibuildwheel]
 build-frontend = "build[uv]"
-build = "cp3{9,10,11,12,13,14,15}-*"
+build = "cp3{11,12,13,14,15}-*"
 skip = "*-musllinux*"
 before-all = "uv export --frozen --no-emit-project --no-build --only-group test -o pylock.toml"
 before-test = "uv pip install -r pylock.toml"
