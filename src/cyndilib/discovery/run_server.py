@@ -31,6 +31,8 @@ class Platform(enum.Enum):
     """Linux platform (i686)"""
     linux_x86_64 = enum.auto()
     """Linux platform (x86_64)"""
+    linux_aarch64 = enum.auto()
+    """Linux platform (aarch64)"""
 
     @classmethod
     def current(cls) -> Platform | None:
@@ -46,6 +48,8 @@ class Platform(enum.Enum):
                 return cls.linux_x86_64
             elif platform.machine() == "i686":
                 return cls.linux_i686
+            elif platform.machine() == "aarch64":
+                return cls.linux_aarch64
 
 
 
@@ -56,6 +60,7 @@ _platform_bin_map: dict[Platform, Path] = {
     Platform.macos: Path('utilities') / 'Apple' / "Application.Mac.NDI.DirectoryService",
     Platform.linux_i686: Path('i686-linux-gnu') / "ndi-discovery-server",
     Platform.linux_x86_64: Path('x86_64-linux-gnu') / "ndi-discovery-server",
+    Platform.linux_aarch64: Path('aarch64-rpi4-linux-gnueabi') / "ndi-discovery-server",
 }
 
 
