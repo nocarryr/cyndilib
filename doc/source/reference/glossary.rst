@@ -104,11 +104,9 @@ Glossary
         More information can be found in the `Receive Advertiser API`_ documentation.
 
     Receive Listener
-        Offers the API for retrieving a list of advertised receivers,
-        enabling the monitoring of receiver events and the control of the sources connected to those receivers.
-        These APIs provide a powerful method for discovering, monitoring, and controlling receivers
-        in real time. The |NDI| Receiver Advertiser API and |NDI| Receiver Listener API are both included
-        as part of the Standard SDK.
+        Offers an API for retrieving a list of advertised receivers. The advertiser
+        and listener APIs are included in the Standard SDK. Receiver event
+        subscriptions and control commands require the Advanced SDK.
 
         More information can be found in the `Receive Listener API`_ documentation.
 

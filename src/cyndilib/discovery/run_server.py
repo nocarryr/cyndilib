@@ -110,7 +110,12 @@ def run() -> None:
         if proc.returncode is not None:
             raise RuntimeError(f"Discovery server exited with return code {proc.returncode}")
     except KeyboardInterrupt:
-        proc.send_signal(signal.SIGINT)
+        interrupt_signal = (
+            signal.CTRL_BREAK_EVENT
+            if sys.platform == "win32"
+            else signal.SIGINT
+        )
+        proc.send_signal(interrupt_signal)
         proc.wait(5)
     finally:
         if proc.returncode is None:
