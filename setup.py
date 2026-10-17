@@ -65,14 +65,19 @@ def get_ndi_libdir():
         lib_pkg_data.append('*.lib')
 
         # Discovery Service for Windows
-        utilities_pkg_data.append('NDI Discovery Service.exe')
+        utilities_pkg_data.extend([
+            'Win_x64/NDI Discovery Service.exe',
+            'Win_x86/NDI Discovery Service.exe',
+        ])
     else:
         lib_dir = PROJECT_PATH / 'src' / 'cyndilib' / 'wrapper' / 'bin'
         if MACOS:
             bin_pkg_data.append('*.dylib')
 
             # Discovery Service for macOS
-            utilities_pkg_data.append('Application.Mac.NDI.DirectoryService')
+            utilities_pkg_data.append(
+                'Apple/Application.Mac.NDI.DirectoryService'
+            )
         else:
             platform_str = get_platform()
             if not platform_str.startswith('linux-'):
