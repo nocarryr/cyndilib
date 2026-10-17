@@ -50,7 +50,7 @@ class ReceiveAdvertiserSettings(TypedDict):
     """If True, allows monitoring of the receiver through the :term:`Discovery Server`
     (if :attr:`enabled` is True)
 
-    The default is ``False``.
+    The default is ``True``.
     """
 
 
