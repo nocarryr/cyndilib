@@ -76,6 +76,83 @@ Glossary
         The `dBu`_ alignment level is :math:`+4\text{ dBu} = 0\text{ dBVU}`.
 
 
+    Discovery Server
+        A command-line application available for Windows, macOS, and Linux.
+        It allows you to replace mDNS-based automatic discovery with a centralized
+        registry of |NDI| sources.
+
+        More information can be found in the `Discovery Server`_,
+        `Receive Discovery Monitor and Control`_ and
+        `Send Discovery and Advertiser`_ documentation.
+
+    Send Advertiser
+        Provides the API for advertising |NDI| senders within the :term:`Discovery Server`,
+        ensuring they can be discovered by other systems.
+
+        More information can be found in the `Send Advertiser API`_ documentation.
+
+    Send Listener
+        Offers the API for retrieving a list of advertised senders,
+        enabling the monitoring of sender events.
+
+        More information can be found in the `Send Listener API`_ documentation.
+
+    Receive Advertiser
+        Provides the API for advertising |NDI| receivers within the :term:`Discovery Server`,
+        ensuring they can be discovered by other systems.
+
+        More information can be found in the `Receive Advertiser API`_ documentation.
+
+    Receive Listener
+        Offers the API for retrieving a list of advertised receivers,
+        enabling the monitoring of receiver events and the control of the sources connected to those receivers.
+        These APIs provide a powerful method for discovering, monitoring, and controlling receivers
+        in real time. The |NDI| Receiver Advertiser API and |NDI| Receiver Listener API are both included
+        as part of the Standard SDK.
+
+        More information can be found in the `Receive Listener API`_ documentation.
+
+    NDI Configuration
+        The |NDI| configuration settings are stored in JSON files as described in the
+        `NDI Configuration File`_ documentation. The location of these files varies per platform and is
+        described in the |NDI| `Platform Documentation`_.
+
+        For Windows, the |NDI| Tools Bundle includes “Access Manager”, a user interface for configuring
+        most of the settings.  They are also stored in ``C:\ProgramData\NDI\ndi-config.v1.json``.
+
+        For macOS and Linux, the configuration settings are stored in ``$HOME/.ndi/ndi-config.v1.json``.
+
+    Discovery Configuration
+
+        To use the |NDI| :term:`Discovery Server`, it will most likely be necessary to configure IP addresses for
+        the servers on the network.  This can be done by setting the following in the :term:`NDI Configuration`
+
+        .. code-block:: json
+
+            {
+              "ndi": {
+                "networks": {
+                  "ips": "",
+                  "discovery": "<discovery-server-ips>"
+                }
+              }
+            }
+
+        Multiple discovery servers can be specified by separating their IP addresses with commas.
+
+        More information can be found in the `Discovery Server`_ documentation.
+
+
+
 .. _dBu: https://en.m.wikipedia.org/wiki/Decibel#Voltage
 .. _dBFS: https://en.m.wikipedia.org/wiki/DBFS
 .. _Volume Unit: https://en.m.wikipedia.org/wiki/VU_meter
+.. _Discovery Server: https://docs.ndi.video/all/getting-started/white-paper/discovery-and-registration/discovery-server
+.. _Send Discovery and Advertiser: https://docs.ndi.video/all/developing-with-ndi/sdk/ndi-sender-discovery-and-monitor
+.. _Receive Discovery Monitor and Control: https://docs.ndi.video/all/developing-with-ndi/sdk/ndi-recv-discovery-monitor-and-control
+.. _Receive Advertiser API: https://docs.ndi.video/all/developing-with-ndi/sdk/ndi-recv-discovery-monitor-and-control#ndi-recv-a-dvertiser
+.. _Receive Listener API: https://docs.ndi.video/all/developing-with-ndi/sdk/ndi-recv-discovery-monitor-and-control#ndi-recv-listener
+.. _Send Advertiser API: https://docs.ndi.video/all/developing-with-ndi/sdk/ndi-sender-discovery-and-monitor/ndi-sender-advertiser
+.. _Send Listener API: https://docs.ndi.video/all/developing-with-ndi/sdk/ndi-sender-discovery-and-monitor/ndi-sender-listener
+.. _NDI Configuration File: https://docs.ndi.video/all/developing-with-ndi/sdk/configuration-files
+.. _Platform Documentation: https://docs.ndi.video/all/developing-with-ndi/sdk/platform-considerations
