@@ -1,17 +1,17 @@
 # import _cython_3_0_10
-from typing_extensions import Self
+from typing import Self, TypeAlias
+
+import numpy as np
+import numpy.typing as npt
 from _typeshed import ReadableBuffer
 
-import numpy.typing as npt
-import numpy as np
-
-from cyndilib.finder import Source
 from cyndilib.audio_frame import AudioSendFrame
-from cyndilib.video_frame import VideoSendFrame
+from cyndilib.finder import Source
 from cyndilib.metadata_frame import MetadataSendFrame
+from cyndilib.video_frame import VideoSendFrame
 
-_UintArray = npt.NDArray[np.uint8]
-_FloatArray = npt.NDArray[np.float32]
+_UintArray: TypeAlias = npt.NDArray[np.uint8]
+_FloatArray: TypeAlias = npt.NDArray[np.float32]
 
 
 class Sender:

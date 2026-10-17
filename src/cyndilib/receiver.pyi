@@ -1,20 +1,17 @@
 # import _cython_3_0_10
-from typing import Any, TypedDict, TYPE_CHECKING
-
 import enum
 import threading
+from typing import Any, TypedDict
 
-from .wrapper import RecvColorFormat, RecvBandwidth
-from .wrapper.ndi_structs import NDIlib_tally_t
-from .locks import RLock, Condition
-from .framesync import FrameSync
-from .finder import Source
 from .audio_frame import AudioRecvFrame
-from .video_frame import VideoRecvFrame
+from .callback import _CallbackType
+from .finder import Source
+from .framesync import FrameSync
+from .locks import Condition, RLock
 from .metadata_frame import MetadataRecvFrame
-if TYPE_CHECKING:
-    from .callback import _CallbackType
-
+from .video_frame import VideoRecvFrame
+from .wrapper import RecvBandwidth, RecvColorFormat
+from .wrapper.ndi_structs import NDIlib_tally_t
 
 class RecvPerformance_t(TypedDict):
     frames_total: int
