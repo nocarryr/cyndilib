@@ -106,7 +106,12 @@ def send(opts: Options) -> None:
 
     sig_generator = Signal(opts)
 
-    sender = Sender(opts.sender_name)
+    sender = Sender(
+        opts.sender_name,
+        discovery={
+            'enabled': True,
+        }
+    )
 
     # Build a VideoSendFrame and set its resolution and frame rate
     # to match the options argument.

@@ -117,6 +117,9 @@ def play(options: Options) -> None:
         receiver = Receiver(
             color_format=options.recv_fmt.value,
             bandwidth=options.recv_bandwidth.value,
+            discovery={
+                'enabled': True,
+            },
         )
         vf = VideoFrameSync()
         frame_sync = receiver.frame_sync
