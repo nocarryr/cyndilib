@@ -2,14 +2,54 @@
 # distutils: language = c++
 
 from libc.math cimport lround
+import warnings
+
+from .discovery import (
+    DiscoveryServerNotFoundError,
+    SendAdvertiserSettings,
+    SendAdvertiserSettingsFull,
+)
+from .discovery.settings import DEFAULT_SEND_ADVERTISER_SETTINGS
 
 
 __all__ = ('Sender',)
 
 
+
+cdef int _close_sender(
+    NDIlib_send_advertiser_instance_t send_advertiser_instance,
+    NDIlib_send_instance_t ptr
+) except -1 nogil:
+    """Close the sender and its advertiser if they exist
+
+    This is a helper function to properly close the sender and its advertiser.
+    The arguments passed may be NULL if the sender or advertiser does not exist.
+    """
+    if send_advertiser_instance is not NULL:
+        if ptr is not NULL:
+            NDIlib_send_advertiser_del_sender(send_advertiser_instance, ptr)
+        NDIlib_send_advertiser_destroy(send_advertiser_instance)
+    if ptr is not NULL:
+        NDIlib_send_destroy(ptr)
+    return 0
+
+
 cdef class Sender:
     """Sends video and audio streams
 
+    Arguments:
+        ndi_name (str): The |NDI| source name to use
+        ndi_groups (str): The |NDI| groups to use.
+            If empty, the default groups will be used.
+        clock_video (bool): Setting for the :attr:`clock_video` attribute.
+            True if the video frames should clock themselves.
+        clock_audio (bool): Setting for the :attr:`clock_audio` attribute.
+            True if the audio frames should clock themselves.
+        discovery (SendAdvertiserSettings, optional): Settings for the
+            :term:`Send Advertiser` API.
+
+    .. versionchanged:: 0.1.4
+        Added support for the :term:`Send Advertiser` API.
 
     Attributes:
         ndi_name (str): The |NDI| source name to use
@@ -26,6 +66,11 @@ cdef class Sender:
 
     """
     def __cinit__(self, *args, **kwargs):
+        self.advertiser_settings.enabled = False
+        self.advertiser_settings.use_default_url_address = True
+        self.advertiser_settings.allow_monitoring = True
+        self.advertiser_settings.url_address = b''
+        self.advertiser_instance = NULL
         self.ptr = NULL
         self.source_ptr = NULL
         self.has_video_frame = False
@@ -42,6 +87,7 @@ cdef class Sender:
         str ndi_groups='',
         bint clock_video=True,
         bint clock_audio=True,
+        discovery: SendAdvertiserSettings | None = None,
     ):
         self.ndi_name = ndi_name
         self.ndi_groups = ndi_groups
@@ -49,6 +95,22 @@ cdef class Sender:
         self._b_ndi_groups = ndi_groups.encode()
         self.clock_video = clock_video
         self.clock_audio = clock_audio
+
+        # Begin with the default advertiser settings and update with any provided discovery settings.
+        py_advertiser_settings = DEFAULT_SEND_ADVERTISER_SETTINGS.copy()
+        if discovery is not None:
+            py_advertiser_settings.update(discovery)
+
+        self.advertiser_settings.enabled = py_advertiser_settings['enabled']
+        self.advertiser_settings.use_default_url_address = py_advertiser_settings['use_default_url_address']
+        self.advertiser_settings.allow_monitoring = py_advertiser_settings['allow_monitoring']
+
+        # Store the URL address as a bytes object so the reference remains valid.
+        # Then it can be safely assigned to the advertiser settings struct.
+        self._b_advertiser_url_address = py_advertiser_settings['url_address'].encode()
+        self.advertiser_settings.url_address = self._b_advertiser_url_address
+        self.advertiser_create.p_url_address = self.advertiser_settings.url_address
+
         self.metadata_frame = MetadataSendFrame('')
         self.source = None
         send_t_initialize(&(self.send_create), self._b_ndi_name, NULL)
@@ -57,10 +119,11 @@ cdef class Sender:
 
 
     def __dealloc__(self):
+        cdef NDIlib_send_advertiser_instance_t advertiser_instance = self.advertiser_instance
         cdef NDIlib_send_instance_t ptr = self.ptr
+        self.advertiser_instance = NULL
         self.ptr = NULL
-        if ptr is not NULL:
-            NDIlib_send_destroy(ptr)
+        _close_sender(advertiser_instance, ptr)
         self.audio_frame = None
         self.video_frame = None
 
@@ -94,6 +157,18 @@ cdef class Sender:
     def has_any_frame(self):
         return self.has_video_frame or self.has_audio_frame
 
+    def get_advertiser_settings(self) -> SendAdvertiserSettingsFull:
+        """Get the advertiser settings for the sender
+
+        .. versionadded:: 0.1.4
+        """
+        return SendAdvertiserSettingsFull(
+            enabled=self.advertiser_settings.enabled,
+            use_default_url_address=self.advertiser_settings.use_default_url_address,
+            url_address=self.advertiser_settings.url_address.decode(),
+            allow_monitoring=self.advertiser_settings.allow_monitoring,
+        )
+
     def open(self):
         """Open the sender
         """
@@ -117,6 +192,7 @@ cdef class Sender:
         if not self.has_video_frame and not self.has_audio_frame:
             raise_exception('Cannot start sender. No frame objects')
         self._running = True
+        cdef NDIlib_send_advertiser_instance_t advertiser_instance
         cdef NDIlib_send_instance_t ptr
         cdef void* source_ptr
         try:
@@ -129,6 +205,22 @@ cdef class Sender:
             self.ptr = NDIlib_send_create(&(self.send_create))
             if self.ptr is NULL:
                 raise_mem_err()
+            if self.advertiser_settings.enabled:
+                if self.advertiser_settings.use_default_url_address:
+                    self.advertiser_instance = NDIlib_send_advertiser_create()
+                else:
+                    self.advertiser_instance = NDIlib_send_advertiser_create(&(self.advertiser_create))
+                if self.advertiser_instance is NULL:
+                    warnings.warn(
+                        "The sender advertiser failed to create. Please configure the connection to the NDI discovery server.",
+                        DiscoveryServerNotFoundError
+                    )
+                else:
+                    NDIlib_send_advertiser_add_sender(
+                        self.advertiser_instance,
+                        self.ptr,
+                        allow_monitoring=self.advertiser_settings.allow_monitoring,
+                    )
 
             # Cast from void* to avoid clang "const" compile errors
             source_ptr = <void*>NDIlib_send_get_source_name(self.ptr)
@@ -139,9 +231,10 @@ cdef class Sender:
             print('caught exc: ', exc)
             self._running = False
             ptr = self.ptr
+            advertiser_instance = self.advertiser_instance
+            self.advertiser_instance = NULL
             self.ptr = NULL
-            if ptr is not NULL:
-                NDIlib_send_destroy(ptr)
+            _close_sender(advertiser_instance, ptr)
             self.video_frame._destroy()
             self.video_frame._set_sender_status(False)
             self.audio_frame._destroy()
@@ -153,12 +246,14 @@ cdef class Sender:
         if not self._running:
             return 0
         self._running = False
+        cdef NDIlib_send_advertiser_instance_t advertiser_instance = self.advertiser_instance
         cdef NDIlib_send_instance_t ptr = self.ptr
+        self.advertiser_instance = NULL
         self.ptr = NULL
         if ptr is not NULL:
             NDIlib_send_send_video_async_v2(ptr, NULL)
             self._clear_async_video_status()
-            NDIlib_send_destroy(ptr)
+        _close_sender(advertiser_instance, ptr)
         if self.has_video_frame:
             self.video_frame._destroy()
             self.video_frame._set_sender_status(False)

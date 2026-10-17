@@ -15,7 +15,18 @@ from .audio_frame cimport AudioSendFrame
 from .metadata_frame cimport MetadataSendFrame
 
 
+cdef struct AdvertiserSettings_t:
+    bint enabled
+    bint use_default_url_address
+    bint allow_monitoring
+    const char* url_address
+
+
 cdef class Sender:
+    cdef AdvertiserSettings_t advertiser_settings
+    cdef bytes _b_advertiser_url_address
+    cdef NDIlib_send_advertiser_create_t advertiser_create
+    cdef NDIlib_send_advertiser_instance_t advertiser_instance
     cdef NDIlib_send_create_t send_create
     cdef NDIlib_send_instance_t ptr
     cdef NDIlib_source_t* source_ptr
