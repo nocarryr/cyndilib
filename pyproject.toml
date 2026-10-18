@@ -63,6 +63,9 @@ classifiers = [
 where = ["src"]
 exclude = ["tests", "tests.*"]
 
+[project.scripts]
+cyndilib-discovery-server = "cyndilib.discovery.run_server:run"
+
 
 [project.urls]
 Homepage = "https://github.com/cyndilib/cyndilib"

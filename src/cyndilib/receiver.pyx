@@ -1,8 +1,16 @@
 from libc.string cimport strdup
 cimport cython
 import threading
+import warnings
 
 from .clock cimport time, sleep
+
+from .discovery import (
+    DiscoveryServerNotFoundError,
+    ReceiveAdvertiserSettings,
+    ReceiveAdvertiserSettingsFull,
+)
+from .discovery.settings import RECEIVE_ADVERTISER_SETTINGS_DEFAULT
 
 
 __all__ = ('Receiver', 'RecvThreadWorker', 'RecvThread')
@@ -94,6 +102,11 @@ cdef class Receiver:
         allow_video_fields: ``True`` if interlaced video frames can be handled.
             If ``False``, only progressive frames will be delivered.
         recv_name: Name for the receiver
+        discovery (ReceiveAdvertiserSettings, optional): Settings for the
+            :term:`Receive Advertiser` API.
+
+    .. versionchanged:: 0.1.4
+        Added support for the :term:`Receive Advertiser` API.
 
 
     Attributes:
@@ -106,6 +119,12 @@ cdef class Receiver:
         ptz (PTZ): Access to the PTZ methods.
     """
     def __cinit__(self, *args, **kwargs):
+        self.advertiser_settings.enabled = False
+        self.advertiser_settings.use_default_url_address = True
+        self.advertiser_settings.url_address = b''
+        self.advertiser_settings.allow_controlling = False
+        self.advertiser_settings.allow_monitoring = True
+        self.advertiser_instance = NULL
         self.ptr = NULL
         self.source_ptr = NULL
         self.video_stats.frames_total = 0
@@ -135,7 +154,8 @@ cdef class Receiver:
         color_format=RecvColorFormat.UYVY_BGRA,
         RecvBandwidth bandwidth=RecvBandwidth.lowest,
         bint allow_video_fields=True,
-        str recv_name=''
+        str recv_name='',
+        discovery: ReceiveAdvertiserSettings | None = None,
     ):
         self.connection_lock = RLock()
         self.connection_notify = Condition(self.connection_lock)
@@ -155,6 +175,22 @@ cdef class Receiver:
         self.has_audio_frame = False
         self.has_metadata_frame = True
 
+        # Begin with the default advertiser settings and update with any provided discovery settings.
+        py_advertiser_settings = RECEIVE_ADVERTISER_SETTINGS_DEFAULT.copy()
+        if discovery is not None:
+            py_advertiser_settings.update(discovery)
+
+        self.advertiser_settings.enabled = py_advertiser_settings['enabled']
+        self.advertiser_settings.allow_controlling = py_advertiser_settings['allow_controlling']
+        self.advertiser_settings.allow_monitoring = py_advertiser_settings['allow_monitoring']
+        self.advertiser_settings.use_default_url_address = py_advertiser_settings['use_default_url_address']
+
+        # Store the URL address as a bytes object so the reference remains valid.
+        # Then it can be safely assigned to the advertiser settings struct.
+        self._b_advertiser_url_address = py_advertiser_settings['url_address'].encode()
+        self.advertiser_settings.url_address = self._b_advertiser_url_address
+        self.advertiser_create.p_url_address = self.advertiser_settings.url_address
+
         cdef NDIlib_recv_create_v3_t* src_p = self.settings.build_create_p()
         try:
             recv_t_copy(src_p, &(self.recv_create))
@@ -167,6 +203,25 @@ cdef class Receiver:
         self.ptr = NDIlib_recv_create_v3(&(self.recv_create))
         if self.ptr is NULL:
             raise MemoryError()
+
+        if self.advertiser_settings.enabled:
+            if self.advertiser_settings.use_default_url_address:
+                self.advertiser_instance = NDIlib_recv_advertiser_create()
+            else:
+                self.advertiser_instance = NDIlib_recv_advertiser_create(&(self.advertiser_create))
+
+            if self.advertiser_instance is NULL:
+                warnings.warn(
+                    "The receiver advertiser failed to create. Please configure the connection to the NDI discovery server.",
+                    DiscoveryServerNotFoundError
+                )
+            else:
+                NDIlib_recv_advertiser_add_receiver(
+                    self.advertiser_instance,
+                    self.ptr,
+                    allow_controlling=self.advertiser_settings.allow_controlling,
+                    allow_monitoring=self.advertiser_settings.allow_monitoring,
+                )
         self.frame_sync = FrameSync(self)
         self.ptz = PTZ(self)
 
@@ -174,9 +229,29 @@ cdef class Receiver:
         self.ptz = None
         self.frame_sync = None
         cdef NDIlib_recv_instance_t p = self.ptr
+        cdef NDIlib_recv_advertiser_instance_t adv = self.advertiser_instance
+        if adv is not NULL:
+            if p is not NULL:
+                NDIlib_recv_advertiser_del_receiver(adv, p)
+            NDIlib_recv_advertiser_destroy(adv)
+            self.advertiser_instance = NULL
         if self.ptr is not NULL:
             self.ptr = NULL
             NDIlib_recv_destroy(p)
+
+    def get_advertiser_settings(self) -> ReceiveAdvertiserSettingsFull:
+        """Get the advertiser settings for the receiver
+
+        .. versionadded:: 0.1.4
+        """
+        cdef str url_address = self.advertiser_settings.url_address.decode()
+        return {
+            'enabled': self.advertiser_settings.enabled,
+            'use_default_url_address': self.advertiser_settings.use_default_url_address,
+            'allow_controlling': self.advertiser_settings.allow_controlling,
+            'allow_monitoring': self.advertiser_settings.allow_monitoring,
+            'url_address': url_address
+        }
 
     cpdef set_video_frame(self, VideoRecvFrame vf):
         """Set the :attr:`video_frame`

@@ -21,4 +21,5 @@ Reference
    metadata_frame
    audio_reference
    locks
+   discovery/index
    wrapper/index.rst

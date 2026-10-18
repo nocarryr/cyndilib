@@ -55,7 +55,11 @@ def play(options: Options) -> None:
     # buffer the incoming audio data.
     chunk_size = 6400
 
-    receiver = Receiver()
+    receiver = Receiver(
+        discovery={
+            'enabled': True,
+        }
+    )
 
     # We're using a VideoFrameSync here even though we only care about the audio frames.
     # It's only needed so the FrameSync can manage timing for us.

@@ -29,6 +29,14 @@ cdef struct RecvPerformance_t:
     int64_t frames_dropped
     double dropped_percent
 
+cdef struct AdvertiserSettings_t:
+    bint enabled
+    bint use_default_url_address
+    bint allow_controlling
+    bint allow_monitoring
+    const char* url_address
+
+
 cdef NDIlib_frame_type_e recv_frame_type_cast(ReceiveFrameType ft) noexcept nogil
 cdef ReceiveFrameType recv_frame_type_uncast(NDIlib_frame_type_e ft) noexcept nogil
 
@@ -44,6 +52,10 @@ cdef class RecvCreate:
 
 cdef class Receiver:
     cdef RecvCreate settings
+    cdef AdvertiserSettings_t advertiser_settings
+    cdef bytes _b_advertiser_url_address
+    cdef NDIlib_recv_advertiser_create_t advertiser_create
+    cdef NDIlib_recv_advertiser_instance_t advertiser_instance
     cdef readonly FrameSync frame_sync
     cdef readonly VideoRecvFrame video_frame
     cdef readonly AudioRecvFrame audio_frame

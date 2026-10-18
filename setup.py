@@ -54,16 +54,30 @@ def get_ndi_libdir():
     bin_pkg_data = []
     lib_dirs = []
     runtime_lib_dirs = []
+
+    # Package data for utility executables (e.g., Discovery Service)
+    utilities_pkg_data: list[str] = []
     if WIN32:
         lib_dir = PROJECT_PATH / 'src' / 'cyndilib' / 'wrapper' / 'lib'
         dll_dir = lib_dir.parent / 'bin'
         lib_dirs.extend([str(dll_dir.resolve()), str(lib_dir.resolve())])
         bin_pkg_data.append('*.dll')
         lib_pkg_data.append('*.lib')
+
+        # Discovery Service for Windows
+        utilities_pkg_data.extend([
+            'Win_x64/NDI Discovery Service.exe',
+            'Win_x86/NDI Discovery Service.exe',
+        ])
     else:
         lib_dir = PROJECT_PATH / 'src' / 'cyndilib' / 'wrapper' / 'bin'
         if MACOS:
             bin_pkg_data.append('*.dylib')
+
+            # Discovery Service for macOS
+            utilities_pkg_data.append(
+                'Apple/Application.Mac.NDI.DirectoryService'
+            )
         else:
             platform_str = get_platform()
             if not platform_str.startswith('linux-'):
@@ -78,6 +92,11 @@ def get_ndi_libdir():
                 raise Exception(f'Unsupported platform: "{platform_str}"')
             lib_dir = lib_dir / arch
             bin_pkg_data.append(f'{arch}/*.so')
+
+            # Discovery Server for Linux. This gets added alongside the
+            # shared libraries in the package data.
+            bin_pkg_data.append(f'{arch}/ndi-discovery-server')
+
         lib_dir = lib_dir.resolve()
         lib_dirs.append(str(lib_dir))
         runtime_lib_dirs.append(str(lib_dir))
@@ -88,6 +107,8 @@ def get_ndi_libdir():
         'cyndilib.wrapper.bin':bin_pkg_data,
         'cyndilib.wrapper.lib':lib_pkg_data,
     })
+    if utilities_pkg_data:
+        package_data['cyndilib.wrapper.bin.utilities'] = utilities_pkg_data
     return package_data, lib_dirs, runtime_lib_dirs
 
 

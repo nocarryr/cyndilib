@@ -22,6 +22,9 @@ from cyndilib import (
     VideoSendFrame,
     FourCC,
 )
+from cyndilib.discovery.exceptions import DiscoveryServerUnavailableError
+from cyndilib.discovery.run_server import get_run_server_path
+
 
 def test_audio_frame():
     sample_rate = 48000
@@ -168,3 +171,14 @@ def test_framesync():
     assert not receiver.has_audio_frame
     assert receiver.frame_sync.video_frame is vf
     assert receiver.frame_sync.audio_frame is af
+
+
+def test_discovery_server_exists():
+    """Test that the discovery server binary exists in the packaged distribution
+    """
+    try:
+        path = get_run_server_path()
+        assert path.exists()
+    except DiscoveryServerUnavailableError:
+        # Discovery server is unavailable for this platform or configuration
+        pass
