@@ -547,6 +547,7 @@ cdef class Receiver:
                         self._set_source_tally(False, False)
                         self.source = new_source
                         self.source_name = new_source.name
+                        self.source_ptr = new_source.ptr
                         source_changed = True
 
             # If `src_ptr.p_ndi_name` is not NULL, the SDK requires that we free the string after use.
