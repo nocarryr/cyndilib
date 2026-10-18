@@ -528,7 +528,7 @@ cdef class Receiver:
             if self.source.valid:
                 # Use bytes for comparison.  Char pointers would require strcmp.
                 new_name_bytes = p_ndi_name
-                cur_name_bytes = self.source_ptr.p_ndi_name
+                cur_name_bytes = self.source.cpp_name
                 name_changed = cur_name_bytes != new_name_bytes
             else:
                 # self.source is not valid (not tracked by the SDK), so treat this as a source change.
