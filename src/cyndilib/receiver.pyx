@@ -1,5 +1,6 @@
 from libc.string cimport strdup
 cimport cython
+from typing import Callable
 import threading
 import warnings
 
@@ -11,6 +12,7 @@ from .discovery import (
     ReceiveAdvertiserSettingsFull,
 )
 from .discovery.settings import RECEIVE_ADVERTISER_SETTINGS_DEFAULT
+from .finder cimport Finder, Source
 
 
 __all__ = ('Receiver', 'RecvThreadWorker', 'RecvThread')
@@ -112,6 +114,11 @@ cdef class Receiver:
     Attributes:
         source_name (str): The current |NDI| source name
         source (Source): The current :class:`~.finder.Source` object
+        source_change_callback (Callback): A callback that is invoked when the source changes.
+            A source change can occur if the :attr:`~.ReceiveAdvertiserSettings.allow_controlling`
+            attribute is set to ``True`` in the **discovery** init argument and the source is
+            changed by an external controller (through the control portion of the
+            :term:`Discovery Server` API).
         video_frame (VideoRecvFrame):
         audio_frame (AudioRecvFrame):
         metadata_frame (MetadataRecvFrame):
@@ -174,6 +181,7 @@ cdef class Receiver:
         self.has_video_frame = False
         self.has_audio_frame = False
         self.has_metadata_frame = True
+        self.source_change_callback = Callback()
 
         # Begin with the default advertiser settings and update with any provided discovery settings.
         py_advertiser_settings = RECEIVE_ADVERTISER_SETTINGS_DEFAULT.copy()
@@ -252,6 +260,15 @@ cdef class Receiver:
             'allow_monitoring': self.advertiser_settings.allow_monitoring,
             'url_address': url_address
         }
+
+    def set_source_change_callback(self, cb: Callable[[], None] | None):
+        """Set (or clear) the :attr:`source_change_callback` for the receiver.
+
+        When a source change occurs, this callback will be invoked with no arguments.
+
+        .. versionadded:: 0.1.4
+        """
+        self.source_change_callback.set_callback(cb)
 
     cpdef set_video_frame(self, VideoRecvFrame vf):
         """Set the :attr:`video_frame`
@@ -479,6 +496,63 @@ cdef class Receiver:
             self.source._set_tally(pgm, pvw)
         return 0
 
+    cdef bint _check_for_source_change(self) except -1:
+        """Check for changes in the currently connected source
+
+        This checks whether the source has been changed by an external controller
+        using `NDIlib_recv_get_source_name` (with a timeout of 0).
+
+        The call to `NDIlib_recv_get_source_name` will return quickly
+        if there has been no change since the last call, so there should be
+        minimal overhead under most circumstances.
+
+        Returns True if the source has changed, False otherwise.
+        """
+        if self.source is None:
+            return False
+        cdef const char* p_ndi_name = NULL
+        cdef const char** p_ndi_name_ptr = &p_ndi_name
+        cdef bint changed = NDIlib_recv_get_source_name(self.ptr, p_ndi_name_ptr)
+        if not changed and p_ndi_name is NULL:
+            return False
+
+        cdef bint name_changed = False
+        cdef Finder finder
+        cdef Source new_source
+        cdef bytes cur_name_bytes, new_name_bytes
+
+        if p_ndi_name is not NULL:
+            # Use bytes for comparison.  Char pointers would require strcmp.
+            new_name_bytes = p_ndi_name
+            cur_name_bytes = self.source.ptr.p_ndi_name
+            if cur_name_bytes != new_name_bytes:
+                name_changed = True
+
+                # Reset tally states before updating the source
+                self._set_source_tally(False, False)
+
+                # The Finder adds a reference to itself in each `Source` object it creates.
+                # Use that reference to find the new source object corresponding to the updated NDI name.
+                finder = self.source.parent
+                if finder is not None:
+                    new_source = finder._get_source_c_str(p_ndi_name)
+                    if new_source is None:
+                        # All we can do here is set `source_name`.
+                        # The source object requires a pointer created by the SDK.
+                        self.source_name = new_name_bytes.encode('utf-8')
+                    else:
+                        self.source = new_source
+                        self.source_name = new_source.name
+                else:
+                    # All we can do here is set `source_name` since we don't have a finder to get a new source object.
+                    self.source_name = new_name_bytes.encode('utf-8')
+
+            # If `src_ptr.p_ndi_name` is not NULL, the SDK requires that we free the string after use.
+            NDIlib_recv_free_string(self.ptr, p_ndi_name)
+        if name_changed:
+            self.source_change_callback.trigger_callback()
+        return name_changed
+
     cpdef ReceiveFrameType receive(self, ReceiveFrameType recv_type, uint32_t timeout_ms):
         """Receive frame data of the given type
 
@@ -512,6 +586,9 @@ cdef class Receiver:
         cdef NDIlib_metadata_frame_t* metadata_ptr
         cdef bint buffers_full = False
         cdef int recv_type_flags = <int>recv_type
+
+        # Check for source change at the beginning of the receive process
+        self._check_for_source_change()
 
         if recv_type & ReceiveFrameType.recv_video and has_video_frame:
             if video_frame.can_receive():

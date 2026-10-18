@@ -131,6 +131,8 @@ cdef class FrameSync:
         return NDIlib_framesync_audio_queue_depth(self.ptr)
 
     cdef int _capture_video(self, FrameFormat fmt = FrameFormat.progressive) except -1:
+        # Check for source change before capturing video
+        self.receiver._check_for_source_change()
         cdef NDIlib_video_frame_v2_t* video_ptr = self.video_frame.ptr
         if self.video_frame.view_count > 0:
             # Checked before capturing: the capture overwrites the frame struct,
@@ -151,6 +153,8 @@ cdef class FrameSync:
         return self._capture_audio(no_samples, False)
 
     cdef size_t _capture_audio(self, size_t no_samples, bint limit=True, bint truncate=True) except? -1:
+        # Check for source change before capturing audio
+        self.receiver._check_for_source_change()
         cdef NDIlib_audio_frame_v3_t* audio_ptr = self.audio_frame.ptr
         cdef size_t num_available
         if limit:
