@@ -519,41 +519,40 @@ cdef class Receiver:
             return False
 
         cdef bint name_changed = False
+        cdef bint source_changed = False
         cdef Finder finder
         cdef Source new_source
         cdef bytes cur_name_bytes, new_name_bytes
 
         if p_ndi_name is not NULL:
-            # Use bytes for comparison.  Char pointers would require strcmp.
-            new_name_bytes = p_ndi_name
-            cur_name_bytes = self.source.ptr.p_ndi_name
-            if cur_name_bytes != new_name_bytes:
+            if self.source.valid:
+                # Use bytes for comparison.  Char pointers would require strcmp.
+                new_name_bytes = p_ndi_name
+                cur_name_bytes = self.source_ptr.p_ndi_name
+                name_changed = cur_name_bytes != new_name_bytes
+            else:
+                # self.source is not valid (not tracked by the SDK), so treat this as a source change.
                 name_changed = True
 
-                # Reset tally states before updating the source
-                self._set_source_tally(False, False)
-
+            if name_changed:
                 # The Finder adds a reference to itself in each `Source` object it creates.
                 # Use that reference to find the new source object corresponding to the updated NDI name.
                 finder = self.source.parent
                 if finder is not None:
                     new_source = finder._get_source_c_str(p_ndi_name)
-                    if new_source is None:
-                        # All we can do here is set `source_name`.
-                        # The source object requires a pointer created by the SDK.
-                        self.source_name = new_name_bytes.encode('utf-8')
-                    else:
+                    # If the source came from the finder, it will be valid and tracked by the SDK.
+                    if new_source is not None:
+                        # Reset tally states before updating the source
+                        self._set_source_tally(False, False)
                         self.source = new_source
                         self.source_name = new_source.name
-                else:
-                    # All we can do here is set `source_name` since we don't have a finder to get a new source object.
-                    self.source_name = new_name_bytes.encode('utf-8')
+                        source_changed = True
 
             # If `src_ptr.p_ndi_name` is not NULL, the SDK requires that we free the string after use.
             NDIlib_recv_free_string(self.ptr, p_ndi_name)
-        if name_changed:
+        if source_changed:
             self.source_change_callback.trigger_callback()
-        return name_changed
+        return source_changed
 
     cpdef ReceiveFrameType receive(self, ReceiveFrameType recv_type, uint32_t timeout_ms):
         """Receive frame data of the given type
