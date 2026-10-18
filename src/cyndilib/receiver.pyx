@@ -525,33 +525,38 @@ cdef class Receiver:
         cdef bytes cur_name_bytes, new_name_bytes
 
         if p_ndi_name is not NULL:
-            if self.source.valid:
-                # Use bytes for comparison.  Char pointers would require strcmp.
-                new_name_bytes = p_ndi_name
-                cur_name_bytes = self.source.cpp_name
-                name_changed = cur_name_bytes != new_name_bytes
-            else:
-                # self.source is not valid (not tracked by the SDK), so treat this as a source change.
-                name_changed = True
+            try:
+                if self.source.valid:
+                    # Use bytes for comparison.  Char pointers would require strcmp.
+                    new_name_bytes = p_ndi_name
+                    cur_name_bytes = self.source.cpp_name
+                    name_changed = cur_name_bytes != new_name_bytes
+                else:
+                    # self.source is not valid (not tracked by the SDK),
+                    # so treat this as a source change.
+                    name_changed = True
 
-            if name_changed:
-                # The Finder adds a reference to itself in each `Source` object it creates.
-                # Use that reference to find the new source object corresponding to the updated NDI name.
-                finder = self.source.parent
-                if finder is not None:
-                    new_source = finder._get_source_c_str(p_ndi_name)
-                    # If the source came from the finder, it will be valid and tracked by the SDK,
-                    # but it's worth checking just in case.
-                    if new_source is not None and new_source.valid:
-                        # Reset tally states before updating the source
-                        self._set_source_tally(False, False)
-                        self.source = new_source
-                        self.source_name = new_source.name
-                        self.source_ptr = new_source.ptr
-                        source_changed = True
-
-            # If `src_ptr.p_ndi_name` is not NULL, the SDK requires that we free the string after use.
-            NDIlib_recv_free_string(self.ptr, p_ndi_name)
+                if name_changed:
+                    # The Finder adds a reference to itself in each `Source`
+                    # object it creates.
+                    # Use that reference to find the new source object
+                    # corresponding to the updated NDI name.
+                    finder = self.source.parent
+                    if finder is not None:
+                        new_source = finder._get_source_c_str(p_ndi_name)
+                        # If the source came from the finder, it will be valid
+                        # and tracked by the SDK, but it's worth checking just in case.
+                        if new_source is not None and new_source.valid:
+                            # Reset tally states before updating the source
+                            self._set_source_tally(False, False)
+                            self.source = new_source
+                            self.source_name = new_source.name
+                            self.source_ptr = new_source.ptr
+                            source_changed = True
+            finally:
+                # If `src_ptr.p_ndi_name` is not NULL, the SDK requires that we free
+                # the string after use.
+                NDIlib_recv_free_string(self.ptr, p_ndi_name)
         if source_changed:
             self.source_change_callback.trigger_callback()
         return source_changed
