@@ -80,6 +80,7 @@ cdef class Finder:
 
     cpdef get_source_names(self)
     cpdef Source get_source(self, str name)
+    cdef Source _get_source_c_str(self, const char* s)
     cdef NDIlib_source_t* _get_source_ptr(self, cpp_string name) except * nogil
     cdef int _trigger_callback(self) except -1 nogil
     cdef bint _update_sources(self) except -1

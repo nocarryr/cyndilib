@@ -229,6 +229,12 @@ cdef class Finder:
         """
         return self.source_obj_map.get(name)
 
+    cdef Source _get_source_c_str(self, const char* s):
+        """Get a :class:`Source` by its name as a C string
+        """
+        cdef cpp_string name = s
+        return self.source_obj_map.get(name.decode('UTF-8'))
+
     # TODO: find a way around `except *` for this
     cdef NDIlib_source_t* _get_source_ptr(self, cpp_string name) except * nogil:
         cdef NDIlib_source_t* result
