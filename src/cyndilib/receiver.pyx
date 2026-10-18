@@ -540,8 +540,9 @@ cdef class Receiver:
                 finder = self.source.parent
                 if finder is not None:
                     new_source = finder._get_source_c_str(p_ndi_name)
-                    # If the source came from the finder, it will be valid and tracked by the SDK.
-                    if new_source is not None:
+                    # If the source came from the finder, it will be valid and tracked by the SDK,
+                    # but it's worth checking just in case.
+                    if new_source is not None and new_source.valid:
                         # Reset tally states before updating the source
                         self._set_source_tally(False, False)
                         self.source = new_source
