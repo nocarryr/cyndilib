@@ -268,7 +268,9 @@ cdef class Receiver:
 
         .. versionadded:: 0.1.4
         """
-        self.source_change_callback.set_callback(cb)
+        self.source_change_callback.remove_callback()
+        if cb is not None:
+            self.source_change_callback.set_callback(cb)
 
     cpdef set_video_frame(self, VideoRecvFrame vf):
         """Set the :attr:`video_frame`
